@@ -1,0 +1,136 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "A user in the app",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "coupleSpaceId": { "type": "string", "description": "ID of the shared couple space" }
+      },
+      "required": ["id", "email"]
+    },
+    "CoupleSpace": {
+      "title": "Couple Space",
+      "description": "A private space for two users",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "partner1Id": { "type": "string" },
+        "partner2Id": { "type": "string" },
+        "inviteCode": { "type": "string" },
+        "streak": { "type": "integer" },
+        "lastInteractionAt": { "type": "integer", "description": "Timestamp" },
+        "createdAt": { "type": "integer" }
+      },
+      "required": ["id", "partner1Id", "createdAt"]
+    },
+    "Message": {
+      "title": "Message",
+      "description": "A chat message or reaction between partners",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "coupleSpaceId": { "type": "string" },
+        "senderId": { "type": "string" },
+        "content": { "type": "string" },
+        "type": { "type": "string", "enum": ["text", "reaction", "surprise"] },
+        "createdAt": { "type": "integer" }
+      },
+      "required": ["id", "coupleSpaceId", "senderId", "content", "type", "createdAt"]
+    },
+    "DailyQuestion": {
+      "title": "Daily Question",
+      "description": "Daily sync question for the couple",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "coupleSpaceId": { "type": "string" },
+        "question": { "type": "string" },
+        "date": { "type": "string" },
+        "answer1": { "type": "string" },
+        "answer1Id": { "type": "string" },
+        "answer2": { "type": "string" },
+        "answer2Id": { "type": "string" }
+      },
+      "required": ["id", "coupleSpaceId", "question", "date"]
+    },
+    "Memory": {
+      "title": "Memory",
+      "description": "A shared memory milestone",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "coupleSpaceId": { "type": "string" },
+        "creatorId": { "type": "string" },
+        "type": { "type": "string" },
+        "content": { "type": "string" },
+        "date": { "type": "string" }
+      },
+      "required": ["id", "coupleSpaceId", "creatorId", "type", "content", "date"]
+    },
+    "Mood": {
+      "title": "Mood",
+      "description": "Daily mood entry",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "coupleSpaceId": { "type": "string" },
+        "userId": { "type": "string" },
+        "mood": { "type": "string" },
+        "note": { "type": "string" },
+        "date": { "type": "string" }
+      },
+      "required": ["id", "coupleSpaceId", "userId", "mood", "date"]
+    },
+    "LoveversePlayhouseGame": {
+      "title": "Loveverse Playhouse Game State",
+      "description": "Real-time state and turns for Loveverse Playhouse multiplayer games",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "coupleSpaceId": { "type": "string" },
+        "gameType": { "type": "string" },
+        "status": { "type": "string" },
+        "currentTurn": { "type": "string" },
+        "data": { "type": "string" },
+        "scores": { "type": "string" },
+        "round": { "type": "integer" },
+        "updatedAt": { "type": "integer" }
+      },
+      "required": ["id", "coupleSpaceId", "gameType", "status", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "User profiles"
+    },
+    "/coupleSpaces/{spaceId}": {
+      "schema": { "$ref": "#/entities/CoupleSpace" },
+      "description": "Shared spaces for couples"
+    },
+    "/coupleSpaces/{spaceId}/messages/{messageId}": {
+      "schema": { "$ref": "#/entities/Message" },
+      "description": "Messages within a couple space"
+    },
+    "/coupleSpaces/{spaceId}/dailyQuestions/{questionId}": {
+      "schema": { "$ref": "#/entities/DailyQuestion" },
+      "description": "Daily questions for a couple"
+    },
+    "/coupleSpaces/{spaceId}/memories/{memoryId}": {
+      "schema": { "$ref": "#/entities/Memory" },
+      "description": "Memories timeline for a couple"
+    },
+    "/coupleSpaces/{spaceId}/moods/{moodId}": {
+      "schema": { "$ref": "#/entities/Mood" },
+      "description": "Mood tracking for a couple"
+    },
+    "/coupleSpaces/{spaceId}/playhouseGames/{gameId}": {
+      "schema": { "$ref": "#/entities/LoveversePlayhouseGame" },
+      "description": "Real-time synchronized game state for Loveverse Playhouse"
+    }
+  }
+}

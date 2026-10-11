@@ -1,0 +1,348 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 0.1 Primitives
+    function isSignedIn() { return request.auth != null; }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isValidString(val, max) { return val is string && val.size() <= max; }
+
+    // User Blueprints
+    function isValidUser(data) {
+      let hasBase = data.keys().hasAll(['id', 'email', 'displayName', 'coupleSpaceId']);
+      let validId = isValidString(data.id, 128) && data.id == request.auth.uid;
+      let validEmail = isValidString(data.email, 256);
+      let validDisplayName = isValidString(data.displayName, 128);
+      let validSpaceId = (isValidString(data.coupleSpaceId, 128) || data.coupleSpaceId == "");
+      let validMood = !('mood' in data) || isValidString(data.mood, 50);
+      let validLoveLanguage = !('loveLanguage' in data) || isValidString(data.loveLanguage, 50);
+      // Validating size. Base 4 + optional mood (1) + optional loveLanguage (1) = max 6
+      let validSize = data.keys().size() >= 4 && data.keys().size() <= 6;
+      return hasBase && validSize && validId && validEmail && validDisplayName && validSpaceId && validMood && validLoveLanguage;
+    }
+
+    // CoupleSpace Blueprints
+    function isValidCoupleSpace(data) {
+      return data.keys().hasAll(['id', 'partner1Id', 'partner2Id', 'inviteCode', 'streak', 'lastInteractionAt', 'createdAt', 'xp', 'level']) &&
+             data.keys().size() == 9 &&
+             isValidString(data.id, 128) &&
+             isValidString(data.partner1Id, 128) &&
+             (isValidString(data.partner2Id, 128) || data.partner2Id == "") &&
+             isValidString(data.inviteCode, 50) &&
+             data.streak is int &&
+             data.lastInteractionAt is int &&
+             data.createdAt is int &&
+             data.xp is int &&
+             data.level is int;
+    }
+    
+    function isCoupleMember(spaceId) {
+      let space = get(/databases/$(database)/documents/coupleSpaces/$(spaceId)).data;
+      return space != null && (space.partner1Id == request.auth.uid || space.partner2Id == request.auth.uid);
+    }
+
+    match /users/{userId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn() && resource.data.id == request.auth.uid;
+      allow create: if isSignedIn() && isValidUser(incoming()) && request.auth.uid == userId;
+      allow update: if isSignedIn() && request.auth.uid == userId && (
+        (incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'coupleSpaceId', 'mood', 'loveLanguage']))
+      );
+    }
+
+    match /coupleSpaces/{spaceId} {
+      allow get: if isSignedIn(); // Let anyone get if they know the ID for invite purposes, but not list.
+      allow create: if isSignedIn() && isValidCoupleSpace(incoming()) && incoming().partner1Id == request.auth.uid;
+      allow update: if isSignedIn() && (
+        // Joining action
+        ((!('partner2Id' in existing()) || existing().partner2Id == "") && incoming().partner2Id == request.auth.uid && incoming().diff(existing()).affectedKeys().hasOnly(['partner2Id'])) ||
+        // Members updating stats
+        ((existing().partner1Id == request.auth.uid || existing().partner2Id == request.auth.uid) && incoming().diff(existing()).affectedKeys().hasOnly(['streak', 'lastInteractionAt', 'xp', 'level']))
+      );
+    }
+
+    match /coupleSpaces/{spaceId}/games/{gameId} {
+      function isValidGame(data) {
+        return data.keys().hasAll(['id', 'coupleSpaceId', 'type', 'status', 'p1Id', 'p2Id', 'p1Answer', 'p2Answer', 'question', 'createdAt', 'updatedAt']) &&
+               data.keys().size() == 11 &&
+               isValidString(data.id, 128) &&
+               isValidString(data.coupleSpaceId, 128) && data.coupleSpaceId == spaceId &&
+               isValidString(data.type, 50) &&
+               isValidString(data.status, 50) &&
+               isValidString(data.p1Id, 128) &&
+               (isValidString(data.p2Id, 128) || data.p2Id == "") &&
+               (isValidString(data.p1Answer, 500) || data.p1Answer == "") &&
+               (isValidString(data.p2Answer, 500) || data.p2Answer == "") &&
+               isValidString(data.question, 500) &&
+               data.createdAt is int &&
+               data.updatedAt is int;
+      }
+      allow list, get: if isSignedIn() && isCoupleMember(spaceId);
+      allow create: if isSignedIn() && isCoupleMember(spaceId) && isValidGame(incoming());
+      allow update: if isSignedIn() && isCoupleMember(spaceId) && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'p1Answer', 'p2Answer', 'updatedAt', 'p2Id']);
+    }
+
+    match /coupleSpaces/{spaceId}/messages/{messageId} {
+      function isValidMessage(data) {
+         let hasBase = data.keys().hasAll(['id', 'coupleSpaceId', 'senderId', 'type', 'createdAt']);
+         let validId = isValidString(data.id, 128) && isValidString(data.coupleSpaceId, 128) && data.coupleSpaceId == spaceId && isValidString(data.senderId, 128) && data.senderId == request.auth.uid;
+         let validType = isValidString(data.type, 30);
+         let validCreatedAt = data.createdAt is int;
+         
+         // Backward-compatible plaintext/legacy types
+         let validText = (data.type == 'text' || data.type == 'reaction') && data.keys().hasAll(['content']) && isValidString(data.content, 2048) && data.keys().size() == 6;
+         let validVoice = data.type == 'voice' && data.keys().hasAll(['voiceUrl', 'duration']) && isValidString(data.voiceUrl, 2048) && data.duration is number && data.keys().size() == 7;
+         
+         // Zero-Knowledge Encrypted message packet (audio, image, text encrypted client-side)
+         let validEncrypted = (data.type == 'encrypted' || data.type == 'image' || data.type == 'voice') &&
+                              ('ciphertext' in data) && isValidString(data.ciphertext, 1048576) &&
+                              ('iv' in data) && isValidString(data.iv, 256);
+
+         return hasBase && validId && validType && validCreatedAt && (validText || validVoice || validEncrypted);
+      }
+      allow list, get: if isSignedIn() && isCoupleMember(spaceId);
+      allow create: if isSignedIn() && isCoupleMember(spaceId) && isValidMessage(incoming());
+      allow delete: if isSignedIn() && isCoupleMember(spaceId) && existing().senderId == request.auth.uid;
+    }
+
+    match /coupleSpaces/{spaceId}/dailyQuestions/{questionId} {
+      function isValidQuestion(data) {
+         return data.keys().hasAll(['id', 'coupleSpaceId', 'question', 'date', 'answer1', 'answer1Id', 'answer2', 'answer2Id']) &&
+                data.keys().size() == 8 &&
+                isValidString(data.id, 128) &&
+                isValidString(data.coupleSpaceId, 128) && data.coupleSpaceId == spaceId &&
+                isValidString(data.question, 1024) &&
+                isValidString(data.date, 50) &&
+                (isValidString(data.answer1, 2048) || data.answer1 == "") &&
+                (isValidString(data.answer1Id, 128) || data.answer1Id == "") &&
+                (isValidString(data.answer2, 2048) || data.answer2 == "") &&
+                (isValidString(data.answer2Id, 128) || data.answer2Id == "");
+      }
+      allow list, get: if isSignedIn() && isCoupleMember(spaceId);
+      allow create: if isSignedIn() && isCoupleMember(spaceId) && isValidQuestion(incoming());
+      allow update: if isSignedIn() && isCoupleMember(spaceId) && incoming().diff(existing()).affectedKeys().hasOnly(['answer1', 'answer1Id', 'answer2', 'answer2Id']);
+    }
+
+    match /coupleSpaces/{spaceId}/memories/{memoryId} {
+      function isValidMemory(data) {
+        return data.keys().hasAll(['id', 'coupleSpaceId', 'creatorId', 'type', 'date']) &&
+               isValidString(data.id, 128) &&
+               isValidString(data.coupleSpaceId, 128) && data.coupleSpaceId == spaceId &&
+               isValidString(data.creatorId, 128) && data.creatorId == request.auth.uid &&
+               isValidString(data.type, 50) &&
+               isValidString(data.date, 50);
+      }
+      allow list, get: if isSignedIn() && isCoupleMember(spaceId);
+      // Removed exact keys size check to allow flexible memory types (surprises, notes, markers, etc.)
+      allow create: if isSignedIn() && isCoupleMember(spaceId) && isValidMemory(incoming());
+      allow update: if isSignedIn() && isCoupleMember(spaceId) && existing().creatorId == request.auth.uid;
+      allow delete: if isSignedIn() && isCoupleMember(spaceId) && existing().creatorId == request.auth.uid;
+    }
+
+    match /coupleSpaces/{spaceId}/liveLocations/{userId} {
+      function isValidLiveLocation(data) {
+        return data.keys().hasAll(['userId', 'coupleSpaceId', 'lat', 'lng', 'updatedAt', 'sharingEnabled']) &&
+               data.keys().size() == 6 &&
+               isValidString(data.userId, 128) && data.userId == request.auth.uid &&
+               isValidString(data.coupleSpaceId, 128) && data.coupleSpaceId == spaceId &&
+               data.lat is number &&
+               data.lng is number &&
+               data.updatedAt is int &&
+               data.sharingEnabled is bool;
+      }
+      allow list, get: if isSignedIn() && isCoupleMember(spaceId);
+      allow create: if isSignedIn() && isCoupleMember(spaceId) && isValidLiveLocation(incoming());
+      allow update: if isSignedIn() && isCoupleMember(spaceId) && existing().userId == request.auth.uid && (
+        incoming().diff(existing()).affectedKeys().hasOnly(['lat', 'lng', 'updatedAt', 'sharingEnabled'])
+      );
+    }
+
+    match /coupleSpaces/{spaceId}/diaryEntries/{entryId} {
+      function isValidDiaryEntry(data) {
+        return data.keys().hasAll(['id', 'coupleSpaceId', 'authorId', 'content', 'date', 'locked']) &&
+               data.keys().size() == 6 &&
+               isValidString(data.id, 128) &&
+               isValidString(data.coupleSpaceId, 128) && data.coupleSpaceId == spaceId &&
+               isValidString(data.authorId, 128) &&
+               data.content is string && data.content.size() <= 20000 &&
+               isValidString(data.date, 50) &&
+               data.locked is bool;
+      }
+      allow list, get: if isSignedIn() && isCoupleMember(spaceId);
+      allow create: if isSignedIn() && isCoupleMember(spaceId) && isValidDiaryEntry(incoming()) && incoming().authorId == request.auth.uid;
+      allow update: if isSignedIn() && isCoupleMember(spaceId) && (
+        incoming().diff(existing()).affectedKeys().hasOnly(['content', 'locked'])
+      ) && (
+        !existing().locked || incoming().locked == false
+      );
+      allow delete: if isSignedIn() && isCoupleMember(spaceId) && existing().authorId == request.auth.uid;
+    }
+
+    match /coupleSpaces/{spaceId}/todGameState/{stateId} {
+      function isValidState(data) {
+        return data.keys().hasAll(['id', 'coupleSpaceId', 'playersOnline', 'status', 'currentTurn', 'selectedChoice', 'questionOrDare', 'mediaUrl', 'scores', 'updatedAt']) &&
+               data.keys().size() == 10 &&
+               isValidString(data.id, 128) && data.id == 'default' &&
+               isValidString(data.coupleSpaceId, 128) && data.coupleSpaceId == spaceId &&
+               data.playersOnline is list && data.playersOnline.size() <= 2 &&
+               isValidString(data.status, 50) &&
+               isValidString(data.currentTurn, 128) &&
+               isValidString(data.selectedChoice, 50) &&
+               data.questionOrDare is string && data.questionOrDare.size() <= 1024 &&
+               data.mediaUrl is string && data.mediaUrl.size() <= 3000000 &&
+               data.scores is map && data.scores.size() <= 2 &&
+               data.updatedAt is int;
+      }
+      allow list, get: if isSignedIn() && isCoupleMember(spaceId);
+      allow create: if isSignedIn() && isCoupleMember(spaceId) && isValidState(incoming());
+      allow update: if isSignedIn() && isCoupleMember(spaceId) && (
+        incoming().diff(existing()).affectedKeys().hasOnly(['playersOnline', 'status', 'currentTurn', 'selectedChoice', 'questionOrDare', 'mediaUrl', 'scores', 'updatedAt'])
+      );
+    }
+
+    match /coupleSpaces/{spaceId}/whoLovesMore/{gameId} {
+      function isValidWhoLovesMore(data) {
+        return data.keys().hasAll(['id', 'coupleSpaceId', 'playersOnline', 'status', 'currentQuestion', 'round', 'answers', 'scores', 'updatedAt']) &&
+               data.keys().size() == 9 &&
+               isValidString(data.id, 128) && data.id == 'default' &&
+               isValidString(data.coupleSpaceId, 128) && data.coupleSpaceId == spaceId &&
+               data.playersOnline is list && data.playersOnline.size() <= 2 &&
+               isValidString(data.status, 50) &&
+               isValidString(data.currentQuestion, 500) &&
+               data.round is int &&
+               data.answers is map &&
+               data.scores is map &&
+               data.updatedAt is int;
+      }
+      allow list, get: if isSignedIn() && isCoupleMember(spaceId);
+      allow create: if isSignedIn() && isCoupleMember(spaceId) && isValidWhoLovesMore(incoming());
+      allow update: if isSignedIn() && isCoupleMember(spaceId) && (
+        incoming().diff(existing()).affectedKeys().hasOnly(['playersOnline', 'status', 'currentQuestion', 'round', 'answers', 'scores', 'updatedAt'])
+      );
+    }
+
+    match /coupleSpaces/{spaceId}/datePlans/{dateId} {
+      function isValidDatePlan(data) {
+        return data.keys().hasAll(['id', 'coupleSpaceId', 'creatorId', 'title', 'description', 'budget', 'mood', 'createdAt']) &&
+               data.keys().size() == 8 &&
+               isValidString(data.id, 128) &&
+               isValidString(data.coupleSpaceId, 128) && data.coupleSpaceId == spaceId &&
+               isValidString(data.creatorId, 128) &&
+               isValidString(data.title, 256) &&
+               data.description is string && data.description.size() <= 10000 &&
+               isValidString(data.budget, 100) &&
+               isValidString(data.mood, 100) &&
+               data.createdAt is int;
+      }
+      allow list, get: if isSignedIn() && isCoupleMember(spaceId);
+      allow create: if isSignedIn() && isCoupleMember(spaceId) && isValidDatePlan(incoming());
+      allow update: if isSignedIn() && isCoupleMember(spaceId);
+      allow delete: if isSignedIn() && isCoupleMember(spaceId);
+    }
+
+    match /coupleSpaces/{spaceId}/reminders/{reminderId} {
+      function isValidReminder(data) {
+        return data.keys().hasAll(['id', 'coupleSpaceId', 'creatorId', 'title', 'type', 'date', 'enabled', 'createdAt']) &&
+               data.keys().size() == 8 &&
+               isValidString(data.id, 128) &&
+               isValidString(data.coupleSpaceId, 128) && data.coupleSpaceId == spaceId &&
+               isValidString(data.creatorId, 128) &&
+               isValidString(data.title, 256) &&
+               isValidString(data.type, 50) &&
+               data.date is int &&
+               data.enabled is bool &&
+               data.createdAt is int;
+      }
+      allow list, get: if isSignedIn() && isCoupleMember(spaceId);
+      allow create: if isSignedIn() && isCoupleMember(spaceId) && isValidReminder(incoming());
+      allow update: if isSignedIn() && isCoupleMember(spaceId) && (
+        incoming().diff(existing()).affectedKeys().hasOnly(['title', 'date', 'enabled', 'type'])
+      );
+      allow delete: if isSignedIn() && isCoupleMember(spaceId);
+    }
+
+    match /coupleSpaces/{spaceId}/moods/{moodId} {
+      function isValidMood(data) {
+        return data.keys().hasAll(['id', 'coupleSpaceId', 'userId', 'mood', 'note', 'date']) &&
+               data.keys().size() == 6 &&
+               isValidString(data.id, 128) &&
+               isValidString(data.coupleSpaceId, 128) && data.coupleSpaceId == spaceId &&
+               isValidString(data.userId, 128) && data.userId == request.auth.uid &&
+               isValidString(data.mood, 50) &&
+               isValidString(data.note, 500) &&
+               isValidString(data.date, 50);
+      }
+      allow list, get: if isSignedIn() && isCoupleMember(spaceId);
+      allow create: if isSignedIn() && isCoupleMember(spaceId) && isValidMood(incoming());
+      allow update: if isSignedIn() && isCoupleMember(spaceId) && existing().userId == request.auth.uid && incoming().diff(existing()).affectedKeys().hasOnly(['mood', 'note']);
+    }
+
+    match /coupleSpaces/{spaceId}/playhouseGames/{gameId} {
+      function isValidPlayhouseGame(data) {
+        return data.keys().hasAll(['id', 'coupleSpaceId', 'gameType', 'status', 'updatedAt']) &&
+               data.keys().size() <= 10 &&
+               isValidString(data.id, 128) &&
+               isValidString(data.coupleSpaceId, 128) && data.coupleSpaceId == spaceId &&
+               isValidString(data.gameType, 64) &&
+               isValidString(data.status, 64) &&
+               (!('currentTurn' in data) || isValidString(data.currentTurn, 128)) &&
+               (!('data' in data) || isValidString(data.data, 2000000)) &&
+               (!('scores' in data) || isValidString(data.scores, 2000)) &&
+               (!('round' in data) || data.round is int) &&
+               data.updatedAt is int;
+      }
+      allow list, get: if isSignedIn() && isCoupleMember(spaceId);
+      allow create: if isSignedIn() && isCoupleMember(spaceId) && isValidPlayhouseGame(incoming());
+      allow update: if isSignedIn() && isCoupleMember(spaceId) && isValidPlayhouseGame(incoming());
+      allow delete: if isSignedIn() && isCoupleMember(spaceId);
+    }
+
+    match /coupleSpaces/{spaceId}/calls/{callId} {
+      function isValidCall(data) {
+        return data.keys().hasAll(['id', 'coupleSpaceId', 'callerId', 'receiverId', 'type', 'status', 'createdAt', 'updatedAt']) &&
+               data.keys().size() <= 12 &&
+               isValidString(data.id, 128) &&
+               isValidString(data.coupleSpaceId, 128) && data.coupleSpaceId == spaceId &&
+               isValidString(data.callerId, 128) &&
+               isValidString(data.receiverId, 128) &&
+               (data.type == 'voice' || data.type == 'video') &&
+               (data.status == 'calling' || data.status == 'connected' || data.status == 'ended' || data.status == 'declined' || data.status == 'missed') &&
+               (!('offer' in data) || isValidString(data.offer, 200000)) &&
+               (!('answer' in data) || isValidString(data.answer, 200000)) &&
+               (!('callerCandidates' in data) || data.callerCandidates is list) &&
+               (!('receiverCandidates' in data) || data.receiverCandidates is list) &&
+               data.createdAt is int &&
+               data.updatedAt is int;
+      }
+      allow list, get: if isSignedIn() && isCoupleMember(spaceId);
+      allow create: if isSignedIn() && isCoupleMember(spaceId) && isValidCall(incoming()) && incoming().callerId == request.auth.uid;
+      allow update: if isSignedIn() && isCoupleMember(spaceId) && isValidCall(incoming());
+      allow delete: if isSignedIn() && isCoupleMember(spaceId);
+    }
+
+    match /coupleSpaces/{spaceId}/quickSnaps/{snapId} {
+      function isValidQuickSnap(data) {
+        return data.keys().hasAll(['id', 'coupleSpaceId', 'senderId', 'senderName', 'imageUrl', 'durationMinutes', 'createdAt', 'expiresAt']) &&
+               data.keys().size() <= 10 &&
+               isValidString(data.id, 128) &&
+               isValidString(data.coupleSpaceId, 128) && data.coupleSpaceId == spaceId &&
+               isValidString(data.senderId, 128) && data.senderId == request.auth.uid &&
+               isValidString(data.senderName, 128) &&
+               data.imageUrl is string && data.imageUrl.size() <= 2000000 &&
+               data.durationMinutes is int &&
+               (!('caption' in data) || isValidString(data.caption, 500)) &&
+               (!('stickers' in data) || data.stickers is list) &&
+               data.createdAt is int &&
+               data.expiresAt is int;
+      }
+      allow list, get: if isSignedIn() && isCoupleMember(spaceId);
+      allow create, update: if isSignedIn() && isCoupleMember(spaceId) && isValidQuickSnap(incoming());
+      allow delete: if isSignedIn() && isCoupleMember(spaceId);
+    }
+  }
+}

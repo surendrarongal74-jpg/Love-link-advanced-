@@ -1,0 +1,213 @@
+import React, { useState } from 'react';
+import { Shield, Lock, HardDrive, Mic, Bell, Heart, CheckCircle2, X, ExternalLink } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+
+interface TermsAndConditionsModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onAccept?: () => void;
+  showAcceptButton?: boolean;
+}
+
+export const TermsAndConditionsModal: React.FC<TermsAndConditionsModalProps> = ({
+  isOpen,
+  onClose,
+  onAccept,
+  showAcceptButton = false,
+}) => {
+  const [activeTab, setActiveTab] = useState<'terms' | 'privacy'>('terms');
+
+  if (!isOpen) return null;
+
+  return (
+    <AnimatePresence>
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+        <motion.div
+          initial={{ scale: 0.95, opacity: 0, y: 10 }}
+          animate={{ scale: 1, opacity: 1, y: 0 }}
+          exit={{ scale: 0.95, opacity: 0, y: 10 }}
+          className="bg-white rounded-3xl max-w-lg w-full max-h-[85vh] flex flex-col shadow-2xl border border-rose-100 overflow-hidden"
+        >
+          {/* Header */}
+          <div className="p-5 border-b border-rose-100 bg-gradient-to-r from-rose-50 via-pink-50 to-purple-50 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-rose-500 text-white flex items-center justify-center shadow-md shadow-rose-200">
+                <Shield className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="font-serif font-bold text-lg text-rose-950">Love Link Trust & Privacy</h2>
+                <p className="text-xs text-rose-600 font-medium">Terms of Service & Private Device Policy</p>
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              className="p-2 text-gray-400 hover:text-gray-700 hover:bg-white/80 rounded-full transition"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Tab Selector */}
+          <div className="flex border-b border-rose-100 px-5 pt-3 gap-4 bg-rose-50/40">
+            <button
+              onClick={() => setActiveTab('terms')}
+              className={`pb-3 text-sm font-semibold transition border-b-2 ${
+                activeTab === 'terms'
+                  ? 'border-rose-500 text-rose-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-800'
+              }`}
+            >
+              Terms & Conditions
+            </button>
+            <button
+              onClick={() => setActiveTab('privacy')}
+              className={`pb-3 text-sm font-semibold transition border-b-2 ${
+                activeTab === 'privacy'
+                  ? 'border-rose-500 text-rose-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-800'
+              }`}
+            >
+              Privacy & Local Storage
+            </button>
+          </div>
+
+          {/* Content Body */}
+          <div className="flex-1 overflow-y-auto p-5 text-sm text-gray-700 space-y-5 leading-relaxed">
+            {activeTab === 'terms' ? (
+              <>
+                <div className="bg-rose-50/70 border border-rose-200 rounded-2xl p-4 text-xs text-rose-900 flex items-start gap-3">
+                  <Heart className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
+                  <div>
+                    <strong className="font-semibold">Designed Exclusively for Two:</strong> Love Link connects you and your partner in a dedicated, private relationship sanctuary. By connecting, you and your partner agree to mutual respect and shared ownership.
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                    <span className="w-5 h-5 rounded-full bg-rose-100 text-rose-600 text-xs flex items-center justify-center font-bold">1</span>
+                    Mutual Relationship Consent
+                  </h3>
+                  <p className="text-xs text-gray-600">
+                    Pairing requires mutual agreement via a unique 6-digit invitation code. Only two accounts can occupy a shared space. Either partner can unlink at any time from their app settings.
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                    <span className="w-5 h-5 rounded-full bg-rose-100 text-rose-600 text-xs flex items-center justify-center font-bold">2</span>
+                    Device Permissions Required Before Connecting
+                  </h3>
+                  <p className="text-xs text-gray-600">
+                    To deliver an intimate couple experience, Love Link requires permission for:
+                  </p>
+                  <ul className="text-xs text-gray-600 space-y-1.5 pl-3 list-disc marker:text-rose-400">
+                    <li><strong className="text-gray-800">Microphone:</strong> For voice notes, audio whispers, and playful voice messages.</li>
+                    <li><strong className="text-gray-800">Camera & Photos:</strong> For couple drawings, photo memories, and avatars.</li>
+                    <li><strong className="text-gray-800">Notifications:</strong> For real-time love alerts, pings, and questions.</li>
+                    <li><strong className="text-gray-800">Local Mobile Vault:</strong> For storing all encrypted chats and media on your phone.</li>
+                  </ul>
+                </div>
+
+                <div className="space-y-3">
+                  <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                    <span className="w-5 h-5 rounded-full bg-rose-100 text-rose-600 text-xs flex items-center justify-center font-bold">3</span>
+                    Zero Unsolicited Sharing & Content Ownership
+                  </h3>
+                  <p className="text-xs text-gray-600">
+                    You and your partner retain 100% intellectual property and ownership over all photos, voice notes, drawings, and chats shared between you. Love Link never sells, licenses, or displays your private couple content.
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                    <span className="w-5 h-5 rounded-full bg-rose-100 text-rose-600 text-xs flex items-center justify-center font-bold">4</span>
+                    Appropriate Use & Safety
+                  </h3>
+                  <p className="text-xs text-gray-600">
+                    Users must be at least 13 years old (or the legal age of digital consent in their jurisdiction). Harassment, abusive behavior, or non-consensual sharing of private media violates our community standards and will terminate access.
+                  </p>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 text-xs text-emerald-900 flex items-start gap-3">
+                  <Lock className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                  <div>
+                    <strong className="font-semibold">Local-Only Mobile Storage Guarantee:</strong> All your voice notes, pictures, and chats are encrypted and stored inside your mobile devices. No central servers read or keep your intimate media.
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                    <HardDrive className="w-4 h-4 text-rose-500" />
+                    How Local Device Storage Works
+                  </h3>
+                  <p className="text-xs text-gray-600">
+                    When you record a voice note or share an image, the file is securely encoded and written to your device&apos;s local IndexedDB encrypted storage. When your partner is connected, the encrypted packet synchronizes directly to their phone and is stored locally on their device as well.
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                    <Lock className="w-4 h-4 text-rose-500" />
+                    Offline Access
+                  </h3>
+                  <p className="text-xs text-gray-600">
+                    Because your chat history, voice recordings, and memories reside directly in your phone&apos;s storage, you can browse, listen to past voice notes, and review memories even when in airplane mode or with no internet connectivity!
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                    <Mic className="w-4 h-4 text-rose-500" />
+                    Microphone & Audio Privacy
+                  </h3>
+                  <p className="text-xs text-gray-600">
+                    The microphone is only active while you are holding down or tapping the voice recording button. Background listening is strictly disabled. Audio blobs are encrypted before leaving your browser.
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                    <Shield className="w-4 h-4 text-rose-500" />
+                    Right to Delete & Export
+                  </h3>
+                  <p className="text-xs text-gray-600">
+                    You can clear local chat history or wipe your phone&apos;s local vault at any time in App Settings. Deleting the app removes all locally cached chats and voice notes.
+                  </p>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="p-4 border-t border-rose-100 bg-gray-50 flex items-center justify-between gap-3">
+            <div className="text-[11px] text-gray-500 flex items-center gap-1.5">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+              <span>Updated & Effective October 2026</span>
+            </div>
+            
+            {showAcceptButton ? (
+              <button
+                onClick={() => {
+                  if (onAccept) onAccept();
+                  onClose();
+                }}
+                className="bg-gradient-to-r from-rose-500 to-pink-500 text-white font-semibold text-xs py-2.5 px-6 rounded-full shadow-md shadow-rose-200 hover:shadow-lg transition active:scale-95"
+              >
+                I Agree & Accept
+              </button>
+            ) : (
+              <button
+                onClick={onClose}
+                className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold text-xs py-2 px-4 rounded-full transition active:scale-95"
+              >
+                Close
+              </button>
+            )}
+          </div>
+        </motion.div>
+      </div>
+    </AnimatePresence>
+  );
+};
