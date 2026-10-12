@@ -2,14 +2,20 @@ import React from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { Home, MessageCircle, Heart, Calendar, Sparkles } from 'lucide-react';
 import { sound } from '../lib/sound';
+import { useLiveNotifications } from '../contexts/LiveNotificationContext';
 
 export function BottomNav() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { notifications } = useLiveNotifications();
+
+  const unreadMessagesCount = notifications.filter(
+    n => !n.read && (n.type === 'message' || n.type === 'voice' || n.type === 'image' || n.type === 'pulse')
+  ).length;
 
   const navItems = [
     { to: '/', icon: Home, label: 'Home' },
-    { to: '/chat', icon: MessageCircle, label: 'Chat' },
+    { to: '/chat', icon: MessageCircle, label: 'Chat', badge: unreadMessagesCount },
     { to: '/game', icon: Heart, label: 'Sync' },
     { to: '/memories', icon: Calendar, label: 'Memories' },
     { to: '/aira', icon: Sparkles, label: 'AIRA' },
@@ -53,7 +59,14 @@ export function BottomNav() {
                     className="absolute inset-0 bg-rose-100/70 rounded-full -z-10 shadow-2xs"
                   />
                 )}
-                <item.icon className={`w-5 h-5 ${isActive ? 'scale-110' : ''} transition-transform`} />
+                <div className="relative">
+                  <item.icon className={`w-5 h-5 ${isActive ? 'scale-110' : ''} transition-transform`} />
+                  {Boolean(item.badge && item.badge > 0) && (
+                    <span className="absolute -top-1 -right-1.5 w-3.5 h-3.5 bg-rose-500 border-2 border-white rounded-full flex items-center justify-center text-[8px] font-bold text-white shadow-xs animate-pulse">
+                      {item.badge! > 9 ? '9+' : item.badge}
+                    </span>
+                  )}
+                </div>
                 <span className="text-[10px] mt-0.5 leading-none">{item.label}</span>
               </>
             )}

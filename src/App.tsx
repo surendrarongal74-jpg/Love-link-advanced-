@@ -21,9 +21,12 @@ import { WhoLovesMoreScreen } from './screens/WhoLovesMoreScreen';
 import { AIPlannerScreen } from './screens/AIPlannerScreen';
 import { AiraScreen } from './screens/AiraScreen';
 import { LoveversePlayhouseScreen } from './screens/LoveversePlayhouseScreen';
+import { VisionBoardScreen } from './screens/VisionBoardScreen';
 import { InstallAPKScreen } from './screens/InstallAPKScreen';
 import { OfflineIndicator } from './components/pwa/OfflineIndicator';
 import { ActiveCallOverlay } from './components/calling/ActiveCallOverlay';
+import { LiveNotificationOverlay } from './components/notifications/LiveNotificationOverlay';
+import { NotificationDrawer } from './components/notifications/NotificationDrawer';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -38,8 +41,17 @@ function SpaceRoute({ children }: { children: React.ReactNode }) {
   
   if (loading) return <div className="min-h-screen bg-rose-50 flex items-center justify-center text-rose-300">Loading...</div>;
   
-  if (!userData?.coupleSpaceId || !space) {
+  if (!userData?.coupleSpaceId) {
     return <Navigate to="/onboarding" />;
+  }
+
+  if (!space) {
+    return (
+      <div className="min-h-screen bg-rose-50 flex flex-col items-center justify-center text-rose-400 gap-3">
+        <div className="w-10 h-10 border-3 border-rose-300 border-t-rose-500 rounded-full animate-spin" />
+        <span className="text-xs font-medium">Connecting to private space...</span>
+      </div>
+    );
   }
   
   return <>{children}</>;
@@ -51,8 +63,17 @@ function ActiveSpaceRoute({ children }: { children: React.ReactNode }) {
   
   if (loading) return <div className="min-h-screen bg-rose-50 flex items-center justify-center text-rose-300">Loading...</div>;
   
-  if (!userData?.coupleSpaceId || !space) {
+  if (!userData?.coupleSpaceId) {
     return <Navigate to="/onboarding" />;
+  }
+
+  if (!space) {
+    return (
+      <div className="min-h-screen bg-rose-50 flex flex-col items-center justify-center text-rose-400 gap-3">
+        <div className="w-10 h-10 border-3 border-rose-300 border-t-rose-500 rounded-full animate-spin" />
+        <span className="text-xs font-medium">Connecting to private space...</span>
+      </div>
+    );
   }
 
   if (!partnerData) {
@@ -194,10 +215,20 @@ export default function App() {
           </ProtectedRoute>
         } />
 
+        <Route path="/vision-board" element={
+          <ProtectedRoute>
+            <ActiveSpaceRoute>
+              <VisionBoardScreen />
+            </ActiveSpaceRoute>
+          </ProtectedRoute>
+        } />
+
         <Route path="/install" element={<InstallAPKScreen />} />
       </Routes>
       <OfflineIndicator />
       <ActiveCallOverlay />
+      <LiveNotificationOverlay />
+      <NotificationDrawer />
     </div>
   );
 }

@@ -5,11 +5,12 @@ import { db } from '../../lib/firebase';
 import { doc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
 import { handleFirestoreError, OperationType } from '../../lib/errorHandler';
 import { sound } from '../../lib/sound';
+import { generateAiraGameContent } from '../../lib/ai';
 import confetti from 'canvas-confetti';
-import { Sparkles, RefreshCw, MessageSquare, CheckCircle2 } from 'lucide-react';
+import { Sparkles, RefreshCw, MessageSquare, CheckCircle2, Wand2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-const DILEMMAS = [
+const FALLBACK_DILEMMAS = [
   {
     optionA: 'Spend every weekend together exploring new cities',
     optionB: 'Have an ultra-luxurious home cinema setup and stay in every weekend'
@@ -32,8 +33,15 @@ const DILEMMAS = [
   }
 ];
 
+interface DilemmaItem {
+  optionA: string;
+  optionB: string;
+  category?: string;
+}
+
 interface WYRState {
-  dilemmaIndex: number;
+  level: number;
+  currentDilemma: DilemmaItem;
   picks: Record<string, 'A' | 'B'>;
 }
 
@@ -41,6 +49,7 @@ export function WouldYouRatherGame() {
   const { userData } = useAuth();
   const { space, partnerData } = useCoupleSpace();
   const [gameState, setGameState] = useState<WYRState | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
   const navigate = useNavigate();
 
   const docRef = space?.id ? doc(db, `coupleSpaces/${space.id}/playhouseGames`, 'would-you-rather') : null;
@@ -54,12 +63,13 @@ export function WouldYouRatherGame() {
           try {
             setGameState(JSON.parse(data.data));
           } catch (e) {
-            console.error(e);
+            console.error('WYR parse error:', e);
           }
         }
       } else {
         const init: WYRState = {
-          dilemmaIndex: 0,
+          level: 1,
+          currentDilemma: FALLBACK_DILEMMAS[0],
           picks: {}
         };
         setDoc(docRef, {
@@ -67,6 +77,7 @@ export function WouldYouRatherGame() {
           coupleSpaceId: space?.id || '',
           gameType: 'would-you-rather',
           status: 'playing',
+          round: 1,
           data: JSON.stringify(init),
           updatedAt: Date.now()
         }).catch(err => handleFirestoreError(err, OperationType.CREATE, `coupleSpaces/${space?.id}/playhouseGames/would-you-rather`));
@@ -76,10 +87,9 @@ export function WouldYouRatherGame() {
     return () => unsubscribe();
   }, [docRef, space?.id]);
 
-  const current = DILEMMAS[(gameState?.dilemmaIndex || 0) % DILEMMAS.length];
+  const current = gameState?.currentDilemma || FALLBACK_DILEMMAS[0];
   const myPick = userData?.id ? gameState?.picks?.[userData.id] : undefined;
   const partnerPick = partnerData?.id ? gameState?.picks?.[partnerData.id] : undefined;
-
   const isBothPicked = Boolean(myPick && partnerPick);
 
   const handlePick = (choice: 'A' | 'B') => {
@@ -93,7 +103,7 @@ export function WouldYouRatherGame() {
 
     if (partnerData?.id && newPicks[partnerData.id]) {
       sound.playSuccess();
-      confetti({ particleCount: 70, spread: 60, origin: { y: 0.6 } });
+      confetti({ particleCount: 75, spread: 60, origin: { y: 0.6 } });
     }
 
     const updated: WYRState = {
@@ -103,20 +113,40 @@ export function WouldYouRatherGame() {
 
     updateDoc(docRef, {
       data: JSON.stringify(updated),
+      status: (partnerData?.id && newPicks[partnerData.id]) ? 'matched' : 'playing',
       updatedAt: Date.now()
     }).catch(console.error);
   };
 
-  const handleNext = () => {
+  const handleNextLevel = async () => {
     if (!docRef || !gameState) return;
     sound.playChime();
-    const nextIdx = (gameState.dilemmaIndex + 1) % DILEMMAS.length;
-    const init: WYRState = {
-      dilemmaIndex: nextIdx,
+    setIsGenerating(true);
+
+    const nextLevel = (gameState.level || 1) + 1;
+    let nextDilemma: DilemmaItem = FALLBACK_DILEMMAS[nextLevel % FALLBACK_DILEMMAS.length];
+
+    try {
+      const airaItem = await generateAiraGameContent<DilemmaItem>('would-you-rather', nextLevel);
+      if (airaItem?.optionA && airaItem?.optionB) {
+        nextDilemma = airaItem;
+      }
+    } catch (e) {
+      console.warn('AIRA generation failed for WYR:', e);
+    } finally {
+      setIsGenerating(false);
+    }
+
+    const updated: WYRState = {
+      level: nextLevel,
+      currentDilemma: nextDilemma,
       picks: {}
     };
+
     updateDoc(docRef, {
-      data: JSON.stringify(init),
+      data: JSON.stringify(updated),
+      status: 'playing',
+      round: nextLevel,
       updatedAt: Date.now()
     }).catch(console.error);
   };
@@ -132,7 +162,10 @@ export function WouldYouRatherGame() {
           <div>
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold text-gray-800">
-                Dilemma #{((gameState?.dilemmaIndex || 0) % DILEMMAS.length) + 1}
+                Would You Rather • Level {gameState?.level || 1}
+              </span>
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-fuchsia-100 text-fuchsia-700">
+                Infinite by AIRA
               </span>
             </div>
             <p className="text-[11px] text-gray-500">Pick your scenario and see if you match!</p>
@@ -140,11 +173,16 @@ export function WouldYouRatherGame() {
         </div>
 
         <button
-          onClick={handleNext}
-          className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-fuchsia-50 text-fuchsia-700 hover:bg-fuchsia-100 border border-fuchsia-200 text-xs font-semibold active:scale-95 transition-all"
+          onClick={handleNextLevel}
+          disabled={isGenerating}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-fuchsia-50 text-fuchsia-700 hover:bg-fuchsia-100 border border-fuchsia-200 text-xs font-semibold active:scale-95 transition-all disabled:opacity-50"
         >
-          <RefreshCw className="w-3.5 h-3.5" />
-          <span>Next Dilemma</span>
+          {isGenerating ? (
+            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+          ) : (
+            <Wand2 className="w-3.5 h-3.5 text-fuchsia-600" />
+          )}
+          <span>{isGenerating ? 'AIRA Level...' : 'Next Level'}</span>
         </button>
       </div>
 
@@ -196,7 +234,7 @@ export function WouldYouRatherGame() {
       </div>
 
       {/* Match Outcome Box */}
-      {isBothPicked && (
+      {isBothPicked ? (
         <div className="bg-white rounded-3xl p-5 border border-fuchsia-200 shadow-lg text-center space-y-3">
           <div className="text-2xl">
             {myPick === partnerPick ? '💖 100% Match!' : '✨ Different Perspectives!'}
@@ -206,15 +244,29 @@ export function WouldYouRatherGame() {
               ? `You both chose Option ${myPick}! Soulmate synergy confirmed!`
               : `You picked Option ${myPick}, while ${partnerData?.displayName || 'partner'} picked Option ${partnerPick}.`}
           </p>
-          <button
-            onClick={() => navigate('/chat')}
-            className="px-4 py-2 bg-fuchsia-50 hover:bg-fuchsia-100 text-fuchsia-700 rounded-xl text-xs font-bold border border-fuchsia-200 inline-flex items-center gap-1.5"
-          >
-            <MessageSquare className="w-3.5 h-3.5" />
-            <span>Discuss this in Chat</span>
-          </button>
+          <div className="flex items-center justify-center gap-2 pt-1">
+            <button
+              onClick={() => navigate('/chat')}
+              className="px-4 py-2 bg-fuchsia-50 hover:bg-fuchsia-100 text-fuchsia-700 rounded-xl text-xs font-bold border border-fuchsia-200 inline-flex items-center gap-1.5"
+            >
+              <MessageSquare className="w-3.5 h-3.5" />
+              <span>Discuss in Chat</span>
+            </button>
+            <button
+              onClick={handleNextLevel}
+              disabled={isGenerating}
+              className="px-4 py-2 bg-gradient-to-r from-fuchsia-600 to-rose-600 text-white rounded-xl text-xs font-bold shadow-sm inline-flex items-center gap-1.5 active:scale-95"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>{isGenerating ? 'AIRA Level...' : `Level ${(gameState?.level || 1) + 1}`}</span>
+            </button>
+          </div>
         </div>
-      )}
+      ) : myPick ? (
+        <p className="text-xs text-center text-fuchsia-600 font-semibold animate-pulse">
+          Locked in! Waiting for {partnerData?.displayName || 'partner'} to pick their choice...
+        </p>
+      ) : null}
     </div>
   );
 }

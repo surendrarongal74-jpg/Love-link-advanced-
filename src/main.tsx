@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 import App from './App.tsx';
 import { AuthProvider } from './contexts/AuthContext';
 import { CoupleSpaceProvider } from './contexts/CoupleSpaceContext';
+import { LiveNotificationProvider } from './contexts/LiveNotificationContext';
 import { CallProvider } from './contexts/CallContext';
 import './index.css';
 
@@ -11,11 +12,13 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <AuthProvider>
       <CoupleSpaceProvider>
-        <CallProvider>
-          <BrowserRouter>
-            <App />
-          </BrowserRouter>
-        </CallProvider>
+        <LiveNotificationProvider>
+          <CallProvider>
+            <BrowserRouter>
+              <App />
+            </BrowserRouter>
+          </CallProvider>
+        </LiveNotificationProvider>
       </CoupleSpaceProvider>
     </AuthProvider>
   </StrictMode>,

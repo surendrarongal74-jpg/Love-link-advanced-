@@ -6,8 +6,8 @@ import { doc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
 import { handleFirestoreError, OperationType } from '../lib/errorHandler';
 import { BottomNav } from '../components/BottomNav';
 import { motion, AnimatePresence } from 'motion/react';
-import { Heart, RefreshCw, AlertCircle, ArrowRight, User } from 'lucide-react';
-import { generateText } from '../lib/gemini';
+import { Heart, RefreshCw, AlertCircle, ArrowRight, User, Wand2, Sparkles } from 'lucide-react';
+import { generateAiraGameContent } from '../lib/ai';
 
 interface WLMState {
   id: string;
@@ -122,10 +122,13 @@ export function WhoLovesMoreScreen() {
 
   const bothOnline = gameState?.playersOnline?.length === 2;
 
-  const getNewQuestion = async () => {
+  const getNewQuestion = async (level: number = 1) => {
     try {
-      const q = await generateText("Generate a fun, slightly cheeky relationship question for a couple to answer about each other. It should start with 'Who is more likely to...' or 'Who is the...'. Make it one short sentence. NO quotes. Just the question text.");
-      return q.trim();
+      const airaItem = await generateAiraGameContent<{ question: string }>('who-loves-more', level);
+      if (airaItem?.question) {
+        return airaItem.question.trim();
+      }
+      return FALLBACK_QUESTIONS[Math.floor(Math.random() * FALLBACK_QUESTIONS.length)];
     } catch {
       return FALLBACK_QUESTIONS[Math.floor(Math.random() * FALLBACK_QUESTIONS.length)];
     }
@@ -134,7 +137,7 @@ export function WhoLovesMoreScreen() {
   const handleStartGame = async () => {
     if (!docRef) return;
     setIsGenerating(true);
-    const q = await getNewQuestion();
+    const q = await getNewQuestion(1);
     await updateDoc(docRef, {
        status: 'playing',
        currentQuestion: q,
@@ -193,11 +196,12 @@ export function WhoLovesMoreScreen() {
   const nextRound = async () => {
     if (!docRef) return;
     setIsGenerating(true);
-    const q = await getNewQuestion();
+    const nextRoundNum = (gameState?.round || 0) + 1;
+    const q = await getNewQuestion(nextRoundNum);
     await updateDoc(docRef, {
        status: 'playing',
        currentQuestion: q,
-       round: (gameState?.round || 0) + 1,
+       round: nextRoundNum,
        answers: {},
        updatedAt: Date.now()
     });

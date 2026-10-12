@@ -5,8 +5,9 @@ import { db } from '../../lib/firebase';
 import { doc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
 import { handleFirestoreError, OperationType } from '../../lib/errorHandler';
 import { sound } from '../../lib/sound';
+import { generateAiraGameContent } from '../../lib/ai';
 import confetti from 'canvas-confetti';
-import { Sparkles, MapPin, Key, Compass, CheckCircle2, ChevronRight, RefreshCw, AlertCircle } from 'lucide-react';
+import { Sparkles, MapPin, Key, Compass, CheckCircle2, ChevronRight, RefreshCw, AlertCircle, Wand2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface Chapter {
@@ -21,7 +22,7 @@ interface Chapter {
   epilogue: string;
 }
 
-const CHAPTERS: Chapter[] = [
+const FALLBACK_CHAPTERS: Chapter[] = [
   {
     id: 1,
     title: 'The Whispering Lagoon',
@@ -58,9 +59,9 @@ const CHAPTERS: Chapter[] = [
 ];
 
 interface MysteryState {
-  currentChapter: number;
+  currentChapterNum: number;
+  chapterData: Chapter;
   solvedChapters: number[];
-  sharedNotes: string;
   status: 'playing' | 'solved';
 }
 
@@ -70,10 +71,9 @@ export function TwoHeartsMysteryGame() {
   const [gameState, setGameState] = useState<MysteryState | null>(null);
   const [inputCode, setInputCode] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const docRef = space?.id ? doc(db, `coupleSpaces/${space.id}/playhouseGames`, 'two-hearts-mystery') : null;
-
-  // Partner 1 gets A clue, Partner 2 gets B clue
   const isPartnerA = space?.partner1Id === userData?.id;
 
   useEffect(() => {
@@ -90,9 +90,9 @@ export function TwoHeartsMysteryGame() {
         }
       } else {
         const init: MysteryState = {
-          currentChapter: 1,
+          currentChapterNum: 1,
+          chapterData: FALLBACK_CHAPTERS[0],
           solvedChapters: [],
-          sharedNotes: '',
           status: 'playing'
         };
         setDoc(docRef, {
@@ -100,6 +100,7 @@ export function TwoHeartsMysteryGame() {
           coupleSpaceId: space?.id || '',
           gameType: 'two-hearts-mystery',
           status: 'playing',
+          round: 1,
           data: JSON.stringify(init),
           updatedAt: Date.now()
         }).catch(err => handleFirestoreError(err, OperationType.CREATE, `coupleSpaces/${space?.id}/playhouseGames/two-hearts-mystery`));
@@ -109,7 +110,7 @@ export function TwoHeartsMysteryGame() {
     return () => unsubscribe();
   }, [docRef, space?.id]);
 
-  const currentChapter = CHAPTERS.find(c => c.id === (gameState?.currentChapter || 1)) || CHAPTERS[0];
+  const currentChapter = gameState?.chapterData || FALLBACK_CHAPTERS[0];
   const isChapterSolved = gameState?.solvedChapters?.includes(currentChapter.id);
 
   const handleVerifyCode = (e: React.FormEvent) => {
@@ -117,24 +118,23 @@ export function TwoHeartsMysteryGame() {
     if (!docRef || !gameState) return;
     setErrorMsg('');
 
-    const cleaned = inputCode.trim().toUpperCase().replace(/\s+/g, '');
-    if (cleaned === currentChapter.solutionCode) {
+    const cleaned = inputCode.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const targetCode = currentChapter.solutionCode.toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+    if (cleaned === targetCode) {
       sound.playSuccess();
-      confetti({ particleCount: 90, spread: 80, origin: { y: 0.6 } });
+      confetti({ particleCount: 95, spread: 80, origin: { y: 0.6 } });
 
       const newSolved = [...(gameState.solvedChapters || []), currentChapter.id];
-      const nextChapterNum = currentChapter.id < CHAPTERS.length ? currentChapter.id + 1 : currentChapter.id;
-
       const updated: MysteryState = {
         ...gameState,
-        currentChapter: nextChapterNum,
         solvedChapters: Array.from(new Set(newSolved)),
-        status: nextChapterNum === CHAPTERS.length && newSolved.length === CHAPTERS.length ? 'solved' : 'playing'
+        status: 'solved'
       };
 
       updateDoc(docRef, {
         data: JSON.stringify(updated),
-        status: updated.status,
+        status: 'solved',
         updatedAt: Date.now()
       }).catch(console.error);
 
@@ -145,18 +145,42 @@ export function TwoHeartsMysteryGame() {
     }
   };
 
-  const handleResetAdventure = () => {
-    if (!docRef) return;
+  const handleNextAiraChapter = async () => {
+    if (!docRef || !gameState) return;
     sound.playChime();
-    const init: MysteryState = {
-      currentChapter: 1,
-      solvedChapters: [],
-      sharedNotes: '',
+    setIsGenerating(true);
+
+    const nextChapNum = (gameState.currentChapterNum || 1) + 1;
+    let newChapter: Chapter = {
+      ...FALLBACK_CHAPTERS[(nextChapNum - 1) % FALLBACK_CHAPTERS.length],
+      id: nextChapNum
+    };
+
+    try {
+      const airaChapter = await generateAiraGameContent<Omit<Chapter, 'id'>>('two-hearts-mystery', nextChapNum);
+      if (airaChapter?.title && airaChapter?.solutionCode) {
+        newChapter = {
+          ...airaChapter,
+          id: nextChapNum
+        };
+      }
+    } catch (e) {
+      console.warn('AIRA generation failed for mystery:', e);
+    } finally {
+      setIsGenerating(false);
+    }
+
+    const updated: MysteryState = {
+      currentChapterNum: nextChapNum,
+      chapterData: newChapter,
+      solvedChapters: gameState.solvedChapters || [],
       status: 'playing'
     };
+
     updateDoc(docRef, {
-      data: JSON.stringify(init),
+      data: JSON.stringify(updated),
       status: 'playing',
+      round: nextChapNum,
       updatedAt: Date.now()
     }).catch(console.error);
   };
@@ -171,21 +195,26 @@ export function TwoHeartsMysteryGame() {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-gray-800">Chapter {currentChapter.id}: {currentChapter.title}</span>
+              <span className="text-xs font-bold text-gray-800">Chapter {gameState?.currentChapterNum || 1}: {currentChapter.title}</span>
               <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-teal-100 text-teal-800">
                 {currentChapter.location}
               </span>
             </div>
-            <p className="text-[11px] text-gray-500">Co-op Clue Solving Escape</p>
+            <p className="text-[11px] text-gray-500">Unlimited Mystery Chapters by AIRA</p>
           </div>
         </div>
 
         <button
-          onClick={handleResetAdventure}
-          className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-teal-50 text-teal-700 hover:bg-teal-100 border border-teal-200 text-xs font-semibold active:scale-95 transition-all"
+          onClick={handleNextAiraChapter}
+          disabled={isGenerating}
+          className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-teal-50 text-teal-700 hover:bg-teal-100 border border-teal-200 text-xs font-semibold active:scale-95 transition-all disabled:opacity-50"
         >
-          <RefreshCw className="w-3.5 h-3.5" />
-          <span>Restart</span>
+          {isGenerating ? (
+            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+          ) : (
+            <Wand2 className="w-3.5 h-3.5" />
+          )}
+          <span>{isGenerating ? 'AIRA Story...' : 'New Chapter'}</span>
         </button>
       </div>
 
@@ -196,36 +225,38 @@ export function TwoHeartsMysteryGame() {
         <div className="space-y-1">
           <span className="text-[10px] font-bold text-teal-300 uppercase tracking-widest flex items-center gap-1">
             <Compass className="w-3.5 h-3.5" />
-            <span>Story Chapter #{currentChapter.id}</span>
+            <span>Story Chapter #{gameState?.currentChapterNum || 1}</span>
           </span>
-          <h2 className="text-base font-serif font-bold text-teal-50">{currentChapter.title}</h2>
-          <p className="text-xs text-teal-100/90 leading-relaxed italic">
+          <h2 className="text-lg font-serif font-bold text-white drop-shadow-xs">
+            {currentChapter.title}
+          </h2>
+          <p className="text-xs text-slate-300 leading-relaxed italic">
             "{currentChapter.storyIntro}"
           </p>
         </div>
 
-        {/* Private Clue Compartment */}
-        <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-teal-300/30 space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-amber-300 flex items-center gap-1">
-              <Key className="w-3.5 h-3.5" />
-              <span>YOUR SECRET CLUE ({isPartnerA ? 'Partner A' : 'Partner B'}):</span>
+        {/* Asymmetric Clue Box */}
+        <div className="p-4 rounded-2xl bg-white/10 backdrop-blur-md border border-white/15 space-y-2">
+          <div className="flex items-center justify-between text-xs font-bold text-teal-200">
+            <span className="flex items-center gap-1.5">
+              <Key className="w-3.5 h-3.5 text-amber-300" />
+              <span>Your Private Half of the Clue:</span>
             </span>
-            <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full text-teal-100">
-              Tell Partner via Chat or Voice
+            <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full text-white">
+              {isPartnerA ? 'Partner A' : 'Partner B'}
             </span>
           </div>
-          <p className="text-xs text-white font-medium p-2 bg-black/25 rounded-xl border border-white/10 leading-relaxed">
+          <p className="text-xs font-medium text-amber-100 bg-black/20 p-3 rounded-xl border border-white/10 leading-relaxed">
             {isPartnerA ? currentChapter.partnerAClue : currentChapter.partnerBClue}
           </p>
-          <p className="text-[11px] text-teal-200/80 italic">
-            💡 {partnerData?.displayName || 'Your partner'} has the other missing half of this riddle on their phone!
+          <p className="text-[10px] text-slate-400 italic text-center">
+            🔒 Your partner sees the other half of this riddle! Call or message them to put your clues together.
           </p>
         </div>
 
-        {/* Passcode Chamber */}
-        <div className="bg-black/30 rounded-2xl p-4 border border-teal-500/30 space-y-3">
-          <p className="text-xs font-semibold text-teal-200">
+        {/* Riddle question */}
+        <div className="space-y-2 pt-1">
+          <p className="text-xs font-semibold text-slate-200">
             {currentChapter.riddleQuestion}
           </p>
           
@@ -234,52 +265,43 @@ export function TwoHeartsMysteryGame() {
               type="text"
               value={inputCode}
               onChange={(e) => setInputCode(e.target.value)}
-              placeholder="e.g. PASSION2026"
-              className="flex-1 px-3.5 py-2.5 bg-white/15 border border-teal-300/40 rounded-xl text-xs text-white placeholder-teal-200/50 uppercase tracking-wider focus:outline-none focus:ring-2 focus:ring-teal-400"
+              placeholder="Enter shared passcode..."
+              className="flex-1 px-3.5 py-2.5 bg-black/30 border border-white/20 rounded-xl text-xs text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-400 uppercase tracking-wider"
             />
             <button
               type="submit"
               disabled={!inputCode.trim()}
-              className="px-5 py-2.5 bg-gradient-to-r from-teal-400 to-emerald-500 text-teal-950 font-bold text-xs rounded-xl shadow-md disabled:opacity-40 active:scale-95 transition-all flex items-center gap-1"
+              className="px-4 py-2.5 bg-gradient-to-r from-teal-500 to-indigo-500 hover:from-teal-600 hover:to-indigo-600 text-white font-bold text-xs rounded-xl transition-all shadow-md active:scale-95 disabled:opacity-40"
             >
-              <span>Unlock</span>
-              <ChevronRight className="w-4 h-4" />
+              Unlock
             </button>
           </form>
 
           {errorMsg && (
-            <p className="text-xs text-rose-300 font-semibold flex items-center gap-1 mt-1">
+            <p className="text-xs text-rose-300 flex items-center gap-1 font-medium">
               <AlertCircle className="w-3.5 h-3.5 shrink-0" />
               <span>{errorMsg}</span>
             </p>
           )}
-        </div>
-      </div>
 
-      {/* Chapters Map & Progress */}
-      <div className="bg-white rounded-2xl p-4 border border-teal-100 shadow-sm space-y-3">
-        <span className="text-xs font-bold text-gray-800 uppercase tracking-wider">Adventure Journey</span>
-        <div className="grid grid-cols-3 gap-2">
-          {CHAPTERS.map((ch) => {
-            const isCompleted = gameState?.solvedChapters?.includes(ch.id);
-            const isCurrent = currentChapter.id === ch.id;
-            return (
-              <div
-                key={ch.id}
-                className={`p-3 rounded-xl border text-center text-xs space-y-1 transition-all ${
-                  isCompleted
-                    ? 'bg-emerald-50 border-emerald-300 text-emerald-800 font-bold'
-                    : isCurrent
-                    ? 'bg-teal-50 border-teal-400 text-teal-900 font-semibold shadow-2xs'
-                    : 'bg-gray-50 border-gray-200 text-gray-400'
-                }`}
+          {isChapterSolved && (
+            <div className="p-3.5 bg-emerald-500/20 border border-emerald-400/40 rounded-2xl text-xs text-emerald-200 space-y-2">
+              <p className="font-bold flex items-center gap-1 text-emerald-300">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" /> Chapter Solved!
+              </p>
+              <p className="italic text-[11px] leading-relaxed">
+                "{currentChapter.epilogue}"
+              </p>
+              <button
+                onClick={handleNextAiraChapter}
+                disabled={isGenerating}
+                className="w-full py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 flex items-center justify-center gap-1"
               >
-                <span className="block text-base">{isCompleted ? '✅' : isCurrent ? '📍' : '🔒'}</span>
-                <span className="block text-[11px] font-bold">Ch. {ch.id}</span>
-                <span className="block text-[10px] truncate">{ch.location}</span>
-              </div>
-            );
-          })}
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>{isGenerating ? 'AIRA Unfolding Chapter...' : `Embark on Chapter ${(gameState?.currentChapterNum || 1) + 1}`}</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>

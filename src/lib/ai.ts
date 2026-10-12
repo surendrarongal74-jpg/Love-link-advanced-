@@ -69,3 +69,59 @@ export async function analyzeMoodAndSuggestAction(myMood: string, partnerMood: s
     };
   }
 }
+
+export async function generateAiraGameContent<T = any>(
+  gameType: string,
+  level: number = 1,
+  options?: { partnerName?: string; userName?: string; currentTopic?: string }
+): Promise<T | null> {
+  try {
+    const res = await fetch('/api/aira/game-content', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        gameType,
+        level,
+        partnerName: options?.partnerName || 'Partner',
+        userName: options?.userName || 'You',
+        currentTopic: options?.currentTopic || 'general'
+      }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    return data.item as T;
+  } catch (err) {
+    console.error(`Failed to generate AIRA content for ${gameType}:`, err);
+    return null;
+  }
+}
+
+export interface VisionBoardIdea {
+  title: string;
+  description: string;
+  category: string;
+  targetYear: string;
+  suggestedEmoji: string;
+  imageUrl?: string;
+}
+
+export async function generateVisionBoardIdeas(
+  category: string = 'All',
+  existingThemes: string[] = [],
+  partner1Name?: string,
+  partner2Name?: string
+): Promise<VisionBoardIdea[]> {
+  try {
+    const res = await fetch('/api/gemini/vision-board-ideas', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ category, existingThemes, partner1Name, partner2Name }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    return data.ideas || [];
+  } catch (err) {
+    console.error("Failed to generate vision board ideas", err);
+    return [];
+  }
+}

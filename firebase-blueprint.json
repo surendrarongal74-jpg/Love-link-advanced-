@@ -8,7 +8,11 @@
         "id": { "type": "string" },
         "email": { "type": "string" },
         "displayName": { "type": "string" },
-        "coupleSpaceId": { "type": "string", "description": "ID of the shared couple space" }
+        "coupleSpaceId": { "type": "string", "description": "ID of the shared couple space" },
+        "mood": { "type": "string" },
+        "loveLanguage": { "type": "string" },
+        "permissionsGranted": { "type": "boolean" },
+        "permissionsGrantedAt": { "type": "integer" }
       },
       "required": ["id", "email"]
     },
@@ -101,6 +105,27 @@
         "updatedAt": { "type": "integer" }
       },
       "required": ["id", "coupleSpaceId", "gameType", "status", "updatedAt"]
+    },
+    "VisionBoardItem": {
+      "title": "Shared Vision Board Item",
+      "description": "A shared future dream, goal, or life vision item with photos and notes",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "coupleSpaceId": { "type": "string" },
+        "creatorId": { "type": "string" },
+        "creatorName": { "type": "string" },
+        "category": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "targetYear": { "type": "string" },
+        "completed": { "type": "boolean" },
+        "likes": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "integer" },
+        "updatedAt": { "type": "integer" }
+      },
+      "required": ["id", "coupleSpaceId", "creatorId", "creatorName", "category", "title", "createdAt", "updatedAt"]
     }
   },
   "firestore": {
@@ -131,6 +156,10 @@
     "/coupleSpaces/{spaceId}/playhouseGames/{gameId}": {
       "schema": { "$ref": "#/entities/LoveversePlayhouseGame" },
       "description": "Real-time synchronized game state for Loveverse Playhouse"
+    },
+    "/coupleSpaces/{spaceId}/visionBoard/{itemId}": {
+      "schema": { "$ref": "#/entities/VisionBoardItem" },
+      "description": "Shared vision board items for future goals, dreams, and plans"
     }
   }
 }

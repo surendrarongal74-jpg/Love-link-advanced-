@@ -9,7 +9,7 @@ import { Play, CheckCircle2, ChevronLeft, Star, Sparkles, Image as ImageIcon, Vi
 import { motion } from 'motion/react';
 import { Link } from 'react-router-dom';
 import confetti from 'canvas-confetti';
-import { generateDailyQuestion } from '../lib/ai';
+import { generateDailyQuestion, generateAiraGameContent } from '../lib/ai';
 import { DailyQuestionAttachmentPreview, QuestionAttachmentItem, processFileToAttachment } from '../components/DailyQuestionAttachmentPreview';
 import { sound } from '../lib/sound';
 
@@ -142,7 +142,13 @@ export function GameScreen() {
       const msgsQuery = query(collection(db, `coupleSpaces/${space.id}/messages`), orderBy('createdAt', 'desc'), limit(15));
       const smap = await getDocs(msgsQuery);
       const chatHistory = smap.docs.reverse().map(d => `${d.data().senderId === userData.id ? 'Me' : 'Partner'}: ${d.data().content}`);
-      randomQ = await generateDailyQuestion(chatHistory);
+      
+      const airaRes = await generateAiraGameContent<{ question: string }>('couple-quiz', (pastGames.length || 0) + 1);
+      if (airaRes?.question) {
+        randomQ = airaRes.question;
+      } else {
+        randomQ = await generateDailyQuestion(chatHistory);
+      }
     } catch(err) {
       console.error("Failed to generate AI question", err);
     }

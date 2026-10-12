@@ -21,9 +21,11 @@ service cloud.firestore {
       let validSpaceId = (isValidString(data.coupleSpaceId, 128) || data.coupleSpaceId == "");
       let validMood = !('mood' in data) || isValidString(data.mood, 50);
       let validLoveLanguage = !('loveLanguage' in data) || isValidString(data.loveLanguage, 50);
-      // Validating size. Base 4 + optional mood (1) + optional loveLanguage (1) = max 6
-      let validSize = data.keys().size() >= 4 && data.keys().size() <= 6;
-      return hasBase && validSize && validId && validEmail && validDisplayName && validSpaceId && validMood && validLoveLanguage;
+      let validPerms = !('permissionsGranted' in data) || data.permissionsGranted is bool;
+      let validPermsAt = !('permissionsGrantedAt' in data) || data.permissionsGrantedAt is int;
+      // Validating size. Base 4 + optional mood (1) + optional loveLanguage (1) + optional permissionsGranted (1) + optional permissionsGrantedAt (1) = max 8
+      let validSize = data.keys().size() >= 4 && data.keys().size() <= 8;
+      return hasBase && validSize && validId && validEmail && validDisplayName && validSpaceId && validMood && validLoveLanguage && validPerms && validPermsAt;
     }
 
     // CoupleSpace Blueprints
@@ -51,7 +53,7 @@ service cloud.firestore {
       allow list: if isSignedIn() && resource.data.id == request.auth.uid;
       allow create: if isSignedIn() && isValidUser(incoming()) && request.auth.uid == userId;
       allow update: if isSignedIn() && request.auth.uid == userId && (
-        (incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'coupleSpaceId', 'mood', 'loveLanguage']))
+        (incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'coupleSpaceId', 'mood', 'loveLanguage', 'permissionsGranted', 'permissionsGrantedAt']))
       );
     }
 
@@ -342,6 +344,29 @@ service cloud.firestore {
       }
       allow list, get: if isSignedIn() && isCoupleMember(spaceId);
       allow create, update: if isSignedIn() && isCoupleMember(spaceId) && isValidQuickSnap(incoming());
+      allow delete: if isSignedIn() && isCoupleMember(spaceId);
+    }
+    match /coupleSpaces/{spaceId}/visionBoard/{itemId} {
+      function isValidVisionBoardItem(data) {
+        return data.keys().hasAll(['id', 'coupleSpaceId', 'creatorId', 'creatorName', 'category', 'title', 'createdAt', 'updatedAt']) &&
+               data.keys().size() <= 12 &&
+               isValidString(data.id, 128) &&
+               isValidString(data.coupleSpaceId, 128) && data.coupleSpaceId == spaceId &&
+               isValidString(data.creatorId, 128) &&
+               isValidString(data.creatorName, 128) &&
+               isValidString(data.category, 64) &&
+               isValidString(data.title, 256) &&
+               (!('description' in data) || isValidString(data.description, 2048)) &&
+               (!('imageUrl' in data) || data.imageUrl is string && data.imageUrl.size() <= 2000000) &&
+               (!('targetYear' in data) || isValidString(data.targetYear, 64)) &&
+               (!('completed' in data) || data.completed is bool) &&
+               (!('likes' in data) || data.likes is list) &&
+               data.createdAt is int &&
+               data.updatedAt is int;
+      }
+      allow list, get: if isSignedIn() && isCoupleMember(spaceId);
+      allow create: if isSignedIn() && isCoupleMember(spaceId) && isValidVisionBoardItem(incoming()) && incoming().creatorId == request.auth.uid;
+      allow update: if isSignedIn() && isCoupleMember(spaceId) && isValidVisionBoardItem(incoming());
       allow delete: if isSignedIn() && isCoupleMember(spaceId);
     }
   }

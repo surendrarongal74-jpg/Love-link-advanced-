@@ -5,10 +5,17 @@ import { db } from '../../lib/firebase';
 import { doc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
 import { handleFirestoreError, OperationType } from '../../lib/errorHandler';
 import { sound } from '../../lib/sound';
+import { generateAiraGameContent } from '../../lib/ai';
 import confetti from 'canvas-confetti';
-import { Sparkles, RefreshCw, Send, HelpCircle, CheckCircle2 } from 'lucide-react';
+import { Sparkles, RefreshCw, Send, HelpCircle, CheckCircle2, Wand2 } from 'lucide-react';
 
-const CIPHERS = [
+interface CipherItem {
+  emoji: string;
+  answer: string;
+  hint: string;
+}
+
+const FALLBACK_CIPHERS: CipherItem[] = [
   { emoji: '🍕 🛋️ 🎬 🫂', answer: 'Pizza and movie cuddling', hint: 'Cozy night in with dinner and a screen' },
   { emoji: '☕ 🥐 🌅 👫', answer: 'Morning coffee and bakery walk', hint: 'Sunrise breakfast together' },
   { emoji: '🚗 🏔️ ⛺ ✨', answer: 'Roadtrip mountain camping under stars', hint: 'Adventure weekend getaway' },
@@ -17,7 +24,8 @@ const CIPHERS = [
 ];
 
 interface EmojiCipherState {
-  cipherIndex: number;
+  level: number;
+  currentCipher: CipherItem;
   guesses: Array<{ senderId: string; text: string; correct: boolean }>;
   solved: boolean;
 }
@@ -28,6 +36,7 @@ export function EmojiCipherGame() {
   const [gameState, setGameState] = useState<EmojiCipherState | null>(null);
   const [guessInput, setGuessInput] = useState('');
   const [showHint, setShowHint] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const docRef = space?.id ? doc(db, `coupleSpaces/${space.id}/playhouseGames`, 'emoji-decoder') : null;
 
@@ -45,7 +54,8 @@ export function EmojiCipherGame() {
         }
       } else {
         const init: EmojiCipherState = {
-          cipherIndex: 0,
+          level: 1,
+          currentCipher: FALLBACK_CIPHERS[0],
           guesses: [],
           solved: false
         };
@@ -54,6 +64,7 @@ export function EmojiCipherGame() {
           coupleSpaceId: space?.id || '',
           gameType: 'emoji-decoder',
           status: 'playing',
+          round: 1,
           data: JSON.stringify(init),
           updatedAt: Date.now()
         }).catch(err => handleFirestoreError(err, OperationType.CREATE, `coupleSpaces/${space?.id}/playhouseGames/emoji-decoder`));
@@ -63,7 +74,7 @@ export function EmojiCipherGame() {
     return () => unsubscribe();
   }, [docRef, space?.id]);
 
-  const current = CIPHERS[(gameState?.cipherIndex || 0) % CIPHERS.length];
+  const current = gameState?.currentCipher || FALLBACK_CIPHERS[0];
 
   const handleGuess = (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,8 +82,11 @@ export function EmojiCipherGame() {
 
     sound.playPop();
     const cleaned = guessInput.trim().toLowerCase();
+    const answerWords = current.answer.toLowerCase().split(/\s+/).filter(w => w.length > 3);
+    const hasWordMatch = answerWords.some(w => cleaned.includes(w));
     const isCorrect = cleaned.includes(current.answer.toLowerCase().slice(0, 8)) ||
-                      current.answer.toLowerCase().includes(cleaned);
+                      current.answer.toLowerCase().includes(cleaned) ||
+                      hasWordMatch;
 
     const newGuesses = [
       ...(gameState.guesses || []),
@@ -99,19 +113,37 @@ export function EmojiCipherGame() {
     setGuessInput('');
   };
 
-  const handleNextCipher = () => {
+  const handleNextLevel = async () => {
     if (!docRef || !gameState) return;
     sound.playChime();
     setShowHint(false);
-    const nextIdx = (gameState.cipherIndex + 1) % CIPHERS.length;
-    const init: EmojiCipherState = {
-      cipherIndex: nextIdx,
+    setIsGenerating(true);
+
+    const nextLevel = (gameState.level || 1) + 1;
+    let nextCipher = FALLBACK_CIPHERS[nextLevel % FALLBACK_CIPHERS.length];
+
+    try {
+      const airaItem = await generateAiraGameContent<CipherItem>('emoji-decoder', nextLevel);
+      if (airaItem?.emoji && airaItem?.answer) {
+        nextCipher = airaItem;
+      }
+    } catch (e) {
+      console.warn('AIRA generation failed for emoji-decoder:', e);
+    } finally {
+      setIsGenerating(false);
+    }
+
+    const updated: EmojiCipherState = {
+      level: nextLevel,
+      currentCipher: nextCipher,
       guesses: [],
       solved: false
     };
+
     updateDoc(docRef, {
-      data: JSON.stringify(init),
+      data: JSON.stringify(updated),
       status: 'playing',
+      round: nextLevel,
       updatedAt: Date.now()
     }).catch(console.error);
   };
@@ -127,7 +159,7 @@ export function EmojiCipherGame() {
           <div>
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold text-gray-800">
-                Puzzle #{((gameState?.cipherIndex || 0) % CIPHERS.length) + 1}
+                Emoji Cipher Level {gameState?.level || 1}
               </span>
               {gameState?.solved && (
                 <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full">
@@ -140,17 +172,24 @@ export function EmojiCipherGame() {
         </div>
 
         <button
-          onClick={handleNextCipher}
-          className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200 text-xs font-semibold active:scale-95 transition-all"
+          onClick={handleNextLevel}
+          disabled={isGenerating}
+          className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200 text-xs font-semibold active:scale-95 transition-all disabled:opacity-50"
         >
-          <RefreshCw className="w-3.5 h-3.5" />
-          <span>Next Riddle</span>
+          {isGenerating ? (
+            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+          ) : (
+            <Wand2 className="w-3.5 h-3.5" />
+          )}
+          <span>{isGenerating ? 'AIRA Riddle...' : 'Next Level'}</span>
         </button>
       </div>
 
       {/* Emoji Chamber */}
       <div className="bg-gradient-to-br from-amber-50 via-white to-orange-50 rounded-3xl p-6 border border-amber-200 shadow-md text-center space-y-4">
-        <span className="text-[10px] font-bold uppercase tracking-widest text-amber-600 block">Secret Emoji Sequence</span>
+        <span className="text-[10px] font-bold uppercase tracking-widest text-amber-600 block">
+          AIRA Emoji Level {gameState?.level || 1}
+        </span>
         <div className="text-4xl py-3 tracking-widest filter drop-shadow-sm">
           {current.emoji}
         </div>
@@ -175,6 +214,25 @@ export function EmojiCipherGame() {
           </div>
         )}
       </div>
+
+      {/* Live Guesses stream */}
+      {Boolean(gameState?.guesses && gameState.guesses.length > 0) && (
+        <div className="bg-white/80 rounded-2xl p-3 border border-amber-100 space-y-1.5 max-h-28 overflow-y-auto">
+          {gameState?.guesses.map((g, idx) => (
+            <div
+              key={idx}
+              className={`text-xs p-2 rounded-xl flex items-center justify-between ${
+                g.correct ? 'bg-emerald-50 text-emerald-800 font-bold' : 'bg-amber-50/50 text-gray-700'
+              }`}
+            >
+              <span>
+                <strong>{g.senderId === userData?.id ? 'You' : (partnerData?.displayName || 'Partner')}:</strong> {g.text}
+              </span>
+              {g.correct && <CheckCircle2 className="w-4 h-4 text-emerald-600" />}
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Input Form */}
       <form onSubmit={handleGuess} className="bg-white p-3 rounded-2xl border border-amber-200 shadow-sm flex gap-2">

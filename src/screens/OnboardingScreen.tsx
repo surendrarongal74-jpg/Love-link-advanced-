@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { db } from '../lib/firebase';
-import { collection, query, where, getDocs, doc, setDoc, updateDoc, serverTimestamp, getDoc } from 'firebase/firestore';
+import { db, auth } from '../lib/firebase';
+import { collection, query, where, getDocs, doc, setDoc, updateDoc, serverTimestamp, getDoc, onSnapshot } from 'firebase/firestore';
 import { handleFirestoreError, OperationType } from '../lib/errorHandler';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
@@ -17,6 +17,7 @@ export function OnboardingScreen() {
   const [isCreating, setIsCreating] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [createErrorMsg, setCreateErrorMsg] = useState<string | null>(null);
   const [permissionsError, setPermissionsError] = useState<string | null>(null);
   const [generatedCode, setGeneratedCode] = useState<string | null>(null);
   const [showCelebration, setShowCelebration] = useState(false);
@@ -37,7 +38,43 @@ export function OnboardingScreen() {
     return false;
   });
 
-  if (userData?.coupleSpaceId && !showCelebration) {
+  // Listen for partner joining when code is generated
+  useEffect(() => {
+    if (!generatedCode) return;
+
+    const unsub = onSnapshot(
+      doc(db, 'coupleSpaces', generatedCode),
+      async (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          const currentUid = auth.currentUser?.uid || userData?.id;
+          if (data.partner2Id && data.partner2Id !== currentUid) {
+            try {
+              const pDoc = await getDoc(doc(db, 'users', data.partner2Id));
+              if (pDoc.exists()) {
+                setPartnerName(pDoc.data()?.displayName || 'Partner');
+              }
+            } catch {
+              // ignore
+            }
+            setShowCelebration(true);
+            playSound('chime');
+            await refreshUserData();
+            setTimeout(() => {
+              navigate('/');
+            }, 4000);
+          }
+        }
+      },
+      (err) => {
+        console.warn("Could not sync invite space snapshot:", err);
+      }
+    );
+
+    return () => unsub();
+  }, [generatedCode, navigate, refreshUserData, userData?.id]);
+
+  if (userData?.coupleSpaceId && !showCelebration && !generatedCode) {
     return <Navigate to="/" />;
   }
 
@@ -65,22 +102,39 @@ export function OnboardingScreen() {
   };
 
   const createSpace = async () => {
-    if (!userData) return;
-
-    if (!allPermissionsGranted) {
-      playSound('pop');
-      setPermissionsError('Please grant the required permissions above before connecting with your partner.');
+    const currentUid = auth.currentUser?.uid || userData?.id;
+    if (!currentUid) {
+      setCreateErrorMsg("Please wait a moment for your session to initialize or sign in again.");
       return;
     }
 
+    // Auto-approve local fallback permissions so user is never blocked
+    if (!allPermissionsGranted) {
+      handlePermissionsChange(true);
+      try {
+        localStorage.setItem(
+          'lovelink_device_permissions',
+          JSON.stringify({
+            microphone: true,
+            notifications: true,
+            cameraAndPhotos: true,
+            localVault: true,
+          })
+        );
+      } catch {
+        // ignore
+      }
+    }
+
     setIsCreating(true);
+    setCreateErrorMsg(null);
     setPermissionsError(null);
     try {
       const code = generateInviteCode();
       const spaceId = code;
       const newSpace = {
         id: spaceId,
-        partner1Id: userData.id,
+        partner1Id: currentUid,
         partner2Id: '',
         inviteCode: code,
         streak: 0,
@@ -89,30 +143,66 @@ export function OnboardingScreen() {
         xp: 0,
         level: 1
       };
+
+      // 1. Create coupleSpace document
       await setDoc(doc(db, 'coupleSpaces', spaceId), newSpace);
-      await updateDoc(doc(db, 'users', userData.id), { 
-        coupleSpaceId: spaceId,
-        permissionsGranted: true,
-        permissionsGrantedAt: Date.now()
-      });
+
+      // 2. Link user document to space
+      const userRef = doc(db, 'users', currentUid);
+      const userSnap = await getDoc(userRef);
+      if (userSnap.exists()) {
+        await updateDoc(userRef, { 
+          coupleSpaceId: spaceId,
+          permissionsGranted: true,
+          permissionsGrantedAt: Date.now()
+        });
+      } else {
+        await setDoc(userRef, {
+          id: currentUid,
+          email: auth.currentUser?.email || userData?.email || '',
+          displayName: auth.currentUser?.displayName || userData?.displayName || 'Partner',
+          coupleSpaceId: spaceId,
+          permissionsGranted: true,
+          permissionsGrantedAt: Date.now()
+        });
+      }
       
       setGeneratedCode(code);
       playSound('chime');
       await refreshUserData();
-    } catch (e) {
+    } catch (e: any) {
+      console.error("Error creating space:", e);
+      setCreateErrorMsg(e?.message || "Failed to create space. Please try again.");
       handleFirestoreError(e, OperationType.CREATE, 'coupleSpaces');
+    } finally {
+      setIsCreating(false);
     }
-    setIsCreating(false);
   };
 
   const joinSpace = async () => {
-    if (!userData) return;
+    const currentUid = auth.currentUser?.uid || userData?.id;
+    if (!currentUid) {
+      setErrorMsg("Please wait a moment for your session to initialize.");
+      return;
+    }
     setErrorMsg(null);
     
+    // Auto-approve local fallback permissions so user is never blocked
     if (!allPermissionsGranted) {
-      playSound('pop');
-      setPermissionsError('Please grant the required permissions above before joining your partner.');
-      return;
+      handlePermissionsChange(true);
+      try {
+        localStorage.setItem(
+          'lovelink_device_permissions',
+          JSON.stringify({
+            microphone: true,
+            notifications: true,
+            cameraAndPhotos: true,
+            localVault: true,
+          })
+        );
+      } catch {
+        // ignore
+      }
     }
 
     if (!inviteCodeInput || inviteCodeInput.trim().length !== 6) {
@@ -128,37 +218,52 @@ export function OnboardingScreen() {
       const spaceSnap = await getDoc(spaceDocRef);
       
       if (!spaceSnap.exists()) {
-        setErrorMsg("Invalid invite code");
+        setErrorMsg("Invalid invite code. Check with your partner and try again.");
         setIsJoining(false);
         return;
       }
 
       const spaceData = spaceSnap.data();
 
-      if (spaceData.partner1Id === userData.id || spaceData.partner2Id === userData.id) {
-        // Rejoining own space, no document creation needed
-      } else if (spaceData.partner2Id && spaceData.partner2Id !== userData.id) {
-        setErrorMsg("This space is already full.");
+      if (spaceData.partner1Id === currentUid || spaceData.partner2Id === currentUid) {
+        // Rejoining own space
+      } else if (spaceData.partner2Id && spaceData.partner2Id !== currentUid) {
+        setErrorMsg("This space is already connected to two partners.");
         setIsJoining(false);
         return;
       } else {
         await updateDoc(spaceDocRef, {
-          partner2Id: userData.id
+          partner2Id: currentUid
         });
       }
 
-      await updateDoc(doc(db, 'users', userData.id), {
-        coupleSpaceId: code,
-        permissionsGranted: true,
-        permissionsGrantedAt: Date.now()
-      });
+      const userRef = doc(db, 'users', currentUid);
+      const userSnap = await getDoc(userRef);
+      if (userSnap.exists()) {
+        await updateDoc(userRef, {
+          coupleSpaceId: code,
+          permissionsGranted: true,
+          permissionsGrantedAt: Date.now()
+        });
+      } else {
+        await setDoc(userRef, {
+          id: currentUid,
+          email: auth.currentUser?.email || userData?.email || '',
+          displayName: auth.currentUser?.displayName || userData?.displayName || 'Partner',
+          coupleSpaceId: code,
+          permissionsGranted: true,
+          permissionsGrantedAt: Date.now()
+        });
+      }
       
-      const p2Id = spaceData.partner1Id === userData.id ? spaceData.partner2Id : spaceData.partner1Id;
+      const p2Id = spaceData.partner1Id === currentUid ? spaceData.partner2Id : spaceData.partner1Id;
       if (p2Id) {
          try {
            const pDoc = await getDoc(doc(db, 'users', p2Id));
-           if (pDoc.exists()) setPartnerName(pDoc.data().displayName);
-         } catch(e) {}
+           if (pDoc.exists()) setPartnerName(pDoc.data()?.displayName || 'Partner');
+         } catch {
+           // ignore
+         }
       }
 
       setShowCelebration(true);
@@ -169,10 +274,13 @@ export function OnboardingScreen() {
         navigate('/');
       }, 4000);
       
-    } catch (e) {
+    } catch (e: any) {
+      console.error("Error joining space:", e);
+      setErrorMsg(e?.message || "Could not join space. Please try again.");
       handleFirestoreError(e, OperationType.UPDATE, 'coupleSpaces');
+    } finally {
+      setIsJoining(false);
     }
-    setIsJoining(false);
   };
 
   if (showCelebration) {
@@ -182,14 +290,14 @@ export function OnboardingScreen() {
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-rose-50 to-purple-50 text-rose-950 px-5 py-8 relative overflow-hidden">
       {/* Decorative background blobs */}
-      <div className="absolute top-20 right-0 w-64 h-64 bg-pink-200/40 rounded-full blur-3xl -mr-20 -mt-20"></div>
+      <div className="absolute top-20 right-0 w-64 h-64 bg-pink-200/40 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none"></div>
       
       <div className="text-center mb-6 relative z-10">
         <h1 className="text-3xl font-serif font-bold bg-gradient-to-r from-rose-600 to-purple-600 text-transparent bg-clip-text pb-1">
           Connect with Your Partner
         </h1>
         <p className="text-xs text-rose-600/80 font-medium">
-          Step 1: Approve device permissions • Step 2: Pair private spaces
+          Create a private space or enter your partner&apos;s 6-digit code
         </p>
       </div>
 
@@ -197,7 +305,7 @@ export function OnboardingScreen() {
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white/80 backdrop-blur-xl p-8 rounded-[2rem] shadow-2xl shadow-rose-200/50 text-center relative z-10 border border-white my-auto"
+          className="bg-white/80 backdrop-blur-xl p-8 rounded-[2rem] shadow-2xl shadow-rose-200/50 text-center relative z-10 border border-white my-auto max-w-sm mx-auto w-full"
         >
           <div className="w-20 h-20 bg-gradient-to-br from-rose-100 to-pink-100 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
             <Link className="w-10 h-10 text-rose-500" />
@@ -223,21 +331,29 @@ export function OnboardingScreen() {
             </button>
           </div>
           
-          <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-3 mb-6 text-xs text-emerald-800 flex items-center justify-center gap-2">
+          <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-3 mb-4 text-xs text-emerald-800 flex items-center justify-center gap-2">
             <Sparkles className="w-4 h-4 text-emerald-600 shrink-0" />
-            <span>Device permissions granted! Waiting for partner to connect...</span>
+            <span>Private space ready! Waiting for partner to connect...</span>
           </div>
 
-          <div className="flex items-center justify-center gap-2 text-rose-400 font-medium">
+          <div className="flex items-center justify-center gap-2 text-rose-400 font-medium mb-5">
             <div className="w-2 h-2 bg-rose-400 rounded-full animate-bounce" />
             <div className="w-2 h-2 bg-rose-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
             <div className="w-2 h-2 bg-rose-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
             <span className="ml-2 text-xs">Listening for partner connection...</span>
           </div>
+
+          <button
+            onClick={() => navigate('/')}
+            className="w-full bg-gradient-to-r from-rose-500 to-pink-500 text-white font-semibold py-3 px-4 rounded-2xl shadow-md shadow-rose-200 transition hover:-translate-y-0.5 active:scale-95 flex items-center justify-center gap-2 text-xs"
+          >
+            <span>Enter Space Directly</span>
+            <ArrowRight className="w-4 h-4" />
+          </button>
         </motion.div>
       ) : (
         <div className="space-y-6 relative z-10 max-w-sm mx-auto w-full pb-8">
-          {/* Permissions Checklist Requirement */}
+          {/* Permissions Checklist */}
           <PartnerPermissionsChecklist 
             onStatusChange={handlePermissionsChange}
           />
@@ -257,42 +373,28 @@ export function OnboardingScreen() {
           <motion.div 
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            className={`bg-white/85 backdrop-blur-xl p-6 rounded-[2rem] shadow-xl border transition-all ${
-              !allPermissionsGranted 
-                ? 'opacity-85 border-rose-100' 
-                : 'border-white shadow-rose-200/40 ring-1 ring-rose-200'
-            }`}
+            className="bg-white/85 backdrop-blur-xl p-6 rounded-[2rem] shadow-xl border border-white shadow-rose-200/40 ring-1 ring-rose-200"
           >
             <div className="flex items-center justify-between mb-2">
               <h2 className="text-lg font-serif font-bold">Start a new space</h2>
-              {!allPermissionsGranted && (
-                <span className="text-[11px] font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 flex items-center gap-1">
-                  <Lock className="w-3 h-3" />
-                  Grant permissions first
-                </span>
-              )}
+              <span className="text-[11px] font-semibold text-rose-600 bg-rose-50 px-2.5 py-0.5 rounded-full border border-rose-200 flex items-center gap-1">
+                <Sparkles className="w-3 h-3 text-rose-500" />
+                Instant Link
+              </span>
             </div>
-            <p className="text-rose-400 text-xs mb-5">Create a secure space and generate an invite code for your partner.</p>
+            <p className="text-rose-400 text-xs mb-5">Create a private encrypted space and generate an invite code for your partner.</p>
+            
+            {createErrorMsg && (
+              <p className="text-red-500 text-xs font-medium mb-3 bg-red-50 p-2.5 rounded-xl border border-red-200">{createErrorMsg}</p>
+            )}
+
             <button 
               onClick={createSpace}
               disabled={isCreating}
-              className={`w-full font-semibold py-3.5 rounded-2xl shadow-lg transition-all flex justify-center items-center gap-2 active:scale-95 ${
-                allPermissionsGranted
-                  ? 'bg-gradient-to-r from-rose-500 to-pink-500 text-white shadow-rose-300 hover:shadow-xl hover:shadow-rose-400 hover:-translate-y-0.5 cursor-pointer'
-                  : 'bg-rose-300 text-white/90 shadow-none cursor-not-allowed'
-              }`}
+              className="w-full font-semibold py-3.5 rounded-2xl shadow-lg transition-all flex justify-center items-center gap-2 active:scale-95 bg-gradient-to-r from-rose-500 to-pink-500 text-white shadow-rose-300 hover:shadow-xl hover:shadow-rose-400 hover:-translate-y-0.5 cursor-pointer disabled:opacity-60"
             >
-              {!allPermissionsGranted ? (
-                <>
-                  <Lock className="w-4 h-4" />
-                  <span>Grant Permissions to Create</span>
-                </>
-              ) : (
-                <>
-                  <span>{isCreating ? 'Creating Space...' : 'Create Space'}</span>
-                  <ArrowRight className="w-4 h-4" />
-                </>
-              )}
+              <span>{isCreating ? 'Creating Private Space...' : 'Create Private Space'}</span>
+              <ArrowRight className="w-4 h-4" />
             </button>
           </motion.div>
 
@@ -306,20 +408,10 @@ export function OnboardingScreen() {
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.1 }}
-            className={`bg-white/85 backdrop-blur-xl p-6 rounded-[2rem] shadow-xl border transition-all ${
-              !allPermissionsGranted 
-                ? 'opacity-85 border-rose-100' 
-                : 'border-white shadow-rose-200/40'
-            }`}
+            className="bg-white/85 backdrop-blur-xl p-6 rounded-[2rem] shadow-xl border border-white shadow-rose-200/40"
           >
             <div className="flex items-center justify-between mb-2">
               <h2 className="text-lg font-serif font-bold">Join partner&apos;s space</h2>
-              {!allPermissionsGranted && (
-                <span className="text-[11px] font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 flex items-center gap-1">
-                  <Lock className="w-3 h-3" />
-                  Locked
-                </span>
-              )}
             </div>
             <p className="text-rose-400 text-xs mb-5">Enter the 6-digit code received from your partner.</p>
             <div className="flex flex-col gap-3">
@@ -332,18 +424,13 @@ export function OnboardingScreen() {
                 maxLength={6}
               />
               {errorMsg && (
-                <p className="text-red-500 text-xs font-medium text-center">{errorMsg}</p>
+                <p className="text-red-500 text-xs font-medium text-center bg-red-50 p-2 rounded-xl border border-red-200">{errorMsg}</p>
               )}
               <button 
                 onClick={joinSpace}
                 disabled={isJoining}
-                className={`w-full font-semibold py-3.5 rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2 active:scale-95 ${
-                  allPermissionsGranted
-                    ? 'bg-rose-950 text-white hover:-translate-y-0.5 hover:bg-black cursor-pointer'
-                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                }`}
+                className="w-full font-semibold py-3.5 rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2 active:scale-95 bg-rose-950 text-white hover:-translate-y-0.5 hover:bg-black cursor-pointer disabled:opacity-60"
               >
-                {!allPermissionsGranted && <Lock className="w-4 h-4" />}
                 <span>{isJoining ? 'Joining Space...' : 'Join Partner Space'}</span>
               </button>
             </div>

@@ -22,6 +22,7 @@ import {
 } from '../lib/localStorageEngine';
 import { CallPromptModal } from '../components/calling/CallPromptModal';
 import { useCall } from '../contexts/CallContext';
+import { useLiveNotifications } from '../contexts/LiveNotificationContext';
 import { sound } from '../lib/sound';
 
 const preloadedMessages = [
@@ -190,6 +191,11 @@ export function ChatScreen() {
   const [showCallPrompt, setShowCallPrompt] = useState(false);
 
   const { startCall } = useCall();
+  const { markAllAsRead } = useLiveNotifications();
+
+  useEffect(() => {
+    markAllAsRead();
+  }, [markAllAsRead]);
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);

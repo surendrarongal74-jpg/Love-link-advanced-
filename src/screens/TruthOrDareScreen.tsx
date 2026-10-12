@@ -6,7 +6,8 @@ import { doc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
 import { handleFirestoreError, OperationType } from '../lib/errorHandler';
 import { BottomNav } from '../components/BottomNav';
 import { motion, AnimatePresence } from 'motion/react';
-import { Wine, AlertCircle, CheckCircle, RefreshCw, Star, Heart, Camera, Upload, ArrowRight, X } from 'lucide-react';
+import { Wine, AlertCircle, CheckCircle, RefreshCw, Star, Heart, Camera, Upload, ArrowRight, X, Wand2, Sparkles } from 'lucide-react';
+import { generateAiraGameContent } from '../lib/ai';
 
 interface ToDState {
   id: string;
@@ -52,6 +53,7 @@ export function TruthOrDareScreen() {
   
   const [customInput, setCustomInput] = useState('');
   const [mediaPreview, setMediaPreview] = useState<string | null>(null);
+  const [isGeneratingAira, setIsGeneratingAira] = useState(false);
 
   const docRef = space?.id ? doc(db, `coupleSpaces/${space.id}/todGameState`, 'default') : null;
 
@@ -168,6 +170,29 @@ export function TruthOrDareScreen() {
       });
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  const handleGenerateAira = async () => {
+    if (!gameState?.selectedChoice) return;
+    setIsGeneratingAira(true);
+    try {
+      const choice = gameState.selectedChoice;
+      const res = await generateAiraGameContent<{ truth?: string; dare?: string }>('truth-or-dare', Math.floor(Math.random() * 50) + 1);
+      if (res) {
+        const text = choice === 'truth' ? res.truth : res.dare;
+        if (text) {
+          setCustomInput(text);
+        } else {
+          setCustomInput(getRandom(choice === 'truth' ? TRUTHS : DARES));
+        }
+      } else {
+        setCustomInput(getRandom(choice === 'truth' ? TRUTHS : DARES));
+      }
+    } catch (e) {
+      setCustomInput(getRandom(gameState.selectedChoice === 'truth' ? TRUTHS : DARES));
+    } finally {
+      setIsGeneratingAira(false);
     }
   };
 
@@ -354,12 +379,27 @@ export function TruthOrDareScreen() {
                            <h2 className="text-2xl font-bold mb-2">They chose {gameState.selectedChoice?.toUpperCase()}!</h2>
                            <p className="text-white/70 mb-6">What do you want them to do?</p>
                            
-                           <button 
-                             onClick={() => handleAsk(getRandom(gameState.selectedChoice === 'truth' ? TRUTHS : DARES))}
-                             className="w-full bg-white/20 hover:bg-white/30 py-3 rounded-xl mb-4 text-sm font-medium transition-colors backdrop-blur-md"
-                           >
-                              Generate Random {gameState.selectedChoice} ✨
-                           </button>
+                           <div className="grid grid-cols-2 gap-2 mb-4">
+                             <button 
+                               onClick={handleGenerateAira}
+                               disabled={isGeneratingAira}
+                               className="bg-gradient-to-r from-rose-500 to-purple-600 hover:from-rose-600 hover:to-purple-700 py-3 rounded-xl text-xs font-bold transition-all shadow-md flex items-center justify-center gap-1.5 disabled:opacity-50"
+                             >
+                               {isGeneratingAira ? (
+                                 <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                               ) : (
+                                 <Wand2 className="w-3.5 h-3.5" />
+                               )}
+                               <span>{isGeneratingAira ? 'AIRA...' : `AIRA ${gameState.selectedChoice}`}</span>
+                             </button>
+
+                             <button 
+                               onClick={() => handleAsk(getRandom(gameState.selectedChoice === 'truth' ? TRUTHS : DARES))}
+                               className="bg-white/20 hover:bg-white/30 py-3 rounded-xl text-xs font-medium transition-colors backdrop-blur-md"
+                             >
+                               Random Classic ✨
+                             </button>
+                           </div>
                            
                            <div className="flex flex-col gap-2">
                              <textarea 

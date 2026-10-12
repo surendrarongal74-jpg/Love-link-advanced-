@@ -6,7 +6,7 @@ import {
   Settings, MessageCircle, Gamepad2, CalendarHeart, Heart, Sparkles, MapPin, 
   BookOpen, Clock, Music, Gift, Bell, CheckCircle2, ChevronRight, Image as ImageIcon, 
   Video as VideoIcon, Camera, Flame, Smile, Lock, Unlock, Send, Volume2, Award,
-  Phone, Video
+  Phone, Video, Copy, Check, Compass
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { doc, updateDoc, addDoc, collection, query, orderBy, limit, onSnapshot, getDocs, setDoc } from 'firebase/firestore';
@@ -20,6 +20,8 @@ import { PartnerPermissionsChecklist } from '../components/permissions/PartnerPe
 import { CallPromptModal } from '../components/calling/CallPromptModal';
 import { QuickSnapWidget } from '../components/widgets/QuickSnapWidget';
 import { useCall } from '../contexts/CallContext';
+import { useLiveNotifications } from '../contexts/LiveNotificationContext';
+import { NotificationPermissionBanner } from '../components/notifications/NotificationPermissionBanner';
 import { sound } from '../lib/sound';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -36,6 +38,7 @@ const FALLBACK_QUESTIONS = [
 export function HomeScreen() {
   const { space, partnerData } = useCoupleSpace();
   const { userData, signOut } = useAuth();
+  const { unreadCount, setIsDrawerOpen, triggerNotification } = useLiveNotifications();
   const navigate = useNavigate();
   
   const [showCelebration, setShowCelebration] = useState(false);
@@ -337,6 +340,20 @@ export function HomeScreen() {
     }
   };
 
+  const [copiedWaitingCode, setCopiedWaitingCode] = useState(false);
+
+  const handleCopyWaitingCode = async () => {
+    if (!space?.inviteCode) return;
+    try {
+      await navigator.clipboard.writeText(space.inviteCode);
+      setCopiedWaitingCode(true);
+      sound.playSuccess();
+      setTimeout(() => setCopiedWaitingCode(false), 2500);
+    } catch {
+      // fallback
+    }
+  };
+
   if (!partnerData) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[100dvh] bg-rose-50 px-6 py-12 relative overflow-hidden font-sans">
@@ -347,13 +364,27 @@ export function HomeScreen() {
           <h1 className="text-2xl font-bold text-rose-950 mb-3 font-serif">Waiting for Partner</h1>
           <p className="text-rose-900/60 font-medium mb-6 text-sm">Ask your partner to enter this code to link your private world.</p>
           
-          <div className="bg-rose-50/70 border border-rose-200/80 px-6 py-4 rounded-2xl w-full mb-6 shadow-2xs">
+          <div className="bg-rose-50/70 border border-rose-200/80 px-5 py-4 rounded-2xl w-full mb-6 shadow-2xs flex items-center justify-between">
              <span className="font-mono font-bold text-3xl tracking-widest text-rose-600 select-all">{space?.inviteCode}</span>
+             <button
+               onClick={handleCopyWaitingCode}
+               className="p-2.5 bg-white text-rose-500 rounded-xl hover:bg-rose-50 shadow-xs transition-all hover:-translate-y-0.5 active:scale-95 flex items-center gap-1.5"
+               title="Copy invite code"
+             >
+               {copiedWaitingCode ? (
+                 <>
+                   <Check className="w-4 h-4 text-emerald-600" />
+                   <span className="text-xs font-bold text-emerald-600">Copied</span>
+                 </>
+               ) : (
+                 <Copy className="w-4 h-4" />
+               )}
+             </button>
           </div>
 
           <button 
             onClick={handleDisconnect}
-            className="text-sm font-semibold text-rose-900/50 hover:text-rose-900 transition-colors mt-6"
+            className="text-sm font-semibold text-rose-900/50 hover:text-rose-900 transition-colors mt-4"
           >
             Cancel & Go Back
           </button>
@@ -435,6 +466,21 @@ export function HomeScreen() {
             </h1>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                sound.playPop();
+                setIsDrawerOpen(true);
+              }}
+              className="relative p-2.5 text-rose-500 hover:text-rose-700 bg-rose-50 hover:bg-rose-100/80 rounded-full transition-colors border border-rose-100 active:scale-95 shadow-2xs"
+              title="Live Notifications"
+            >
+              <Bell className="w-5 h-5" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-r from-rose-500 to-pink-500 text-white rounded-full text-[10px] font-bold flex items-center justify-center border-2 border-white shadow-xs animate-pulse">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </button>
             <button
               onClick={() => {
                 sound.playPop();
@@ -554,6 +600,9 @@ export function HomeScreen() {
       {/* Main Body */}
       <div className="px-5 mt-5 space-y-5">
         
+        {/* Live Notification Permission Prompt */}
+        <NotificationPermissionBanner />
+
         {/* QUICK SNAP LIVE WIDGET */}
         <QuickSnapWidget />
 
@@ -941,7 +990,32 @@ export function HomeScreen() {
           <div>
             <div className="flex items-center justify-between mb-2.5 px-1">
               <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Our Future & Adventures</h2>
+              <span className="text-[11px] font-bold text-rose-500">Shared Dreams 🌟</span>
             </div>
+
+            {/* Featured Shared Vision Board Banner */}
+            <Link
+              to="/vision-board"
+              onClick={() => sound.playPop()}
+              className="block mb-3 rounded-3xl overflow-hidden relative border border-rose-200/90 shadow-md hover:shadow-xl transition-all group bg-gradient-to-r from-purple-600 via-pink-600 to-rose-500 text-white p-4"
+            >
+              <div className="relative z-10 flex items-center justify-between">
+                <div>
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <span className="text-lg">✨</span>
+                    <span className="text-[10px] font-extrabold uppercase tracking-widest bg-white/20 px-2 py-0.5 rounded-full">
+                      New • AI Assisted
+                    </span>
+                  </div>
+                  <h3 className="font-serif font-black text-base text-white">Shared Vision Board</h3>
+                  <p className="text-[11px] text-rose-100 font-medium">Pin future photos, bucket lists, and dream goals together.</p>
+                </div>
+                <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white group-hover:scale-110 transition-transform shrink-0">
+                  <Compass className="w-5 h-5" />
+                </div>
+              </div>
+            </Link>
+
             <div className="grid grid-cols-2 gap-3">
               <Link
                 to="/date-planner"
@@ -1019,8 +1093,38 @@ export function HomeScreen() {
                 </button>
 
                 <button
-                  onClick={() => setShowPermissionsModal(true)}
+                  onClick={() => {
+                    setShowSettings(false);
+                    sound.playPop();
+                    setIsDrawerOpen(true);
+                  }}
                   className="w-full bg-rose-50 text-rose-700 hover:bg-rose-100 font-semibold py-3 rounded-xl transition-colors flex items-center justify-center gap-2 border border-rose-200/60"
+                >
+                  <Bell className="w-4 h-4 text-rose-500" />
+                  <span>🔔 Live Notifications & Alerts</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    sound.playLoveAlert();
+                    triggerNotification({
+                      type: 'pulse',
+                      title: `💓 Live Heartbeat Alert Test`,
+                      body: `Live notification test successful! Sound, vibration, and banners are active 💕`,
+                      senderName: partnerData?.displayName || 'Partner',
+                      link: '/chat',
+                      actionLabel: 'Open Chat',
+                    });
+                  }}
+                  className="w-full bg-pink-50/70 text-pink-700 hover:bg-pink-100/80 font-medium py-2.5 rounded-xl transition-colors flex items-center justify-center gap-2 border border-pink-200/40 text-xs"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-pink-500" />
+                  <span>Test Live Notification Sound & Banner</span>
+                </button>
+
+                <button
+                  onClick={() => setShowPermissionsModal(true)}
+                  className="w-full bg-gray-50 text-gray-700 hover:bg-gray-100 font-semibold py-3 rounded-xl transition-colors flex items-center justify-center gap-2 border border-gray-200/60"
                 >
                   <span>🛡️ Device Permissions</span>
                 </button>
