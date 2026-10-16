@@ -2150,7 +2150,7 @@ function getCanonicalOrigin(req: express.Request): string {
 }
 
 // In-memory store for custom Google Search Console verification token if configured via UI
-let dynamicGscToken = process.env.GOOGLE_SITE_VERIFICATION || process.env.VITE_GOOGLE_SITE_VERIFICATION || '';
+let dynamicGscToken = process.env.GOOGLE_SITE_VERIFICATION || process.env.VITE_GOOGLE_SITE_VERIFICATION || 'f9e701bd5d974c1f';
 
 // 1. Dynamic robots.txt route for Search Console & web crawlers
 app.get('/robots.txt', (req, res) => {
