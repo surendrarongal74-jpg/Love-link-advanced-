@@ -136,28 +136,52 @@ export const PLAYHOUSE_GAMES: PlayhouseGameDef[] = [
     image: 'https://images.openai.com/static-rsc-4/SELBz22rC-lc9Xi-kmo7ymNL2Yomr3OC06pElG0v8OWFwBTmSZvGwHpEq2fQh4QaH3nGyKW_fZruVuKBynIxyEsO86yOFRV-dOrTXHLwphrCLumw4rI8ooNmq_9hwUPZQtPLB9b27jDzZge7L7S1na_RkH4B7Buy2Rlrw7tVWhEAxqq73e-z8LVzYQawmVHU?purpose=fullsize'
   },
   {
-    id: 'sync-pulse',
-    title: 'Synchronized Heartbeats',
-    tagline: 'Tap simultaneously to sync your rhythm into pure harmony.',
+    id: 'heartbeat-harmony',
+    title: 'Heartbeat Harmony: Rhythm Wave',
+    tagline: 'Synchronize taps to romantic beats, tempo waves & AIRA tracks.',
     category: 'Rhythm',
-    icon: '💓',
-    badge: 'Sensory',
-    gradient: 'from-rose-500 via-pink-600 to-red-500',
+    icon: '🎵',
+    badge: 'AIRA Rhythm',
+    gradient: 'from-pink-500 via-rose-500 to-red-600',
     accentColor: 'rose-500',
-    description: 'Feel each other’s presence in real time. Tap the pulsing heart together, match frequencies, and reach 100% emotional alignment.',
+    description: 'Listen to acoustic rhythm beats, match tempo frequencies with your partner, and keep the harmony streak alive across endless AIRA levels.',
     rules: [
-      'Both partners place their thumbs on their respective heart pads',
-      'Tap to the rhythm of the pulsing visual and acoustic heartbeat',
-      'The closer your tap timestamps, the higher your harmony resonance meter rises',
-      'Hit a 10-tap perfect sync to trigger the cosmic fireworks burst'
+      'Feel the rhythmic heartbeat pulses in sync with your partner',
+      'Tap in tempo to the love waveform and lyric cues',
+      'The closer your simultaneous taps, the higher your sync resonance climbs',
+      'Unlock romantic couple rewards with 85%+ synchronization!'
     ],
     features: [
-      'Ultra low-latency synchronized tap indicator',
-      'Haptic and acoustic heartbeat pulse feedback',
-      'Real-time percentage resonance gauge (0% - 100%)',
-      'Long-distance presence aura: glow illuminates as partner touches screen'
+      'Web Audio synthesized heartbeat sounds & rhythm tracks',
+      'Live synchronized frequency wave animation',
+      'Real-time timestamp differential sync analyzer',
+      'AIRA endless tracks generator with custom BPM & romantic perks'
     ],
     image: 'https://images.openai.com/static-rsc-4/SELBz22rC-lc9Xi-kmo7ymNL2Yomr3OC06pElG0v8OWFwBTmSZvGwHpEq2fQh4QaH3nGyKW_fZruVuKBynIxyEsO86yOFRV-dOrTXHLwphrCLumw4rI8ooNmq_9hwUPZQtPLB9b27jDzZge7L7S1na_RkH4B7Buy2Rlrw7tVWhEAxqq73e-z8LVzYQawmVHU?purpose=fullsize'
+  },
+  {
+    id: 'constellation-puzzle',
+    title: 'Constellation Connect',
+    tagline: 'Cooperative star-linking puzzle to awaken celestial memories.',
+    category: 'Mystery',
+    icon: '✨',
+    badge: 'Co-Op Puzzle',
+    gradient: 'from-slate-900 via-indigo-900 to-purple-800',
+    accentColor: 'indigo-500',
+    description: 'Work together as Astral Guide and Celestial Navigator! Combine asymmetric clues to connect starry energy lines and awaken constellations.',
+    rules: [
+      'Partner A and Partner B receive different cosmic clues',
+      'Tap pairs of glowing stars to forge glowing celestial lines',
+      'Match the secret stellar outline to unlock the hidden couple memory',
+      'Solve chapters together with endless maps created by AIRA'
+    ],
+    features: [
+      'Interactive 2D star node grid with glowing vector beams',
+      'Asymmetric information co-op gameplay',
+      'Instant clue inspection modal for both partners',
+      'AIRA endless constellation chapters generator'
+    ],
+    image: 'https://images.openai.com/static-rsc-4/7_yAPB9SGVgzdAGbz3NYTpETDKiV3lttpkkxA5MOohWG5xLzmAm7lb7ua9vIU1AiYL9MHKgBmBraMXfVhbM2b73kotUAd2YSSrLuj1uW0eiLI51M-FLUBe6yzoywLcrgYYKrpJThKZ70_rh3PQZRhSLneNA6kS7wqXGUioldSOZ6noMmSfWe2zEbiSzqYzG0?purpose=fullsize'
   },
   {
     id: 'love-tic-tac-toe',

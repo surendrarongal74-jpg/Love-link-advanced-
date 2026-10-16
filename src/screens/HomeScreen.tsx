@@ -6,9 +6,12 @@ import {
   Settings, MessageCircle, Gamepad2, CalendarHeart, Heart, Sparkles, MapPin, 
   BookOpen, Clock, Music, Gift, Bell, CheckCircle2, ChevronRight, Image as ImageIcon, 
   Video as VideoIcon, Camera, Flame, Smile, Lock, Unlock, Send, Volume2, Award,
-  Phone, Video, Copy, Check, Compass
+  Phone, Video, Copy, Check, Compass, ShoppingBag, Coins, Palette
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useLoveCoins } from '../contexts/LoveCoinsContext';
+import { SHOP_CATALOG } from '../types/coins';
+import { WALLPAPER_PRESETS, getStoredWallpaper, applyWallpaper } from '../lib/themeEngine';
 import { doc, updateDoc, addDoc, collection, query, orderBy, limit, onSnapshot, getDocs, setDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { handleFirestoreError, OperationType } from '../lib/errorHandler';
@@ -16,6 +19,7 @@ import { LinkedCelebration } from '../components/LinkedCelebration';
 import { analyzeMoodAndSuggestAction, generateDailyQuestion } from '../lib/ai';
 import { DailyQuestionAttachmentPreview, QuestionAttachmentItem, processFileToAttachment } from '../components/DailyQuestionAttachmentPreview';
 import { TermsAndConditionsModal } from '../components/legal/TermsAndConditionsModal';
+import { GoogleSearchConsoleModal } from '../components/seo/GoogleSearchConsoleModal';
 import { PartnerPermissionsChecklist } from '../components/permissions/PartnerPermissionsChecklist';
 import { CallPromptModal } from '../components/calling/CallPromptModal';
 import { QuickSnapWidget } from '../components/widgets/QuickSnapWidget';
@@ -39,14 +43,21 @@ export function HomeScreen() {
   const { space, partnerData } = useCoupleSpace();
   const { userData, signOut } = useAuth();
   const { unreadCount, setIsDrawerOpen, triggerNotification } = useLiveNotifications();
+  const { wallet, inventory } = useLoveCoins();
   const navigate = useNavigate();
+
+  const equippedBadgeItem = SHOP_CATALOG.find(i => i.id === inventory?.equippedBadge);
+  const isEquippedFrame = equippedBadgeItem?.subCategory?.includes('Frame') || equippedBadgeItem?.subCategory?.includes('Decorations') || equippedBadgeItem?.id.startsWith('frame_');
   
   const [showCelebration, setShowCelebration] = useState(false);
   const [wasWaiting, setWasWaiting] = useState(!partnerData);
   const [showSettings, setShowSettings] = useState(false);
   const [showCallPrompt, setShowCallPrompt] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
+  const [showGscModal, setShowGscModal] = useState(false);
   const [showPermissionsModal, setShowPermissionsModal] = useState(false);
+  const [showWallpaperModal, setShowWallpaperModal] = useState(false);
+  const [currentWallpaper, setCurrentWallpaper] = useState(getStoredWallpaper());
   const [myMood, setMyMood] = useState<string>(userData?.mood || 'Happy');
   const [aiSuggestion, setAiSuggestion] = useState<any>(null);
   const [isAnalyzingMood, setIsAnalyzingMood] = useState(false);
@@ -461,9 +472,16 @@ export function HomeScreen() {
             <span className="text-[11px] font-bold uppercase tracking-widest text-rose-500/80 mb-0.5 block">
               {greeting}
             </span>
-            <h1 className="text-2xl font-serif font-bold text-gray-900 tracking-tight leading-tight">
-              {userData?.displayName?.split(' ')[0]} & {partnerData?.displayName?.split(' ')[0]}
-            </h1>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-2xl font-serif font-bold text-gray-900 tracking-tight leading-tight">
+                {userData?.displayName?.split(' ')[0]} & {partnerData?.displayName?.split(' ')[0]}
+              </h1>
+              {equippedBadgeItem && !isEquippedFrame && (
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-gradient-to-r from-amber-100 to-rose-100 text-amber-900 border border-amber-200/80 shadow-2xs">
+                  {equippedBadgeItem.badgeLabel || equippedBadgeItem.name}
+                </span>
+              )}
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -480,6 +498,17 @@ export function HomeScreen() {
                   {unreadCount > 9 ? '9+' : unreadCount}
                 </span>
               )}
+            </button>
+            <button
+              onClick={() => {
+                sound.tap();
+                navigate('/market');
+              }}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200/90 shadow-2xs active:scale-95 transition-all text-xs font-bold"
+              title="Love Link Market"
+            >
+              <Coins className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
+              <span>{wallet?.balance ?? 50}</span>
             </button>
             <button
               onClick={() => {
@@ -506,22 +535,36 @@ export function HomeScreen() {
         <div className="bg-gradient-to-br from-rose-500/10 via-pink-500/5 to-rose-100/40 border border-rose-200/80 rounded-3xl p-4.5 mb-5 shadow-2xs">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              {/* Partner Avatar with Breathing Halo */}
+              {/* Partner Avatar with Frame and Breathing Halo */}
               <div className="relative">
-                <div className="w-13 h-13 rounded-full bg-gradient-to-tr from-rose-400 to-pink-500 p-0.5 shadow-md">
+                {isEquippedFrame && equippedBadgeItem?.image && (
+                  <div className="absolute -inset-2.5 z-10 pointer-events-none">
+                    <img 
+                      src={equippedBadgeItem.image} 
+                      alt={equippedBadgeItem.name} 
+                      className="w-full h-full object-contain filter drop-shadow-md animate-pulse duration-1000" 
+                    />
+                  </div>
+                )}
+                <div className={`w-13 h-13 rounded-full ${isEquippedFrame ? 'ring-2 ring-amber-300/80' : 'bg-gradient-to-tr from-rose-400 to-pink-500'} p-0.5 shadow-md`}>
                   <div className="w-full h-full bg-white rounded-full flex items-center justify-center font-bold text-rose-600 font-serif text-lg">
                     {partnerData?.displayName?.charAt(0) || 'P'}
                   </div>
                 </div>
                 {/* Real-time Green Presence Indicator */}
-                <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 border-2 border-white rounded-full shadow-2xs animate-pulse" />
+                <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 border-2 border-white rounded-full shadow-2xs animate-pulse z-20" />
               </div>
 
               <div>
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5 flex-wrap">
                   <h3 className="font-bold text-rose-950 text-sm leading-snug">
                     {partnerData?.displayName}
                   </h3>
+                  {isEquippedFrame && (
+                    <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
+                      {equippedBadgeItem?.badgeLabel || 'Framed'}
+                    </span>
+                  )}
                   <span className="text-xs">
                     {partnerData?.mood === 'Loved' ? '🥰' : partnerData?.mood === 'Happy' ? '😊' : '💖'}
                   </span>
@@ -983,6 +1026,29 @@ export function HomeScreen() {
                   <p className="text-[11px] text-rose-500 font-medium">Romantic AI</p>
                 </div>
               </Link>
+
+              {/* Love Coupons & Date Rewards Vault */}
+              <Link
+                to="/love-coupons"
+                onClick={() => sound.playPop()}
+                className="col-span-2 bg-gradient-to-r from-amber-500 via-rose-500 to-pink-500 p-4 rounded-2xl text-white shadow-md hover:shadow-lg transition-all active:scale-[0.98] flex items-center justify-between group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 bg-white/20 backdrop-blur-md rounded-xl flex items-center justify-center text-2xl group-hover:scale-105 transition-transform">
+                    🎁
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <h4 className="font-bold text-sm text-white">Love Coupons & Date Vault</h4>
+                      <span className="text-[9px] font-extrabold uppercase bg-white/25 px-2 py-0.5 rounded-full">Perks</span>
+                    </div>
+                    <p className="text-[11px] text-rose-100">Unlock & redeem massage passes, date wagers, and sweet favors</p>
+                  </div>
+                </div>
+                <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center group-hover:scale-110 transition-transform shrink-0">
+                  <ChevronRight className="w-4 h-4 text-white" />
+                </div>
+              </Link>
             </div>
           </div>
 
@@ -1016,125 +1082,171 @@ export function HomeScreen() {
               </div>
             </Link>
 
-            <div className="grid grid-cols-2 gap-3">
-              <Link
-                to="/date-planner"
-                className="bg-white p-4 rounded-2xl border border-rose-100 shadow-2xs hover:shadow-md transition-all active:scale-[0.98] flex items-center gap-3 group"
-              >
-                <div className="w-11 h-11 bg-rose-100 text-rose-600 rounded-xl flex items-center justify-center group-hover:scale-105 transition-transform">
-                  <CalendarHeart className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="font-bold text-gray-900 text-sm">Date Planner</h4>
-                  <p className="text-[11px] text-gray-400">Curated dates</p>
-                </div>
-              </Link>
+              <div className="grid grid-cols-2 gap-3">
+                <Link
+                  to="/market"
+                  className="bg-white p-4 rounded-2xl border border-rose-100 shadow-2xs hover:shadow-md transition-all active:scale-[0.98] flex items-center gap-3 group"
+                >
+                  <div className="w-11 h-11 bg-pink-100 text-pink-600 rounded-xl flex items-center justify-center group-hover:scale-105 transition-transform">
+                    <ShoppingBag className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-gray-900 text-sm">Love Market</h4>
+                    <p className="text-[11px] text-gray-400">Gifts & perks</p>
+                  </div>
+                </Link>
 
-              <Link
-                to="/map"
-                className="bg-white p-4 rounded-2xl border border-rose-100 shadow-2xs hover:shadow-md transition-all active:scale-[0.98] flex items-center gap-3 group"
-              >
-                <div className="w-11 h-11 bg-green-100 text-green-600 rounded-xl flex items-center justify-center group-hover:scale-105 transition-transform">
-                  <MapPin className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="font-bold text-gray-900 text-sm">Love Map</h4>
-                  <p className="text-[11px] text-gray-400">Pin our places</p>
-                </div>
-              </Link>
+                <Link
+                  to="/date-planner"
+                  className="bg-white p-4 rounded-2xl border border-rose-100 shadow-2xs hover:shadow-md transition-all active:scale-[0.98] flex items-center gap-3 group"
+                >
+                  <div className="w-11 h-11 bg-rose-100 text-rose-600 rounded-xl flex items-center justify-center group-hover:scale-105 transition-transform">
+                    <CalendarHeart className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-gray-900 text-sm">Date Planner</h4>
+                    <p className="text-[11px] text-gray-400">Curated dates</p>
+                  </div>
+                </Link>
 
-              <Link
-                to="/diary"
-                className="bg-white p-4 rounded-2xl border border-rose-100 shadow-2xs hover:shadow-md transition-all active:scale-[0.98] flex items-center gap-3 group"
-              >
-                <div className="w-11 h-11 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center group-hover:scale-105 transition-transform">
-                  <BookOpen className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="font-bold text-gray-900 text-sm">Diary</h4>
-                  <p className="text-[11px] text-gray-400">Private thoughts</p>
-                </div>
-              </Link>
+                <Link
+                  to="/map"
+                  className="bg-white p-4 rounded-2xl border border-rose-100 shadow-2xs hover:shadow-md transition-all active:scale-[0.98] flex items-center gap-3 group"
+                >
+                  <div className="w-11 h-11 bg-green-100 text-green-600 rounded-xl flex items-center justify-center group-hover:scale-105 transition-transform">
+                    <MapPin className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-gray-900 text-sm">Love Map</h4>
+                    <p className="text-[11px] text-gray-400">Pin our places</p>
+                  </div>
+                </Link>
 
-              <Link
-                to="/reminders"
-                className="bg-white p-4 rounded-2xl border border-rose-100 shadow-2xs hover:shadow-md transition-all active:scale-[0.98] flex items-center gap-3 group"
-              >
-                <div className="w-11 h-11 bg-sky-100 text-sky-600 rounded-xl flex items-center justify-center group-hover:scale-105 transition-transform">
-                  <Bell className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="font-bold text-gray-900 text-sm">Reminders</h4>
-                  <p className="text-[11px] text-gray-400">Anniversaries</p>
-                </div>
-              </Link>
+                <Link
+                  to="/diary"
+                  className="bg-white p-4 rounded-2xl border border-rose-100 shadow-2xs hover:shadow-md transition-all active:scale-[0.98] flex items-center gap-3 group"
+                >
+                  <div className="w-11 h-11 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center group-hover:scale-105 transition-transform">
+                    <BookOpen className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-gray-900 text-sm">Diary</h4>
+                    <p className="text-[11px] text-gray-400">Private thoughts</p>
+                  </div>
+                </Link>
+
+                <Link
+                  to="/reminders"
+                  className="bg-white p-4 rounded-2xl border border-rose-100 shadow-2xs hover:shadow-md transition-all active:scale-[0.98] flex items-center gap-3 group"
+                >
+                  <div className="w-11 h-11 bg-sky-100 text-sky-600 rounded-xl flex items-center justify-center group-hover:scale-105 transition-transform">
+                    <Bell className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-gray-900 text-sm">Reminders</h4>
+                    <p className="text-[11px] text-gray-400">Anniversaries</p>
+                  </div>
+                </Link>
+              </div>
             </div>
           </div>
         </div>
 
-      </div>
+        {/* Settings Modal */}
+        {showSettings && (
+          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-6 backdrop-blur-sm">
+             <div className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl border border-rose-100 max-h-[85vh] overflow-y-auto">
+                <h2 className="text-xl font-bold text-gray-900 mb-6 font-serif">Settings</h2>
+                
+                <div className="space-y-3">
+                  <button
+                    onClick={() => {
+                      setShowSettings(false);
+                      setShowCallPrompt(true);
+                    }}
+                    className="w-full bg-gradient-to-r from-rose-500 to-pink-500 text-white font-bold py-3 rounded-xl shadow-md shadow-rose-300/40 hover:opacity-95 transition-all flex items-center justify-center gap-2"
+                  >
+                    <Phone className="w-4 h-4" />
+                    <span>Start Voice or Video Call</span>
+                  </button>
 
-      {/* Settings Modal */}
-      {showSettings && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-6 backdrop-blur-sm">
-           <div className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl border border-rose-100">
-              <h2 className="text-xl font-bold text-gray-900 mb-6 font-serif">Settings</h2>
-              
-              <div className="space-y-3">
-                <button
-                  onClick={() => {
-                    setShowSettings(false);
-                    setShowCallPrompt(true);
-                  }}
-                  className="w-full bg-gradient-to-r from-rose-500 to-pink-500 text-white font-bold py-3 rounded-xl shadow-md shadow-rose-300/40 hover:opacity-95 transition-all flex items-center justify-center gap-2"
-                >
-                  <Phone className="w-4 h-4" />
-                  <span>Start Voice or Video Call</span>
-                </button>
+                  <button
+                    onClick={() => {
+                      setShowSettings(false);
+                      sound.tap();
+                      navigate('/my-collection');
+                    }}
+                    className="w-full bg-rose-50 text-rose-700 hover:bg-rose-100 font-semibold py-3 rounded-xl transition-colors flex items-center justify-center gap-2 border border-rose-200/60"
+                  >
+                    <Palette className="w-4 h-4 text-rose-500" />
+                    <span>🎨 Active Themes & Badges</span>
+                  </button>
 
-                <button
-                  onClick={() => {
-                    setShowSettings(false);
-                    sound.playPop();
-                    setIsDrawerOpen(true);
-                  }}
-                  className="w-full bg-rose-50 text-rose-700 hover:bg-rose-100 font-semibold py-3 rounded-xl transition-colors flex items-center justify-center gap-2 border border-rose-200/60"
-                >
-                  <Bell className="w-4 h-4 text-rose-500" />
-                  <span>🔔 Live Notifications & Alerts</span>
-                </button>
+                  <button
+                    onClick={() => {
+                      setShowSettings(false);
+                      sound.tap();
+                      setShowWallpaperModal(true);
+                    }}
+                    className="w-full bg-pink-50 text-pink-700 hover:bg-pink-100 font-semibold py-3 rounded-xl transition-colors flex items-center justify-center gap-2 border border-pink-200/60"
+                  >
+                    <ImageIcon className="w-4 h-4 text-pink-500" />
+                    <span>🖼️ Chat Background & Wallpaper</span>
+                  </button>
 
-                <button
-                  onClick={() => {
-                    sound.playLoveAlert();
-                    triggerNotification({
-                      type: 'pulse',
-                      title: `💓 Live Heartbeat Alert Test`,
-                      body: `Live notification test successful! Sound, vibration, and banners are active 💕`,
-                      senderName: partnerData?.displayName || 'Partner',
-                      link: '/chat',
-                      actionLabel: 'Open Chat',
-                    });
-                  }}
-                  className="w-full bg-pink-50/70 text-pink-700 hover:bg-pink-100/80 font-medium py-2.5 rounded-xl transition-colors flex items-center justify-center gap-2 border border-pink-200/40 text-xs"
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-pink-500" />
-                  <span>Test Live Notification Sound & Banner</span>
-                </button>
+                  <button
+                    onClick={() => {
+                      setShowSettings(false);
+                      sound.playPop();
+                      setIsDrawerOpen(true);
+                    }}
+                    className="w-full bg-purple-50 text-purple-700 hover:bg-purple-100 font-semibold py-3 rounded-xl transition-colors flex items-center justify-center gap-2 border border-purple-200/60"
+                  >
+                    <Bell className="w-4 h-4 text-purple-500" />
+                    <span>🔔 Live Notifications & Alerts</span>
+                  </button>
 
-                <button
-                  onClick={() => setShowPermissionsModal(true)}
-                  className="w-full bg-gray-50 text-gray-700 hover:bg-gray-100 font-semibold py-3 rounded-xl transition-colors flex items-center justify-center gap-2 border border-gray-200/60"
-                >
-                  <span>🛡️ Device Permissions</span>
-                </button>
+                  <button
+                    onClick={() => {
+                      sound.playLoveAlert();
+                      triggerNotification({
+                        type: 'pulse',
+                        title: `💓 Live Heartbeat Alert Test`,
+                        body: `Live notification test successful! Sound, vibration, and banners are active 💕`,
+                        senderName: partnerData?.displayName || 'Partner',
+                        link: '/chat',
+                        actionLabel: 'Open Chat',
+                      });
+                    }}
+                    className="w-full bg-pink-50/70 text-pink-700 hover:bg-pink-100/80 font-medium py-2.5 rounded-xl transition-colors flex items-center justify-center gap-2 border border-pink-200/40 text-xs"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-pink-500" />
+                    <span>Test Live Notification Sound & Banner</span>
+                  </button>
 
-                <button
-                  onClick={() => setShowTermsModal(true)}
-                  className="w-full bg-gray-50 text-gray-700 hover:bg-gray-100 font-semibold py-3 rounded-xl transition-colors flex items-center justify-center gap-2 border border-gray-200/60"
-                >
-                  <span>🔒 Privacy & Terms Policy</span>
-                </button>
+                  <button
+                    onClick={() => setShowPermissionsModal(true)}
+                    className="w-full bg-gray-50 text-gray-700 hover:bg-gray-100 font-semibold py-3 rounded-xl transition-colors flex items-center justify-center gap-2 border border-gray-200/60"
+                  >
+                    <span>🛡️ Device Permissions</span>
+                  </button>
+
+                  <button
+                    onClick={() => setShowTermsModal(true)}
+                    className="w-full bg-gray-50 text-gray-700 hover:bg-gray-100 font-semibold py-3 rounded-xl transition-colors flex items-center justify-center gap-2 border border-gray-200/60"
+                  >
+                    <span>🔒 Privacy & Terms Policy</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setShowSettings(false);
+                      setShowGscModal(true);
+                    }}
+                    className="w-full bg-gradient-to-r from-rose-50 to-pink-50 text-rose-700 hover:bg-rose-100 font-semibold py-3 rounded-xl transition-colors flex items-center justify-center gap-2 border border-rose-200/60"
+                  >
+                    <span>🔍 Google Search Console & SEO</span>
+                  </button>
 
                 <button 
                   onClick={signOut} 
@@ -1174,10 +1286,78 @@ export function HomeScreen() {
         </div>
       )}
 
+      {/* Chat Wallpaper Customization Modal */}
+      {showWallpaperModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in">
+          <div className="w-full max-w-sm bg-white rounded-3xl p-5 shadow-2xl border border-rose-100 max-h-[85vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b border-rose-100 mb-3">
+              <div>
+                <h3 className="font-bold text-base font-serif text-gray-900">Chat Background</h3>
+                <p className="text-[11px] text-gray-500">Pick a persistent romantic wallpaper</p>
+              </div>
+              <button
+                onClick={() => setShowWallpaperModal(false)}
+                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-600"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-2.5">
+              {WALLPAPER_PRESETS.map((wp) => {
+                const isSelected = currentWallpaper === wp.id;
+                return (
+                  <div
+                    key={wp.id}
+                    onClick={() => {
+                      sound.tap();
+                      applyWallpaper(wp.id);
+                      setCurrentWallpaper(wp.id);
+                    }}
+                    className={`p-3 rounded-2xl border cursor-pointer flex items-center justify-between transition-all ${
+                      isSelected
+                        ? 'border-rose-500 ring-2 ring-rose-200 bg-rose-50/50 shadow-xs'
+                        : 'border-gray-100 hover:border-rose-200 bg-white'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="w-10 h-10 rounded-xl shadow-xs border border-white/50"
+                        style={{ background: wp.preview }}
+                      />
+                      <span className="font-bold text-xs text-gray-800">{wp.name}</span>
+                    </div>
+
+                    {isSelected && (
+                      <span className="w-6 h-6 rounded-full bg-rose-500 text-white flex items-center justify-center text-xs shadow-2xs">
+                        ✓
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <button
+              onClick={() => setShowWallpaperModal(false)}
+              className="mt-4 w-full bg-gradient-to-r from-rose-500 to-pink-500 text-white font-bold py-2.5 rounded-xl shadow-md shadow-rose-300/40 text-xs"
+            >
+              Apply to Chat
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Terms & Privacy Modal */}
       <TermsAndConditionsModal
         isOpen={showTermsModal}
         onClose={() => setShowTermsModal(false)}
+      />
+
+      {/* Google Search Console & SEO Modal */}
+      <GoogleSearchConsoleModal
+        isOpen={showGscModal}
+        onClose={() => setShowGscModal(false)}
       />
 
       {/* Voice & Video Call Prompt Modal */}

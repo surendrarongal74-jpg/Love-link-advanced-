@@ -1,7 +1,8 @@
-import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import { useCoupleSpace } from './contexts/CoupleSpaceContext';
+import { NotFoundScreen } from './screens/NotFoundScreen';
 
 import { AuthScreen } from './screens/AuthScreen';
 import { OnboardingScreen } from './screens/OnboardingScreen';
@@ -22,11 +23,18 @@ import { AIPlannerScreen } from './screens/AIPlannerScreen';
 import { AiraScreen } from './screens/AiraScreen';
 import { LoveversePlayhouseScreen } from './screens/LoveversePlayhouseScreen';
 import { VisionBoardScreen } from './screens/VisionBoardScreen';
+import { LoveCouponsScreen } from './screens/LoveCouponsScreen';
+import { MarketScreen } from './screens/MarketScreen';
+import { EarnCoinsScreen } from './screens/EarnCoinsScreen';
+import { MyCollectionScreen } from './screens/MyCollectionScreen';
+import { LoveCoinsProvider } from './contexts/LoveCoinsContext';
 import { InstallAPKScreen } from './screens/InstallAPKScreen';
 import { OfflineIndicator } from './components/pwa/OfflineIndicator';
 import { ActiveCallOverlay } from './components/calling/ActiveCallOverlay';
 import { LiveNotificationOverlay } from './components/notifications/LiveNotificationOverlay';
 import { NotificationDrawer } from './components/notifications/NotificationDrawer';
+import { IncomingGiftCelebrationModal } from './components/widgets/IncomingGiftCelebrationModal';
+import { PublicInfoScreen } from './screens/PublicInfoScreen';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -83,11 +91,58 @@ function ActiveSpaceRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+const ROUTE_TITLES: Record<string, string> = {
+  '/': 'Love Link — Private Couple Space',
+  '/auth': 'Sign In • Love Link',
+  '/onboarding': 'Get Started • Love Link',
+  '/chat': 'Chat & Love Notes • Love Link',
+  '/memories': 'Our Scrapbook & Memories • Love Link',
+  '/game': 'Daily Sync & Games • Love Link',
+  '/market': 'Loveverse Market & Rewards • Love Link',
+  '/earn-coins': 'Earn Love Coins • Love Link',
+  '/my-collection': 'My Collection & Wardrobe • Love Link',
+  '/lovelanguage': 'Love Language Quiz • Love Link',
+  '/notes': 'Daily Sticky Notes • Love Link',
+  '/scheduler': 'Surprise Scheduler • Love Link',
+  '/map': 'Love Map & Locations • Love Link',
+  '/diary': 'Secret Couple Diary • Love Link',
+  '/truth-or-dare': 'Truth or Dare • Love Link',
+  '/reminders': 'Smart Reminders • Love Link',
+  '/who-loves-more': 'Who Loves More? • Love Link',
+  '/aira': 'AIRA Love Companion • Love Link',
+  '/date-planner': 'AI Date Planner • Love Link',
+  '/playhouse': 'Loveverse Playhouse • Love Link',
+  '/vision-board': 'Couple Vision Board • Love Link',
+  '/love-coupons': 'Love Coupons Vault • Love Link',
+  '/install': 'Install Love Link App • Love Link',
+  '/features': 'Features & Highlights • Love Link',
+  '/about': 'About Us • Love Link',
+  '/privacy': 'Privacy Policy • Love Link',
+  '/terms': 'Terms of Service • Love Link',
+};
+
 export default function App() {
+  const location = useLocation();
+
+  useEffect(() => {
+    document.title = ROUTE_TITLES[location.pathname] || 'Love Link — Private Couple Space';
+    try {
+      const canonical = document.getElementById('canonical-url');
+      if (canonical) {
+        canonical.setAttribute('href', `${window.location.origin}${location.pathname}`);
+      }
+      const ogUrl = document.querySelector('meta[property="og:url"]');
+      if (ogUrl) {
+        ogUrl.setAttribute('content', `${window.location.origin}${location.pathname}`);
+      }
+    } catch (e) {}
+  }, [location.pathname]);
+
   return (
-    <div className="min-h-screen bg-white max-w-md mx-auto shadow-2xl overflow-hidden relative border-x border-rose-100">
-      <Routes>
-        <Route path="/auth" element={<AuthScreen />} />
+    <LoveCoinsProvider>
+      <div className="min-h-screen bg-white max-w-md mx-auto shadow-2xl overflow-hidden relative border-x border-rose-100">
+        <Routes>
+          <Route path="/auth" element={<AuthScreen />} />
         
         <Route path="/onboarding" element={
           <ProtectedRoute>
@@ -223,12 +278,56 @@ export default function App() {
           </ProtectedRoute>
         } />
 
+        <Route path="/love-coupons" element={
+          <ProtectedRoute>
+            <ActiveSpaceRoute>
+              <LoveCouponsScreen />
+            </ActiveSpaceRoute>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/market" element={
+          <ProtectedRoute>
+            <ActiveSpaceRoute>
+              <MarketScreen />
+            </ActiveSpaceRoute>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/earn-coins" element={
+          <ProtectedRoute>
+            <ActiveSpaceRoute>
+              <EarnCoinsScreen />
+            </ActiveSpaceRoute>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/my-collection" element={
+          <ProtectedRoute>
+            <ActiveSpaceRoute>
+              <MyCollectionScreen />
+            </ActiveSpaceRoute>
+          </ProtectedRoute>
+        } />
+
         <Route path="/install" element={<InstallAPKScreen />} />
+        
+        {/* Public Information, Feature Showcase & Privacy routes */}
+        <Route path="/features" element={<PublicInfoScreen />} />
+        <Route path="/about" element={<PublicInfoScreen />} />
+        <Route path="/privacy" element={<PublicInfoScreen />} />
+        <Route path="/terms" element={<PublicInfoScreen />} />
+
+        {/* Graceful 404 Not Found route */}
+        <Route path="*" element={<NotFoundScreen />} />
       </Routes>
       <OfflineIndicator />
       <ActiveCallOverlay />
       <LiveNotificationOverlay />
       <NotificationDrawer />
-    </div>
+      <IncomingGiftCelebrationModal />
+      </div>
+    </LoveCoinsProvider>
   );
 }
+

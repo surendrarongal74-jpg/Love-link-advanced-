@@ -1,0 +1,66 @@
+{
+  "wallets": {
+    "NHr32VQ0sZT9Fdxh6xFoQ6lKNDy2": {
+      "userId": "NHr32VQ0sZT9Fdxh6xFoQ6lKNDy2",
+      "balance": 50,
+      "totalEarned": 50,
+      "totalSpent": 0,
+      "dailyEarnedToday": 0,
+      "lastEarnDate": "2026-10-15",
+      "maxDailyQuota": 250,
+      "updatedAt": 1792054961113
+    },
+    "test_user_qa": {
+      "userId": "test_user_qa",
+      "balance": 70,
+      "totalEarned": 70,
+      "totalSpent": 0,
+      "dailyEarnedToday": 0,
+      "lastEarnDate": "2026-10-15",
+      "maxDailyQuota": 250,
+      "updatedAt": 1792060591300,
+      "streakDays": 1,
+      "lastCheckInDate": "2026-10-15"
+    }
+  },
+  "inventories": {
+    "NHr32VQ0sZT9Fdxh6xFoQ6lKNDy2": {
+      "userId": "NHr32VQ0sZT9Fdxh6xFoQ6lKNDy2",
+      "ownedThemes": [
+        "theme_blush_romance"
+      ],
+      "activeTheme": "theme_blush_romance",
+      "ownedBadges": [],
+      "equippedBadge": "",
+      "ownedGamePacks": [],
+      "streakFreezeTokens": 0,
+      "updatedAt": 1792054961113
+    },
+    "test_user_qa": {
+      "userId": "test_user_qa",
+      "ownedThemes": [
+        "theme_cloud_romance",
+        "theme_blush_romance"
+      ],
+      "activeTheme": "theme_cloud_romance",
+      "ownedBadges": [],
+      "equippedBadge": "",
+      "ownedGamePacks": [],
+      "streakFreezeTokens": 0,
+      "updatedAt": 1792060599719
+    }
+  },
+  "transactions": [
+    {
+      "id": "tx_1792060591300_checkin_pvdn",
+      "userId": "test_user_qa",
+      "amount": 20,
+      "type": "daily_checkin",
+      "description": "Daily Love Streak: Day 1 (+20 coins)",
+      "createdAt": 1792060591300
+    }
+  ],
+  "submittedHashes": {},
+  "claimedReferrals": {},
+  "recentMissionCompletions": {}
+}

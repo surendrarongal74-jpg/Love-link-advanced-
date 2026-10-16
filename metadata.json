@@ -1,6 +1,6 @@
 {
   "name": "Love Link",
-  "description": "A private relationship app designed for couples to connect, communicate, and grow together.",
+  "description": "Private relationship app for couples to connect deeper. Share memories, sweet love notes, send 3D virtual gifts, track love streaks, and explore your shared Loveverse.",
   "requestFramePermissions": [
     "microphone",
     "camera"

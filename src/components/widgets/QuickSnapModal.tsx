@@ -292,18 +292,24 @@ export const QuickSnapModal: React.FC<QuickSnapModalProps> = ({
       const now = Date.now();
       const expiresAt = now + durationMinutes * 60 * 1000;
 
-      const snapPayload: QuickSnapData = {
+      const snapPayload: Record<string, any> = {
         id: `snap_${now}_${userData.id}`,
         coupleSpaceId: space.id,
         senderId: userData.id,
         senderName: userData.displayName?.split(' ')[0] || 'Partner',
         imageUrl: finalImgData,
-        caption: caption.trim() || undefined,
-        stickers: stickers.map(s => ({ emoji: s.emoji, x: s.x, y: s.y, scale: 1 })),
         durationMinutes,
         createdAt: now,
-        expiresAt
+        expiresAt,
       };
+
+      if (caption && caption.trim().length > 0) {
+        snapPayload.caption = caption.trim();
+      }
+
+      if (stickers && stickers.length > 0) {
+        snapPayload.stickers = stickers.map(s => ({ emoji: s.emoji, x: s.x, y: s.y, scale: 1 }));
+      }
 
       // Set directly as the active snap document for this couple space
       await setDoc(doc(db, `coupleSpaces/${space.id}/quickSnaps`, 'active'), snapPayload);

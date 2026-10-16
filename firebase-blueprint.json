@@ -126,6 +126,110 @@
         "updatedAt": { "type": "integer" }
       },
       "required": ["id", "coupleSpaceId", "creatorId", "creatorName", "category", "title", "createdAt", "updatedAt"]
+    },
+    "LoveCoupon": {
+      "title": "Love Coupon & Date Reward",
+      "description": "Unlockable and redeemable love coupons and date night wagers",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "coupleSpaceId": { "type": "string" },
+        "creatorId": { "type": "string" },
+        "creatorName": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "category": { "type": "string" },
+        "tokenCost": { "type": "integer" },
+        "emoji": { "type": "string" },
+        "terms": { "type": "string" },
+        "status": { "type": "string", "enum": ["available", "gifted", "redeemed"] },
+        "redeemedBy": { "type": "string" },
+        "redeemedAt": { "type": "integer" },
+        "createdAt": { "type": "integer" },
+        "updatedAt": { "type": "integer" }
+      },
+      "required": ["id", "coupleSpaceId", "creatorId", "creatorName", "title", "category", "tokenCost", "emoji", "status", "createdAt", "updatedAt"]
+    },
+    "UserWallet": {
+      "title": "User Love Coins Wallet",
+      "description": "Server-authoritative Love Coins balance and quota for an authenticated user",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "balance": { "type": "integer" },
+        "totalEarned": { "type": "integer" },
+        "totalSpent": { "type": "integer" },
+        "dailyEarnedToday": { "type": "integer" },
+        "lastEarnDate": { "type": "string" },
+        "updatedAt": { "type": "integer" }
+      },
+      "required": ["userId", "balance", "totalEarned", "totalSpent", "updatedAt"]
+    },
+    "CoinTransaction": {
+      "title": "Coin Transaction",
+      "description": "Immutable ledger record of earned or spent Love Coins",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "amount": { "type": "integer" },
+        "type": { "type": "string" },
+        "description": { "type": "string" },
+        "referenceId": { "type": "string" },
+        "createdAt": { "type": "integer" }
+      },
+      "required": ["id", "userId", "amount", "type", "description", "createdAt"]
+    },
+    "UserInventory": {
+      "title": "User Inventory",
+      "description": "Owned themes, badges, and cosmetic perks unlocked with Love Coins",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "ownedThemes": { "type": "array", "items": { "type": "string" } },
+        "activeTheme": { "type": "string" },
+        "ownedBadges": { "type": "array", "items": { "type": "string" } },
+        "equippedBadge": { "type": "string" },
+        "ownedGamePacks": { "type": "array", "items": { "type": "string" } },
+        "streakFreezeTokens": { "type": "integer" },
+        "updatedAt": { "type": "integer" }
+      },
+      "required": ["userId", "ownedThemes", "activeTheme", "updatedAt"]
+    },
+    "MissionSubmission": {
+      "title": "Mission Proof Submission",
+      "description": "Proof of romantic action analyzed and verified by AIRA for coin rewards",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "coupleSpaceId": { "type": "string" },
+        "missionId": { "type": "string" },
+        "proofType": { "type": "string" },
+        "proofHash": { "type": "string" },
+        "status": { "type": "string" },
+        "coinsAwarded": { "type": "integer" },
+        "airaEvaluation": { "type": "string" },
+        "createdAt": { "type": "integer" }
+      },
+      "required": ["id", "userId", "coupleSpaceId", "missionId", "status", "createdAt"]
+    },
+    "VirtualGift": {
+      "title": "Virtual Romantic Gift",
+      "description": "Animated virtual gift sent to partner's chat using Love Coins",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "coupleSpaceId": { "type": "string" },
+        "senderId": { "type": "string" },
+        "recipientId": { "type": "string" },
+        "giftId": { "type": "string" },
+        "giftName": { "type": "string" },
+        "cost": { "type": "integer" },
+        "note": { "type": "string" },
+        "createdAt": { "type": "integer" }
+      },
+      "required": ["id", "coupleSpaceId", "senderId", "giftId", "giftName", "cost", "createdAt"]
     }
   },
   "firestore": {
@@ -160,6 +264,30 @@
     "/coupleSpaces/{spaceId}/visionBoard/{itemId}": {
       "schema": { "$ref": "#/entities/VisionBoardItem" },
       "description": "Shared vision board items for future goals, dreams, and plans"
+    },
+    "/coupleSpaces/{spaceId}/loveCoupons/{couponId}": {
+      "schema": { "$ref": "#/entities/LoveCoupon" },
+      "description": "Unlockable and redeemable love coupons and date rewards"
+    },
+    "/user_wallets/{userId}": {
+      "schema": { "$ref": "#/entities/UserWallet" },
+      "description": "Server-authoritative Love Coins balance for each user"
+    },
+    "/coin_transactions/{txId}": {
+      "schema": { "$ref": "#/entities/CoinTransaction" },
+      "description": "Transaction audit trail of earned and spent coins"
+    },
+    "/user_inventory/{userId}": {
+      "schema": { "$ref": "#/entities/UserInventory" },
+      "description": "Unlocked themes, badges, and cosmetic items"
+    },
+    "/mission_submissions/{submissionId}": {
+      "schema": { "$ref": "#/entities/MissionSubmission" },
+      "description": "Proof records evaluated by AIRA AI"
+    },
+    "/coupleSpaces/{spaceId}/virtualGifts/{giftId}": {
+      "schema": { "$ref": "#/entities/VirtualGift" },
+      "description": "Virtual romantic gifts triggered in the couple space"
     }
   }
 }

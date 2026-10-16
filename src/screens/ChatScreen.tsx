@@ -8,8 +8,9 @@ import { BottomNav } from '../components/BottomNav';
 import { 
   Send, Heart, Smile, Sparkles, Volume2, VolumeX, Mic, Square, Trash2, 
   Play, Pause, Loader2, Image as ImageIcon, ShieldCheck, Lock, WifiOff, 
-  Download, Eye, X, Check, RefreshCw, Phone, Video
+  Download, Eye, X, Check, RefreshCw, Phone, Video, Palette, Gift
 } from 'lucide-react';
+import { WALLPAPER_PRESETS, getStoredWallpaper, applyWallpaper } from '../lib/themeEngine';
 import { motion, AnimatePresence } from 'motion/react';
 import { safeFormat } from '../lib/dateUtils';
 import { encryptData, decryptData, blobToDataUrl } from '../lib/encryption';
@@ -23,6 +24,9 @@ import {
 import { CallPromptModal } from '../components/calling/CallPromptModal';
 import { useCall } from '../contexts/CallContext';
 import { useLiveNotifications } from '../contexts/LiveNotificationContext';
+import { useLoveCoins } from '../contexts/LoveCoinsContext';
+import { LOVEVERSE_ASSETS } from '../assets/loveverseAssets';
+import { SHOP_CATALOG } from '../types/coins';
 import { sound } from '../lib/sound';
 
 const preloadedMessages = [
@@ -189,9 +193,48 @@ export function ChatScreen() {
   const [latestVoiceMsg, setLatestVoiceMsg] = useState<LocalEncryptedMessage | null>(null);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [showCallPrompt, setShowCallPrompt] = useState(false);
+  const [activeWallpaperId, setActiveWallpaperId] = useState<string>(getStoredWallpaper());
+  const [showWallpaperPicker, setShowWallpaperPicker] = useState<boolean>(false);
+  const [liveVirtualGift, setLiveVirtualGift] = useState<any | null>(null);
 
   const { startCall } = useCall();
   const { markAllAsRead } = useLiveNotifications();
+  const { inventory } = useLoveCoins();
+
+  // Listen to wallpaper changes from theme engine
+  useEffect(() => {
+    const handleWpChange = (e: any) => {
+      setActiveWallpaperId(e.detail || getStoredWallpaper());
+    };
+    window.addEventListener('lovelink-wallpaper-change', handleWpChange);
+    return () => window.removeEventListener('lovelink-wallpaper-change', handleWpChange);
+  }, []);
+
+  // Listen to real-time incoming virtual gifts sent in couple space
+  useEffect(() => {
+    if (!space?.id) return;
+    const giftsQuery = query(
+      collection(db, `coupleSpaces/${space.id}/virtualGifts`),
+      orderBy('createdAt', 'desc'),
+      limit(1)
+    );
+
+    const unsubscribe = onSnapshot(giftsQuery, (snap) => {
+      if (!snap.empty) {
+        const giftData = snap.docs[0].data();
+        // If sent within the last 20 seconds, play live celebration!
+        if (Date.now() - (giftData.createdAt || 0) < 20000) {
+          setLiveVirtualGift(giftData);
+          sound.playLoveAlert();
+          setTimeout(() => setLiveVirtualGift(null), 5000);
+        }
+      }
+    }, (err) => {
+      console.warn("Virtual gift listener error:", err);
+    });
+
+    return () => unsubscribe();
+  }, [space?.id]);
 
   useEffect(() => {
     markAllAsRead();
@@ -792,8 +835,13 @@ export function ChatScreen() {
     }
   };
 
+  const currentWp = WALLPAPER_PRESETS.find(w => w.id === activeWallpaperId) || WALLPAPER_PRESETS[0];
+
   return (
-    <div className="flex flex-col h-screen bg-gradient-to-br from-pink-100 via-purple-50 to-rose-100 relative pb-20 overflow-hidden">
+    <div 
+      className={`flex flex-col h-screen ${currentWp.styleClass} relative pb-20 overflow-hidden transition-all duration-300`}
+      style={currentWp.customBgStyle}
+    >
       
       {/* Hidden file input for photos */}
       <input 
@@ -1005,6 +1053,18 @@ export function ChatScreen() {
             title="Ambient Music"
           >
             {isMusicPlaying ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4 text-rose-300" />}
+          </button>
+
+          <button 
+            type="button"
+            onClick={() => {
+              sound.tap();
+              setShowWallpaperPicker(true);
+            }} 
+            className="p-2.5 bg-white/70 backdrop-blur-md rounded-full shadow-sm text-pink-500 hover:text-pink-600 hover:bg-white border border-white transition-all active:scale-95"
+            title="Chat Wallpaper"
+          >
+            <Palette className="w-4 h-4" />
           </button>
         </div>
       </div>
@@ -1336,6 +1396,125 @@ export function ChatScreen() {
           </div>
         </div>
       </div>
+
+      {/* Wallpaper Picker Modal in Chat */}
+      <AnimatePresence>
+        {showWallpaperPicker && (
+          <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 backdrop-blur-sm">
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="w-full max-w-sm bg-white rounded-3xl p-5 shadow-2xl border border-rose-100 max-h-[85vh] overflow-y-auto"
+            >
+              <div className="flex items-center justify-between pb-3 border-b border-rose-100 mb-3">
+                <div>
+                  <h3 className="font-bold text-base font-serif text-gray-900">Chat Background</h3>
+                  <p className="text-[11px] text-gray-500">Pick a persistent romantic wallpaper</p>
+                </div>
+                <button
+                  onClick={() => setShowWallpaperPicker(false)}
+                  className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-600"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="space-y-2.5">
+                {WALLPAPER_PRESETS.map((wp) => {
+                  const isSelected = activeWallpaperId === wp.id;
+                  return (
+                    <div
+                      key={wp.id}
+                      onClick={() => {
+                        sound.tap();
+                        applyWallpaper(wp.id);
+                        setActiveWallpaperId(wp.id);
+                      }}
+                      className={`p-3 rounded-2xl border cursor-pointer flex items-center justify-between transition-all ${
+                        isSelected
+                          ? 'border-rose-500 ring-2 ring-rose-200 bg-rose-50/50 shadow-xs'
+                          : 'border-gray-100 hover:border-rose-200 bg-white'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="w-10 h-10 rounded-xl shadow-xs border border-white/50"
+                          style={{ background: wp.preview }}
+                        />
+                        <span className="font-bold text-xs text-gray-800">{wp.name}</span>
+                      </div>
+
+                      {isSelected && (
+                        <span className="w-6 h-6 rounded-full bg-rose-500 text-white flex items-center justify-center text-xs shadow-2xs">
+                          ✓
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              <button
+                onClick={() => setShowWallpaperPicker(false)}
+                className="mt-4 w-full bg-gradient-to-r from-rose-500 to-pink-500 text-white font-bold py-2.5 rounded-xl shadow-md shadow-rose-300/40 text-xs"
+              >
+                Done
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Live Incoming Virtual Gift Animation Overlay */}
+      <AnimatePresence>
+        {liveVirtualGift && (
+          <motion.div 
+            initial={{ scale: 0.8, opacity: 0, y: 30 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.8, opacity: 0, y: -30 }}
+            className="fixed inset-0 z-50 pointer-events-none flex items-center justify-center p-6 bg-black/40 backdrop-blur-xs"
+          >
+            <div className="bg-white/95 rounded-3xl p-5 shadow-2xl border-2 border-rose-300 text-center max-w-xs space-y-3 pointer-events-auto">
+              {(() => {
+                const catItem = SHOP_CATALOG.find(i => i.id === liveVirtualGift.giftId);
+                const giftImg = catItem?.image || liveVirtualGift.image;
+                return giftImg ? (
+                  <div className="w-24 h-24 rounded-2xl overflow-hidden bg-rose-50 mx-auto shadow-lg shadow-rose-300/40 border border-white">
+                    <img src={giftImg} alt={liveVirtualGift.giftName} className="w-full h-full object-cover animate-pulse duration-1000" />
+                  </div>
+                ) : (
+                  <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-rose-400 to-pink-500 mx-auto flex items-center justify-center text-4xl shadow-md shadow-rose-300/50 animate-bounce">
+                    {catItem?.icon || '🎁'}
+                  </div>
+                );
+              })()}
+              <div>
+                <span className="text-[10px] font-extrabold text-rose-500 uppercase tracking-widest bg-rose-50 px-2.5 py-0.5 rounded-full">
+                  Special Loveverse Gift
+                </span>
+                <h3 className="font-serif font-black text-lg text-rose-950 mt-1">
+                  {liveVirtualGift.giftName}
+                </h3>
+                {liveVirtualGift.note && (
+                  <p className="text-xs text-rose-700 italic mt-1 bg-rose-50/70 p-2.5 rounded-xl border border-rose-100 font-serif leading-relaxed">
+                    "{liveVirtualGift.note}"
+                  </p>
+                )}
+                <p className="text-[11px] text-gray-400 mt-2">
+                  Delivered with love from your partner ❤️
+                </p>
+              </div>
+              <button
+                onClick={() => setLiveVirtualGift(null)}
+                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 text-white font-bold text-xs shadow-md shadow-rose-300/40 hover:brightness-105 active:scale-95 transition-all"
+              >
+                Receive with a Hug
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="z-20 bg-white shadow-[0_-4px_20px_rgba(0,0,0,0.03)] border-t border-rose-100/50">
         <BottomNav />

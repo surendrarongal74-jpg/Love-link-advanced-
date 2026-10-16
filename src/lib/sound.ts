@@ -25,6 +25,8 @@ class SoundManager {
   pop() { this.playPop(); }
   chime() { this.playChime(); }
   success() { this.playSuccess(); }
+  playCelebration() { this.playSuccess(); }
+  celebration() { this.playSuccess(); }
 
   // Double warm heartbeat thud
   playHeartbeat() {

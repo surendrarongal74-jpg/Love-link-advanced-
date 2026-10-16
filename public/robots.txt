@@ -1,0 +1,20 @@
+User-agent: *
+Allow: /
+Allow: /market
+Allow: /features
+Allow: /about
+Allow: /privacy
+Allow: /terms
+Allow: /favicon.ico
+Allow: /icon.svg
+Allow: /pwa-*.png
+Allow: /apple-touch-icon.png
+
+# Shield private couple spaces, individual chat messages, memories, and internal API routes
+Disallow: /space/
+Disallow: /chat/
+Disallow: /timeline/
+Disallow: /settings/
+Disallow: /api/
+
+Sitemap: https://love-link.app/sitemap.xml

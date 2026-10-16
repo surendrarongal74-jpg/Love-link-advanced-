@@ -369,5 +369,87 @@ service cloud.firestore {
       allow update: if isSignedIn() && isCoupleMember(spaceId) && isValidVisionBoardItem(incoming());
       allow delete: if isSignedIn() && isCoupleMember(spaceId);
     }
+
+    match /coupleSpaces/{spaceId}/loveCoupons/{couponId} {
+      function isValidLoveCoupon(data) {
+        return data.keys().hasAll(['id', 'coupleSpaceId', 'creatorId', 'creatorName', 'title', 'category', 'tokenCost', 'emoji', 'status', 'createdAt', 'updatedAt']) &&
+               data.keys().size() <= 15 &&
+               isValidString(data.id, 128) &&
+               isValidString(data.coupleSpaceId, 128) && data.coupleSpaceId == spaceId &&
+               isValidString(data.creatorId, 128) &&
+               isValidString(data.creatorName, 128) &&
+               isValidString(data.title, 256) &&
+               isValidString(data.category, 64) &&
+               data.tokenCost is int &&
+               isValidString(data.emoji, 32) &&
+               isValidString(data.status, 32) &&
+               (!('description' in data) || isValidString(data.description, 1024)) &&
+               (!('terms' in data) || isValidString(data.terms, 1024)) &&
+               (!('redeemedBy' in data) || isValidString(data.redeemedBy, 128)) &&
+               (!('redeemedAt' in data) || data.redeemedAt is int) &&
+               data.createdAt is int &&
+               data.updatedAt is int;
+      }
+      allow list, get: if isSignedIn() && isCoupleMember(spaceId);
+      allow create: if isSignedIn() && isCoupleMember(spaceId) && isValidLoveCoupon(incoming()) && incoming().creatorId == request.auth.uid;
+      allow update: if isSignedIn() && isCoupleMember(spaceId) && isValidLoveCoupon(incoming());
+      allow delete: if isSignedIn() && isCoupleMember(spaceId);
+    }
+
+    // Virtual Romantic Gifts sent in Couple Space
+    match /coupleSpaces/{spaceId}/virtualGifts/{giftId} {
+      function isValidVirtualGift(data) {
+        return data.keys().hasAll(['id', 'coupleSpaceId', 'senderId', 'giftId', 'giftName', 'cost', 'createdAt']) &&
+               data.keys().size() <= 10 &&
+               isValidString(data.id, 128) &&
+               isValidString(data.coupleSpaceId, 128) && data.coupleSpaceId == spaceId &&
+               isValidString(data.senderId, 128) && data.senderId == request.auth.uid &&
+               isValidString(data.giftId, 64) &&
+               isValidString(data.giftName, 128) &&
+               data.cost is int &&
+               (!('recipientId' in data) || isValidString(data.recipientId, 128)) &&
+               (!('note' in data) || isValidString(data.note, 500)) &&
+               data.createdAt is int;
+      }
+      allow list, get: if isSignedIn() && isCoupleMember(spaceId);
+      allow create: if isSignedIn() && isCoupleMember(spaceId) && isValidVirtualGift(incoming());
+      allow update, delete: if false;
+    }
+
+    // Shared Canvas Drawings for couples
+    match /coupleSpaces/{spaceId}/sharedCanvas/{canvasId} {
+      allow list, get: if isSignedIn() && isCoupleMember(spaceId);
+      allow create, update: if isSignedIn() && isCoupleMember(spaceId);
+      allow delete: if isSignedIn() && isCoupleMember(spaceId);
+    }
+
+    // Love Coins: User Wallet (Server-authoritative, strictly read-only to owner)
+    match /user_wallets/{userId} {
+      allow get: if isSignedIn() && request.auth.uid == userId;
+      allow list: if false;
+      allow write: if false;
+    }
+
+    // Love Coins: Transaction Ledger (Read-only to owner, writes strictly server-side)
+    match /coin_transactions/{txId} {
+      allow get, list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow write: if false;
+    }
+
+    // Love Coins: User Inventory (User can read own/partner and update activeTheme & equippedBadge)
+    match /user_inventory/{userId} {
+      allow get: if isSignedIn();
+      allow list: if false;
+      allow create, delete: if false;
+      allow update: if isSignedIn() && request.auth.uid == userId && (
+        incoming().diff(existing()).affectedKeys().hasOnly(['activeTheme', 'equippedBadge', 'updatedAt'])
+      );
+    }
+
+    // Love Coins: Mission Proof Submissions (Read-only to submitter)
+    match /mission_submissions/{submissionId} {
+      allow get, list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow write: if false;
+    }
   }
 }

@@ -176,6 +176,21 @@ export const TermsAndConditionsModal: React.FC<TermsAndConditionsModalProps> = (
                     You can clear local chat history or wipe your phone&apos;s local vault at any time in App Settings. Deleting the app removes all locally cached chats and voice notes.
                   </p>
                 </div>
+
+                <div className="space-y-3 pt-1 border-t border-rose-100/60">
+                  <h3 className="font-bold text-gray-900 text-xs">
+                    Contact & Privacy Inquiries
+                  </h3>
+                  <p className="text-xs text-gray-600">
+                    Have questions about your couple space privacy or terms? Email our dedicated team at{' '}
+                    <a
+                      href="mailto:support@lovelinkapp.com?subject=Love%20Link%20Inquiry"
+                      className="text-rose-600 underline font-semibold hover:text-rose-700"
+                    >
+                      support@lovelinkapp.com
+                    </a>.
+                  </p>
+                </div>
               </>
             )}
           </div>

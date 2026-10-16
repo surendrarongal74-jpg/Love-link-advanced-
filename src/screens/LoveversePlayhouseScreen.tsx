@@ -9,6 +9,8 @@ import { TwoHeartsMysteryGame } from '../components/playhouse/TwoHeartsMysteryGa
 import { LoveMemoryMatchGame } from '../components/playhouse/LoveMemoryMatchGame';
 import { OneWordStoryGame } from '../components/playhouse/OneWordStoryGame';
 import { SyncHeartbeatsGame } from '../components/playhouse/SyncHeartbeatsGame';
+import { HeartbeatHarmonyGame } from '../components/playhouse/HeartbeatHarmonyGame';
+import { ConstellationConnectGame } from '../components/playhouse/ConstellationConnectGame';
 import { LoveTicTacToeGame } from '../components/playhouse/LoveTicTacToeGame';
 import { EmojiCipherGame } from '../components/playhouse/EmojiCipherGame';
 import { CouplesTriviaGame } from '../components/playhouse/CouplesTriviaGame';
@@ -27,7 +29,7 @@ export function LoveversePlayhouseScreen() {
   const { userData } = useAuth();
   const { space, partnerData } = useCoupleSpace();
   const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'All' | 'Creativity' | 'Intimacy' | 'Mystery' | 'Memory' | 'Playful'>('All');
+  const [activeTab, setActiveTab] = useState<'All' | 'Creativity' | 'Intimacy' | 'Mystery' | 'Memory' | 'Playful' | 'Rhythm'>('All');
 
   const selectedGame = PLAYHOUSE_GAMES.find(g => g.id === selectedGameId);
 
@@ -72,16 +74,16 @@ export function LoveversePlayhouseScreen() {
                 💖 Loveverse Playhouse
               </span>
               <h1 className="text-2xl font-serif font-black leading-tight text-white drop-shadow-sm">
-                Top 10 Couple Games
+                Top Couple Games
               </h1>
               <p className="text-xs text-rose-100 max-w-xs leading-relaxed">
-                Live interactive drawing, telepathic guessing, mystery islands, and sync pulses built exclusively for two.
+                Live interactive drawing, telepathic guessing, rhythm waves, stellar puzzles, and sync pulses built exclusively for two.
               </p>
               
               <div className="flex items-center gap-2 pt-2">
                 <span className="text-[11px] font-bold bg-black/25 backdrop-blur-sm px-2.5 py-1 rounded-xl flex items-center gap-1">
                   <Star className="w-3.5 h-3.5 text-amber-300 fill-amber-300" />
-                  <span>10 Playable Games</span>
+                  <span>AIRA Endless Games</span>
                 </span>
                 <span className="text-[11px] font-bold bg-black/25 backdrop-blur-sm px-2.5 py-1 rounded-xl flex items-center gap-1">
                   <Flame className="w-3.5 h-3.5 text-rose-300" />
@@ -93,7 +95,7 @@ export function LoveversePlayhouseScreen() {
 
           {/* Category Filter Pills */}
           <div className="flex items-center gap-2 overflow-x-auto scrollbar-none py-3 mt-2">
-            {(['All', 'Creativity', 'Intimacy', 'Mystery', 'Memory', 'Playful'] as const).map((cat) => (
+            {(['All', 'Creativity', 'Intimacy', 'Rhythm', 'Mystery', 'Memory', 'Playful'] as const).map((cat) => (
               <button
                 key={cat}
                 onClick={() => { sound.playPop(); setActiveTab(cat); }}
@@ -231,9 +233,11 @@ export function LoveversePlayhouseScreen() {
           {selectedGameId === 'draw-guess' && <DrawItGuessItGame />}
           {selectedGameId === 'guess-answer' && <GuessMyAnswerGame />}
           {selectedGameId === 'mystery-island' && <TwoHeartsMysteryGame />}
+          {selectedGameId === 'heartbeat-harmony' && <HeartbeatHarmonyGame />}
+          {selectedGameId === 'constellation-puzzle' && <ConstellationConnectGame />}
           {selectedGameId === 'memory-match' && <LoveMemoryMatchGame />}
           {selectedGameId === 'story-weaver' && <OneWordStoryGame />}
-          {selectedGameId === 'sync-pulse' && <SyncHeartbeatsGame />}
+          {selectedGameId === 'sync-pulse' && <HeartbeatHarmonyGame />}
           {selectedGameId === 'love-tic-tac-toe' && <LoveTicTacToeGame />}
           {selectedGameId === 'emoji-decoder' && <EmojiCipherGame />}
           {selectedGameId === 'couples-trivia' && <CouplesTriviaGame />}

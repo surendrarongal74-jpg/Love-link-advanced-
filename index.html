@@ -1,20 +1,204 @@
 <!doctype html>
 <html lang="en">
   <head>
+    <script>
+      // Gracefully handle Vite HMR WebSocket connection closures in iframe dev environment
+      (function() {
+        // Intercept Vite HMR WebSocket connections to avoid failed connection spam
+        var NativeWebSocket = window.WebSocket;
+        if (NativeWebSocket) {
+          window.WebSocket = function(url, protocols) {
+            var urlStr = String(url || '');
+            var isViteHmr = (protocols === 'vite-hmr') ||
+              urlStr.indexOf('vite') !== -1 ||
+              urlStr.indexOf(':24678') !== -1;
+            if (isViteHmr) {
+              // Return a silent mock WebSocket for Vite HMR
+              return {
+                readyState: 3, // CLOSED
+                bufferedAmount: 0,
+                extensions: '',
+                protocol: '',
+                url: urlStr,
+                onopen: null,
+                onclose: null,
+                onerror: null,
+                onmessage: null,
+                binaryType: 'blob',
+                send: function() {},
+                close: function() {},
+                addEventListener: function() {},
+                removeEventListener: function() {},
+                dispatchEvent: function() { return false; }
+              };
+            }
+            return new NativeWebSocket(url, protocols);
+          };
+          window.WebSocket.prototype = NativeWebSocket.prototype;
+          window.WebSocket.CONNECTING = NativeWebSocket.CONNECTING;
+          window.WebSocket.OPEN = NativeWebSocket.OPEN;
+          window.WebSocket.CLOSING = NativeWebSocket.CLOSING;
+          window.WebSocket.CLOSED = NativeWebSocket.CLOSED;
+        }
+
+        var origError = console.error;
+        console.error = function() {
+          var args = Array.prototype.slice.call(arguments);
+          var msg = args.map(function(item) {
+            if (item instanceof Error) return (item.stack || item.message);
+            return typeof item === 'object' ? JSON.stringify(item) : String(item);
+          }).join(' ');
+          if (
+            msg.indexOf('WebSocket closed without opened') !== -1 ||
+            (msg.indexOf('vite') !== -1 && msg.indexOf('WebSocket') !== -1)
+          ) {
+            return;
+          }
+          return origError.apply(console, arguments);
+        };
+
+        var origOnError = window.onerror;
+        window.onerror = function(message, source, lineno, colno, error) {
+          var msg = String(message || '');
+          var src = String(source || '');
+          var errStr = error ? String(error.message || error.stack || '') : '';
+          if (
+            msg.indexOf('WebSocket') !== -1 ||
+            src.indexOf('@vite/client') !== -1 ||
+            errStr.indexOf('WebSocket') !== -1
+          ) {
+            return true;
+          }
+          if (origOnError) return origOnError.apply(this, arguments);
+          return false;
+        };
+
+        window.addEventListener('error', function(e) {
+          var msg = (e && (e.message || (e.error && e.error.message))) || '';
+          var filename = (e && e.filename) || '';
+          if (
+            msg.indexOf('WebSocket') !== -1 ||
+            msg.indexOf('vite') !== -1 ||
+            filename.indexOf('@vite/client') !== -1
+          ) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            return true;
+          }
+        }, true);
+
+        window.addEventListener('unhandledrejection', function(e) {
+          var reason = e && (e.reason ? (e.reason.message || String(e.reason)) : '');
+          if (reason.indexOf('WebSocket') !== -1 || reason.indexOf('vite') !== -1) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            return true;
+          }
+        }, true);
+      })();
+    </script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <title>Love Link</title>
-    <meta name="description" content="A private relationship app designed for couples to connect, communicate, and grow together." />
+    <title>Love Link – Private Relationship App for Couples</title>
+    <meta name="description" content="Private relationship app for couples to connect deeper. Share memories, sweet love notes, send 3D virtual gifts, track love streaks, and explore your shared Loveverse." />
+    <meta name="keywords" content="love link, couples app, relationship app, private couple space, love streak, virtual gifts, memory timeline, anniversary countdown, love notes" />
+    <meta name="author" content="Love Link" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    
+    <!-- Google Search Console Verification Meta Tag -->
+    <meta name="google-site-verification" content="%VITE_GOOGLE_SITE_VERIFICATION%" id="google-site-verification-meta" />
+    
+    <!-- Canonical URL Link -->
+    <link rel="canonical" id="canonical-url" href="https://love-link.app/" />
+
+    <!-- Mobile & PWA Configuration -->
     <meta name="theme-color" content="#FFF8FA" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Love Link" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <link rel="icon" type="image/svg+xml" href="/icon.svg" />
     <link rel="icon" type="image/png" sizes="192x192" href="/pwa-192x192.png" />
-    <meta property="og:title" content="Love Link" />
-    <meta property="og:description" content="A private relationship app designed for couples to connect, communicate, and grow together." />
+    <link rel="icon" type="image/png" sizes="512x512" href="/pwa-512x512.png" />
+
+    <!-- OpenGraph Social Sharing Card Metadata -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Love Link" />
+    <meta property="og:title" content="Love Link – Private Relationship App for Couples" />
+    <meta property="og:description" content="Private relationship app for couples to connect deeper. Share memories, sweet love notes, send 3D virtual gifts, track love streaks, and explore your shared Loveverse." />
+    <meta property="og:url" content="https://love-link.app/" />
+    <meta property="og:image" content="/pwa-512x512.png" />
+    <meta property="og:image:width" content="512" />
+    <meta property="og:image:height" content="512" />
+    <meta property="og:image:alt" content="Love Link - Private Relationship App for Couples" />
+    <meta property="og:locale" content="en_US" />
+
+    <!-- Twitter / X Social Card Metadata -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Love Link – Private Relationship App for Couples" />
+    <meta name="twitter:description" content="Private relationship app for couples to connect deeper. Share memories, sweet love notes, send 3D virtual gifts, track love streaks, and explore your shared Loveverse." />
+    <meta name="twitter:image" content="/pwa-512x512.png" />
+
+    <!-- Schema.org JSON-LD Structured Data for Google Rich Snippets -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebApplication",
+          "@id": "https://love-link.app/#webapp",
+          "name": "Love Link",
+          "url": "https://love-link.app/",
+          "applicationCategory": "LifestyleApplication",
+          "operatingSystem": "All (Web, Android, iOS)",
+          "description": "Private relationship app for couples to connect deeper. Share memories, sweet love notes, send 3D virtual gifts, track love streaks, and explore your shared Loveverse.",
+          "browserRequirements": "Requires JavaScript. Requires HTML5.",
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+          },
+          "featureList": [
+            "Private Couple Spaces",
+            "End-to-End Real-Time Messaging",
+            "Interactive Memory Timeline & Milestones",
+            "Daily Love Streaks & Check-ins",
+            "Virtual Gift Shop & Animated Surprises",
+            "Custom Romantic Themes & Badges"
+          ],
+          "screenshot": "https://love-link.app/pwa-512x512.png"
+        },
+        {
+          "@type": "Organization",
+          "@id": "https://love-link.app/#organization",
+          "name": "Love Link",
+          "url": "https://love-link.app/",
+          "logo": "https://love-link.app/icon.svg",
+          "sameAs": []
+        }
+      ]
+    }
+    </script>
+    <script>
+      // Runtime canonical URL and Google site verification dynamic sync
+      (function() {
+        try {
+          var origin = window.location.origin;
+          var path = window.location.pathname;
+          var canonical = document.getElementById('canonical-url');
+          if (canonical) {
+            canonical.setAttribute('href', origin + path);
+          }
+          var storedToken = localStorage.getItem('love_link_gsc_token');
+          var metaTag = document.getElementById('google-site-verification-meta');
+          if (storedToken && metaTag) {
+            metaTag.setAttribute('content', storedToken);
+          }
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

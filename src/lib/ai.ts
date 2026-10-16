@@ -125,3 +125,32 @@ export async function generateVisionBoardIdeas(
     return [];
   }
 }
+
+export interface LoveCouponIdea {
+  title: string;
+  description: string;
+  category: string;
+  tokenCost: number;
+  emoji: string;
+  terms?: string;
+}
+
+export async function generateAiraLoveCoupons(
+  partnerName?: string,
+  category: string = 'All',
+  loveLanguage: string = 'Quality Time'
+): Promise<LoveCouponIdea[]> {
+  try {
+    const res = await fetch('/api/gemini/love-coupons-ideas', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ partnerName, category, loveLanguage }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    return data.coupons || [];
+  } catch (err) {
+    console.error("Failed to generate AI love coupons", err);
+    return [];
+  }
+}

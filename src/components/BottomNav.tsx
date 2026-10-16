@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { Home, MessageCircle, Heart, Calendar, Sparkles } from 'lucide-react';
+import { Home, MessageCircle, Heart, Calendar, Sparkles, ShoppingBag } from 'lucide-react';
 import { sound } from '../lib/sound';
 import { useLiveNotifications } from '../contexts/LiveNotificationContext';
 
@@ -16,31 +16,15 @@ export function BottomNav() {
   const navItems = [
     { to: '/', icon: Home, label: 'Home' },
     { to: '/chat', icon: MessageCircle, label: 'Chat', badge: unreadMessagesCount },
+    { to: '/market', icon: ShoppingBag, label: 'Market' },
     { to: '/game', icon: Heart, label: 'Sync' },
     { to: '/memories', icon: Calendar, label: 'Memories' },
     { to: '/aira', icon: Sparkles, label: 'AIRA' },
   ];
 
-  if (location.pathname !== '/') {
-    return (
-      <div className="fixed top-5 left-5 z-[100]">
-        <button 
-          onClick={() => {
-            sound.playPop();
-            navigate('/');
-          }} 
-          className="w-11 h-11 bg-white/95 backdrop-blur-xl border border-rose-200/90 flex items-center justify-center rounded-2xl shadow-lg hover:scale-105 active:scale-95 transition-all text-rose-500 hover:text-rose-600 hover:bg-rose-50 shadow-rose-200/40"
-          title="Back to Home"
-        >
-          <Home className="w-5 h-5" />
-        </button>
-      </div>
-    );
-  }
-
   return (
-    <div className="fixed bottom-0 w-full left-0 right-0 z-50 px-4 pb-4 pointer-events-none">
-      <div className="bg-white/95 backdrop-blur-2xl border border-rose-100 flex justify-around items-center px-2 py-2 rounded-full shadow-2xl shadow-rose-300/40 pointer-events-auto max-w-sm mx-auto">
+    <div className="fixed bottom-0 w-full left-0 right-0 z-40 px-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] pointer-events-none">
+      <div className="bg-white/95 backdrop-blur-2xl border border-rose-100 flex justify-around items-center px-1.5 py-1.5 rounded-full shadow-2xl shadow-rose-300/40 pointer-events-auto max-w-sm mx-auto">
         {navItems.map((item) => (
           <NavLink 
             key={item.to}
