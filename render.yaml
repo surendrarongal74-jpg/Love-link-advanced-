@@ -1,0 +1,15 @@
+services:
+  # Render Web Service configuration for Love Link
+  - type: web
+    name: love-link
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: VITE_GOOGLE_SITE_VERIFICATION
+        value: f9e701bd5d974c1f

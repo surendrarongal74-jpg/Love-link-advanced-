@@ -17,6 +17,20 @@ const PORT = parseInt(process.env.PORT || '3000', 10);
 
 app.use(express.json({ limit: '25mb' }));
 
+// CORS & iFrame compatibility headers for AI Studio preview
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+});
+
 const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY,
   httpOptions: {
@@ -2167,6 +2181,7 @@ app.get('/robots.txt', (req, res) => {
     'Allow: /icon.svg',
     'Allow: /pwa-*.png',
     'Allow: /apple-touch-icon.png',
+    'Allow: /google*.html',
     '',
     '# Shield private couple spaces, individual chat messages, memories, and internal API routes',
     'Disallow: /space/',
@@ -2218,12 +2233,43 @@ ${urlEntries}
   res.send(xml);
 });
 
-// 3. Google Search Console HTML verification file route: /google<token>.html
-app.get(/^\/google([a-zA-Z0-9_-]+)\.html$/, (req, res) => {
-  const code = req.params[0];
+// 3. Google Search Console HTML verification file routes
+const EXACT_GSC_TOKEN = 'f9e701bd5d974c1f';
+const EXACT_GSC_FILENAME = `google${EXACT_GSC_TOKEN}.html`;
+
+// Serve ONLY the legitimate Google verification file with exact token
+app.get(`/${EXACT_GSC_FILENAME}`, (req, res) => {
+  const distFile = path.resolve(__dirname, 'dist', EXACT_GSC_FILENAME);
+  const publicFile = path.resolve(__dirname, 'public', EXACT_GSC_FILENAME);
+  const targetFile = fs.existsSync(distFile) ? distFile : fs.existsSync(publicFile) ? publicFile : null;
+
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
-  res.setHeader('Cache-Control', 'public, max-age=86400');
-  res.send(`google-site-verification: google${code}.html`);
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+
+  if (targetFile) {
+    return res.sendFile(targetFile);
+  }
+  return res.send(`google-site-verification: ${EXACT_GSC_FILENAME}\n`);
+});
+
+// Support configurable token via env var if provided and different
+const envGscToken = process.env.GOOGLE_SITE_VERIFICATION || process.env.VITE_GOOGLE_SITE_VERIFICATION;
+if (envGscToken && envGscToken !== EXACT_GSC_TOKEN) {
+  const envFilename = `google${envGscToken}.html`;
+  app.get(`/${envFilename}`, (req, res) => {
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.send(`google-site-verification: ${envFilename}\n`);
+  });
+}
+
+// CRITICAL FOR GOOGLE SEARCH CONSOLE ANTI-SPOOF / ANTI-HACKING VALIDATION:
+// Any other /google* request (probes, non-existent tokens, soft-404 tests) MUST return 404 Not Found!
+// Never return 200 OK or the application homepage for non-existent verification probes.
+app.all(/^\/google.*$/i, (req, res) => {
+  res.status(404).setHeader('Content-Type', 'text/plain; charset=utf-8').send('404 Not Found');
 });
 
 // 4. API endpoint to inspect or update Google Search Console verification settings
@@ -2248,6 +2294,51 @@ app.post('/api/seo/token', (req, res) => {
   return res.status(400).json({ success: false, error: 'Invalid token' });
 });
 
+// DPDP Consent Logging Audit Endpoint
+app.post('/api/dpdp/consent-log', (req, res) => {
+  try {
+    const record = req.body;
+    console.log(`[DPDP Audit] Consent recorded: ID=${record.consentId}, User=${record.userId}, Notice=${record.noticeVersion}`);
+    res.json({ success: true, loggedAt: new Date().toISOString() });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// DPDP Data Rights Request Intake Endpoint
+app.post('/api/dpdp/rights-request', (req, res) => {
+  try {
+    const request = req.body;
+    console.log(`[DPDP Grievance Intake] New Statutory Request: Ticket=${request.ticketNumber}, Type=${request.requestType}, Email=${request.userEmail}`);
+    res.json({ 
+      success: true, 
+      ticketNumber: request.ticketNumber, 
+      statutoryDeadlineDays: 30,
+      grievanceOfficerEmail: 'grievance-dpdp@love-link.app' 
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// DPDP Status & Governance Info Endpoint
+app.get('/api/dpdp/status', (req, res) => {
+  res.json({
+    complianceStandard: 'Digital Personal Data Protection Act, 2023 (India)',
+    noticeVersion: 'dpdp-2023-v1.0',
+    dataFiduciary: 'Love Link Digital Sanctuary (India) Private Limited',
+    grievanceOfficer: {
+      name: 'Priyadarshini Rao',
+      designation: 'Data Protection & Grievance Redressal Officer',
+      email: 'grievance-dpdp@love-link.app',
+      slaResponseHours: 48,
+      slaResolutionDays: 30,
+    },
+    rightsSupported: ['Access', 'Correction', 'Erasure', 'WithdrawConsent', 'Nomination'],
+    statutoryBoard: 'Data Protection Board of India (DPBI)',
+  });
+});
+
 
 async function startServer() {
   const isDev = process.env.NODE_ENV === 'development';
@@ -2258,6 +2349,14 @@ async function startServer() {
     // Production / Deployed environment: serve pre-built static bundle
     app.use(express.static(distPath));
     app.get('*', (req, res) => {
+      const ext = path.extname(req.path).toLowerCase();
+      // If a file extension is present (.html, .xml, .txt, .php, etc.) and not in static assets, return 404 to prevent soft 404
+      if (ext && ext !== '.html') {
+        return res.status(404).setHeader('Content-Type', 'text/plain; charset=utf-8').send('404 Not Found');
+      }
+      if (ext === '.html' && req.path !== '/' && req.path !== '/index.html') {
+        return res.status(404).setHeader('Content-Type', 'text/plain; charset=utf-8').send('404 Not Found');
+      }
       res.sendFile(path.resolve(distPath, 'index.html'));
     });
     console.log(`Serving static assets from ${distPath}`);

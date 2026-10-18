@@ -113,6 +113,7 @@ export function LoveCouponsScreen() {
   const [isGeneratingAira, setIsGeneratingAira] = useState(false);
   const [airaSuggestions, setAiraSuggestions] = useState<LoveCouponIdea[]>([]);
   const [redeemConfirmCoupon, setRedeemConfirmCoupon] = useState<LoveCoupon | null>(null);
+  const [actionFeedback, setActionFeedback] = useState<{ text: string; error?: boolean } | null>(null);
 
   // Form State
   const [newTitle, setNewTitle] = useState('');
@@ -179,25 +180,37 @@ export function LoveCouponsScreen() {
   // Handle Redeem coupon
   const handleRedeemCoupon = async (coupon: LoveCoupon) => {
     if (!space?.id || !userData?.id) return;
+    setActionFeedback(null);
 
     if (currentLoveTokens < coupon.tokenCost) {
       sound.pop();
-      alert(`You need ${coupon.tokenCost - currentLoveTokens} more Love Coins to redeem this coupon! Complete missions in Earn Coins.`);
+      setActionFeedback({
+        text: `You need ${coupon.tokenCost - currentLoveTokens} more Love Coins to redeem this perk! Complete missions in Earn Coins.`,
+        error: true
+      });
       return;
     }
 
-    sound.playCelebration();
-    confetti({
-      particleCount: 80,
-      spread: 70,
-      origin: { y: 0.6 },
-      colors: ['#f43f5e', '#ec4899', '#a855f7', '#fbbf24']
-    });
-
     const now = Date.now();
     try {
-      // Deduct coins atomically via backend transaction
-      await spendCoins(coupon.id, 'coupon', coupon.tokenCost);
+      // Deduct coins atomically via wallet manager
+      const spendResult = await spendCoins(coupon.id, 'coupon', coupon.tokenCost);
+      if (!spendResult.success) {
+        sound.pop();
+        setActionFeedback({
+          text: spendResult.error || 'Failed to redeem coupon. Please try again.',
+          error: true
+        });
+        return;
+      }
+
+      sound.playCelebration();
+      confetti({
+        particleCount: 80,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ['#f43f5e', '#ec4899', '#a855f7', '#fbbf24']
+      });
 
       const updatePayload: Record<string, any> = {
         status: 'redeemed',
@@ -206,7 +219,10 @@ export function LoveCouponsScreen() {
         updatedAt: now
       };
       await updateDoc(doc(db, `coupleSpaces/${space.id}/loveCoupons`, coupon.id), updatePayload);
-      setRedeemConfirmCoupon(null);
+      setTimeout(() => {
+        setRedeemConfirmCoupon(null);
+        setActionFeedback(null);
+      }, 1400);
     } catch (err) {
       handleFirestoreError(err, OperationType.UPDATE, `coupleSpaces/${space.id}/loveCoupons/${coupon.id}`);
     }
@@ -602,11 +618,28 @@ export function LoveCouponsScreen() {
                 <p className="text-xs text-gray-500 mt-1">
                   Ready to cash this in with your partner? It will be stamped as redeemed in your shared vault.
                 </p>
+                <div className="mt-3 p-2.5 bg-rose-50/70 rounded-2xl border border-rose-100 flex items-center justify-between text-xs">
+                  <span className="text-gray-500 font-medium">Coupon Cost:</span>
+                  <div className="flex items-center gap-1 font-bold text-rose-600">
+                    <Coins className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
+                    <span>{redeemConfirmCoupon.tokenCost} Coins</span>
+                  </div>
+                </div>
+                {actionFeedback && (
+                  <div className={`mt-2.5 p-2.5 rounded-xl text-xs font-semibold text-center ${
+                    actionFeedback.error ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                  }`}>
+                    {actionFeedback.text}
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center gap-2 pt-2">
                 <button
-                  onClick={() => setRedeemConfirmCoupon(null)}
+                  onClick={() => {
+                    setRedeemConfirmCoupon(null);
+                    setActionFeedback(null);
+                  }}
                   className="flex-1 py-2.5 rounded-xl bg-gray-100 text-gray-600 text-xs font-bold hover:bg-gray-200 transition-all"
                 >
                   Keep for Later

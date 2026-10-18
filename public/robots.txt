@@ -9,6 +9,7 @@ Allow: /favicon.ico
 Allow: /icon.svg
 Allow: /pwa-*.png
 Allow: /apple-touch-icon.png
+Allow: /google*.html
 
 # Shield private couple spaces, individual chat messages, memories, and internal API routes
 Disallow: /space/

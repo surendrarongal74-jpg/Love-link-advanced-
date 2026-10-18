@@ -52,11 +52,17 @@
     scrollbar-width: none;
 }
 
-html, body {
+html {
   overflow-x: hidden;
   max-width: 100vw;
   -webkit-text-size-adjust: 100%;
-  overscroll-behavior-y: contain;
+}
+
+body {
+  overflow-x: hidden;
+  min-height: 100vh;
+  -webkit-overflow-scrolling: touch;
+  background-color: #fff6f9;
 }
 
 * {

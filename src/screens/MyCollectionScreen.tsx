@@ -15,6 +15,7 @@ import { THEMES_LIST, getStoredTheme } from '../lib/themeEngine';
 import { SHOP_CATALOG, ShopItem } from '../types/coins';
 import { sound } from '../lib/sound';
 import confetti from 'canvas-confetti';
+import { triggerHeartBurstConfetti } from '../lib/celebrationEffects';
 import { LOVEVERSE_ASSETS } from '../assets/loveverseAssets';
 
 type MainTab = 'owned' | 'gifts' | 'history';
@@ -74,12 +75,7 @@ export function MyCollectionScreen() {
   };
 
   const handleReplayGift = (gift: any) => {
-    sound.playLoveAlert();
-    confetti({
-      particleCount: 90,
-      spread: 90,
-      origin: { y: 0.5 }
-    });
+    triggerHeartBurstConfetti(0.5, 0.45);
     setReplayGift(gift);
   };
 
@@ -121,7 +117,7 @@ export function MyCollectionScreen() {
   }, [spaceGifts, transactions, giftFilter, userData?.id, partnerData?.id]);
 
   return (
-    <div className="min-h-screen bg-[#FFF6F9] text-[#2B1A2E] pb-28 select-none font-sans">
+    <div className="min-h-screen bg-[#FFF6F9] text-[#2B1A2E] pb-32 select-none font-sans overflow-y-auto">
       {/* Top Header */}
       <header className="bg-white/90 backdrop-blur-xl sticky top-0 z-30 border-b border-rose-100/80 px-4 py-3.5 shadow-2xs">
         <div className="max-w-md mx-auto flex items-center justify-between">

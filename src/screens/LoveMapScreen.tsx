@@ -7,8 +7,10 @@ import { db } from '../lib/firebase';
 import { collection, query, where, onSnapshot, doc, setDoc, deleteDoc } from 'firebase/firestore';
 import { handleFirestoreError, OperationType } from '../lib/errorHandler';
 import { BottomNav } from '../components/BottomNav';
-import { MapPin, Plus, Navigation, Image as ImageIcon, X } from 'lucide-react';
+import { MapPin, Plus, Navigation, Image as ImageIcon, X, Shield } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { getTrackerPreferences, updateTrackerPreferences } from '../lib/dpdpService';
+import { sound } from '../lib/sound';
 
 const mapContainerStyle = {
   width: '100%',
@@ -115,11 +117,25 @@ const mapStyles = [
 ];
 
 export function LoveMapScreen() {
+  const [hasLocationConsent, setHasLocationConsent] = useState<boolean>(() => {
+    return getTrackerPreferences().locationMaps;
+  });
+
+  useEffect(() => {
+    const handleUpdate = (e: any) => {
+      if (e.detail) {
+        setHasLocationConsent(Boolean(e.detail.locationMaps));
+      }
+    };
+    window.addEventListener('lovelink:dpdp-trackers-updated', handleUpdate);
+    return () => window.removeEventListener('lovelink:dpdp-trackers-updated', handleUpdate);
+  }, []);
+
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
   
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-map-script',
-    googleMapsApiKey: apiKey
+    googleMapsApiKey: hasLocationConsent ? apiKey : ''
   });
 
   const { space } = useCoupleSpace();
@@ -366,7 +382,39 @@ export function LoveMapScreen() {
       </div>
 
       <div className="flex-1 w-full relative">
-        {!isLoaded ? (
+        {!hasLocationConsent ? (
+          <div className="w-full h-full flex items-center justify-center p-6 bg-gradient-to-b from-rose-50/70 via-pink-50/50 to-white">
+            <div className="max-w-sm bg-white/95 backdrop-blur-md rounded-3xl p-6 border border-rose-200/90 shadow-xl text-center space-y-3.5">
+              <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mx-auto shadow-xs">
+                <MapPin className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="font-bold text-gray-900 text-sm">Google Maps & Geolocation Paused</h3>
+                <p className="text-[11px] text-rose-600 font-semibold mt-0.5">DPDP Act (India, 2023) Privacy Gate</p>
+              </div>
+              <p className="text-xs text-gray-600 leading-relaxed">
+                Loading third-party Google Maps and sharing device coordinates requires your affirmative tracker consent under Indian data protection law.
+              </p>
+              <div className="pt-1 space-y-2">
+                <button
+                  onClick={() => {
+                    sound.tap();
+                    updateTrackerPreferences({ locationMaps: true });
+                  }}
+                  className="w-full py-2.5 px-4 bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white font-bold text-xs rounded-xl shadow-xs transition active:scale-95"
+                >
+                  Grant Consent & Load Interactive Map
+                </button>
+                <a
+                  href="/privacy"
+                  className="block text-[11px] text-gray-500 hover:text-gray-700 underline"
+                >
+                  Review DPDP Privacy Notice
+                </a>
+              </div>
+            </div>
+          </div>
+        ) : !isLoaded ? (
           <div className="w-full h-full flex items-center justify-center bg-rose-100/50">
             <div className="animate-pulse flex flex-col items-center">
               <MapPin className="w-8 h-8 text-rose-300 mb-2" />

@@ -1,49 +1,48 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, Shield, Heart, Sparkles, FileText, Lock, Globe, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Shield, Heart, Sparkles, FileText, Lock, Globe, CheckCircle2, Scale } from 'lucide-react';
 import { sound } from '../lib/sound';
+import { DPDPPrivacyNotice } from '../components/legal/DPDPPrivacyNotice';
+import { DataRightsRequestModal } from '../components/legal/DataRightsRequestModal';
+import { GrievanceContactCard } from '../components/legal/GrievanceContactCard';
 
 export function PublicInfoScreen() {
   const navigate = useNavigate();
   const location = useLocation();
   const path = location.pathname;
+  const [showRightsModal, setShowRightsModal] = useState(false);
 
   let title = 'About Love Link';
   let badge = 'Our Mission';
   let content: React.ReactNode = null;
 
-  if (path === '/privacy') {
-    title = 'Privacy Policy';
-    badge = 'Your Privacy Matters';
+  if (path === '/privacy' || path === '/privacy-notice') {
+    title = 'Privacy Notice & Policy';
+    badge = 'DPDP Act, 2023 Compliant';
     content = (
-      <div className="space-y-4 text-xs text-gray-700 leading-relaxed">
-        <p className="font-semibold text-rose-700 bg-rose-50/80 p-3 rounded-2xl border border-rose-100">
-          Love Link is built on absolute intimacy. We never sell your personal moments, sell ads, or share private couple communications with third parties.
-        </p>
-        <section className="space-y-1.5">
-          <h2 className="font-bold text-gray-900 text-sm flex items-center gap-1.5">
-            <Lock className="w-4 h-4 text-rose-500" /> 1. Couple Space Confidentiality
-          </h2>
+      <DPDPPrivacyNotice onOpenDataRightsModal={() => setShowRightsModal(true)} />
+    );
+  } else if (path === '/data-rights') {
+    title = 'Data Principal Rights';
+    badge = 'Statutory Rights (DPDP Act)';
+    content = (
+      <div className="space-y-4">
+        <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs leading-relaxed space-y-1.5">
+          <strong className="font-bold text-sm block">Exercise Your Rights Under India DPDP Act, 2023</strong>
           <p>
-            Each couple space is an isolated enclave. Only you and your paired partner possess access to your shared messages, memories, voice notes, and milestone dates.
+            As a Data Principal, you possess statutory rights under Chapter III to access, correct, erase, nominate, or withdraw consent for personal data processed by Love Link.
           </p>
-        </section>
-        <section className="space-y-1.5">
-          <h2 className="font-bold text-gray-900 text-sm flex items-center gap-1.5">
-            <Shield className="w-4 h-4 text-emerald-500" /> 2. Data Encryption & Storage
-          </h2>
-          <p>
-            All media, love notes, and chats transmitted across Love Link are encrypted in transit via industry-standard TLS 1.3 and stored in secure, access-controlled cloud repositories.
-          </p>
-        </section>
-        <section className="space-y-1.5">
-          <h2 className="font-bold text-gray-900 text-sm flex items-center gap-1.5">
-            <Globe className="w-4 h-4 text-indigo-500" /> 3. Search Engine Boundary
-          </h2>
-          <p>
-            Private couple spaces, individual chat messages, memories, and personal profiles are strictly blocked from search engine indexing via robots.txt and server protection headers.
-          </p>
-        </section>
+          <button
+            onClick={() => {
+              sound.tap();
+              setShowRightsModal(true);
+            }}
+            className="mt-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow-xs"
+          >
+            Open Interactive Request Form
+          </button>
+        </div>
+        <GrievanceContactCard onOpenDataRightsModal={() => setShowRightsModal(true)} />
       </div>
     );
   } else if (path === '/terms') {
@@ -69,6 +68,28 @@ export function PublicInfoScreen() {
           <p>
             Love Coins and virtual market gifts are digital in-app enhancements intended for couples to express affection and celebrate milestones.
           </p>
+        </section>
+        <section className="space-y-2 pt-2 border-t border-rose-100">
+          <div className="p-3 rounded-2xl bg-amber-50/90 border border-amber-200 text-[10px] text-amber-900 font-mono">
+            <strong>[LEGAL REVIEW REQUIRED - STATUTORY DATA PROTECTION CLAUSE UNDER DIGITAL PERSONAL DATA PROTECTION ACT, 2023]</strong>
+          </div>
+          <h2 className="font-bold text-gray-900 text-sm flex items-center gap-1.5">
+            <Scale className="w-4 h-4 text-indigo-600" /> 3. Data Protection Clause (India DPDP Act, 2023)
+          </h2>
+          <div className="text-xs text-gray-600 space-y-2 leading-relaxed">
+            <p>
+              <strong>3.1 Relationship of Parties:</strong> You acknowledge that you are a <em>Data Principal</em> and Love Link Digital Sanctuary (India) Private Limited is the <em>Data Fiduciary</em> under Section 2 of the Digital Personal Data Protection Act, 2023.
+            </p>
+            <p>
+              <strong>3.2 Purpose Limitation:</strong> Your personal data is processed solely for providing the private couple sanctuary service pursuant to affirmative, specific, and unambiguous consent obtained at signup and feature activation.
+            </p>
+            <p>
+              <strong>3.3 Security & Breach Notification:</strong> Love Link maintains technical safeguards (AES-GCM encryption, access controls) under Section 8(5). In the event of a personal data breach, Love Link will notify the Data Protection Board of India and affected Data Principals within 72 hours as required by Section 8(6).
+            </p>
+            <p>
+              <strong>3.4 Grievance Redressal:</strong> Inquiries, disputes, or complaints may be addressed to our Data Protection Grievance Officer at <code>grievance-dpdp@love-link.app</code> with guaranteed acknowledgment in 48 hours and resolution within 30 calendar days. Escalation is available to the Data Protection Board of India (DPBI) under Section 13(3).
+            </p>
+          </div>
         </section>
       </div>
     );
@@ -167,17 +188,24 @@ export function PublicInfoScreen() {
         </div>
 
         {/* Quick Footer Links */}
-        <div className="pt-4 flex items-center justify-center gap-4 text-[11px] font-semibold text-rose-500">
+        <div className="pt-4 flex flex-wrap items-center justify-center gap-3 text-[11px] font-semibold text-rose-500">
           <button onClick={() => navigate('/')} className="hover:underline">Home</button>
           <span>•</span>
           <button onClick={() => navigate('/features')} className="hover:underline">Features</button>
           <span>•</span>
           <button onClick={() => navigate('/about')} className="hover:underline">About</button>
           <span>•</span>
-          <button onClick={() => navigate('/privacy')} className="hover:underline">Privacy</button>
+          <button onClick={() => navigate('/privacy')} className="hover:underline">Privacy Notice</button>
           <span>•</span>
           <button onClick={() => navigate('/terms')} className="hover:underline">Terms</button>
+          <span>•</span>
+          <button onClick={() => setShowRightsModal(true)} className="hover:underline text-indigo-600">Data Rights Form</button>
         </div>
+
+        <DataRightsRequestModal
+          isOpen={showRightsModal}
+          onClose={() => setShowRightsModal(false)}
+        />
       </div>
     </div>
   );

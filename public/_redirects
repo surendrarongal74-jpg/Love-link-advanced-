@@ -1,0 +1,22 @@
+# Render & Netlify Static Site Routing Rules
+# Google Search Console exact HTML verification file must return 200 OK directly
+/googlef9e701bd5d974c1f.html  /googlef9e701bd5d974c1f.html  200
+
+# Crawler feeds & robots
+/robots.txt   /robots.txt   200
+/sitemap.xml  /sitemap.xml  200
+
+# Static PWA and UI assets
+/favicon.ico           /favicon.ico           200
+/icon.svg              /icon.svg              200
+/apple-touch-icon.png  /apple-touch-icon.png  200
+/pwa-*.png             /pwa-:splat.png        200
+/assets/*              /assets/:splat         200
+
+# Critical anti-spoofing rule for Search Console:
+# Non-existent google verification requests MUST return 404 (never rewrite to 200 index.html)
+/google*.html  /index.html  404
+/google*       /index.html  404
+
+# SPA client-side routing fallback
+/*  /index.html  200

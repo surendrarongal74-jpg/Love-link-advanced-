@@ -5,9 +5,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { BottomNav } from '../components/BottomNav';
 import { 
   Sparkles, Coins, Gift, Palette, Award, Gamepad2, 
-  ArrowRight, Check, Send, Heart, Flame, Shield, 
-  ChevronRight, AlertCircle, ShoppingBag, Plus, Eye, 
-  MessageCircle, Phone, Video, MoreVertical, X, Play
+  Send, Heart, Plus, Eye, Phone, Video, X, Play,
+  Search, ArrowLeft, Check, ShieldCheck
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { SHOP_CATALOG, ShopItem } from '../types/coins';
@@ -20,13 +19,14 @@ import { LOVEVERSE_ASSETS } from '../assets/loveverseAssets';
 type MarketSection = 'all' | 'gifts' | 'themes' | 'badges' | 'game_packs';
 
 export function MarketScreen() {
-  const { wallet, inventory, spendCoins, sendGift, setActiveTheme, setEquippedBadge, loading } = useLoveCoins();
+  const { wallet, inventory, spendCoins, sendGift, setActiveTheme, setEquippedBadge } = useLoveCoins();
   const { space, partnerData } = useCoupleSpace();
   const { userData } = useAuth();
   const navigate = useNavigate();
 
   const [activeSection, setActiveSection] = useState<MarketSection>('all');
   const [giftSubCategory, setGiftSubCategory] = useState<string>('All');
+  const [searchQuery, setSearchQuery] = useState('');
   
   // Modals
   const [selectedGift, setSelectedGift] = useState<ShopItem | null>(null);
@@ -37,8 +37,9 @@ export function MarketScreen() {
   const [feedbackMsg, setFeedbackMsg] = useState<{ text: string; error?: boolean } | null>(null);
 
   const balance = wallet?.balance ?? 50;
+  const activeThemeId = inventory?.activeTheme || getStoredTheme();
 
-  // Filter items
+  // Filter items without any duplicates
   const displayedItems = useMemo(() => {
     let list = SHOP_CATALOG;
     if (activeSection !== 'all') {
@@ -47,12 +48,20 @@ export function MarketScreen() {
     if (activeSection === 'gifts' && giftSubCategory !== 'All') {
       list = list.filter(item => item.subCategory === giftSubCategory);
     }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      list = list.filter(item => 
+        item.name.toLowerCase().includes(q) || 
+        item.description.toLowerCase().includes(q) ||
+        (item.subCategory && item.subCategory.toLowerCase().includes(q))
+      );
+    }
     return list;
-  }, [activeSection, giftSubCategory]);
+  }, [activeSection, giftSubCategory, searchQuery]);
 
   const isItemOwned = (item: ShopItem) => {
     if (!inventory) return false;
-    if (item.category === 'themes') return inventory.ownedThemes?.includes(item.id);
+    if (item.category === 'themes') return inventory.ownedThemes?.includes(item.id) || item.cost === 0;
     if (item.category === 'badges') {
       if (item.id === 'token_streak_freeze') return (inventory.streakFreezeTokens || 0) > 0;
       return inventory.ownedBadges?.includes(item.id);
@@ -106,7 +115,7 @@ export function MarketScreen() {
           setFeedbackMsg(null);
         }, 2200);
       }
-    } catch (err: any) {
+    } catch {
       setFeedbackMsg({ text: 'Error sending gift. Please check connection.', error: true });
     } finally {
       setIsProcessing(false);
@@ -157,47 +166,56 @@ export function MarketScreen() {
           setFeedbackMsg(null);
         }, 1600);
       }
-    } catch (err) {
+    } catch {
       setFeedbackMsg({ text: 'Transaction failed. Please try again.', error: true });
     } finally {
       setIsProcessing(false);
     }
   };
 
-  const activeThemeId = inventory?.activeTheme || getStoredTheme();
+  const categoryCounts = useMemo(() => {
+    return {
+      all: SHOP_CATALOG.length,
+      gifts: SHOP_CATALOG.filter(i => i.category === 'gifts').length,
+      themes: SHOP_CATALOG.filter(i => i.category === 'themes').length,
+      badges: SHOP_CATALOG.filter(i => i.category === 'badges').length,
+      game_packs: SHOP_CATALOG.filter(i => i.category === 'game_packs').length,
+    };
+  }, []);
 
   return (
-    <div className="min-h-screen bg-[#FFF6F9] text-[#2B1A2E] pb-28 select-none font-sans">
-      {/* Top Navigation Bar with Real Balance & Earn Coins Link */}
-      <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-xl border-b border-rose-100/80 px-4 py-3 shadow-2xs">
-        <div className="max-w-md mx-auto flex items-center justify-between">
-          <button
-            onClick={() => {
-              sound.tap();
-              navigate('/');
-            }}
-            className="flex items-center gap-2 text-left hover:opacity-90 active:scale-95 transition-all"
-            title="Return to Couple Space"
-          >
-            <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-rose-500 to-pink-400 flex items-center justify-center text-white shadow-md shadow-rose-300/40">
-              <Heart className="w-5 h-5 fill-white" />
-            </div>
+    <div className="min-h-screen bg-[#FFF6F9] text-[#2B1A2E] pb-32 font-sans select-none overflow-y-auto">
+      {/* Top Header */}
+      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-xl border-b border-rose-100/90 px-4 py-3 shadow-xs">
+        <div className="max-w-md mx-auto flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                sound.tap();
+                navigate('/');
+              }}
+              className="w-9 h-9 rounded-2xl bg-rose-50 hover:bg-rose-100 flex items-center justify-center text-rose-600 transition-colors shrink-0"
+              title="Return to Space"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </button>
             <div>
               <div className="flex items-center gap-1.5">
-                <span className="font-serif font-black text-base tracking-tight bg-gradient-to-r from-rose-600 via-pink-600 to-purple-600 bg-clip-text text-transparent">
-                  Love Link
-                </span>
-                <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded-full bg-rose-50 text-rose-500 border border-rose-200/60">
-                  Market
+                <h1 className="font-serif font-black text-base text-[#2B1A2E] tracking-tight">
+                  Loveverse Market
+                </h1>
+                <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-md bg-rose-100 text-rose-700">
+                  Shop
                 </span>
               </div>
               <p className="text-[10px] text-[#9B7A87] font-medium leading-none">
-                Make your love story magical
+                Send surprises & personalize your space
               </p>
             </div>
-          </button>
+          </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 shrink-0">
+            {/* My Collection link */}
             <button
               onClick={() => {
                 sound.tap();
@@ -208,16 +226,16 @@ export function MarketScreen() {
               Collection
             </button>
 
-            {/* Live Coin Balance Pill with + button */}
+            {/* Live Coin Balance Pill */}
             <button
               onClick={() => {
                 sound.tap();
                 navigate('/earn-coins');
               }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-400 text-white shadow-sm shadow-amber-300/50 hover:brightness-105 active:scale-95 transition-all"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-400 text-white shadow-sm shadow-amber-300/40 hover:brightness-105 active:scale-95 transition-all"
               title="View and Earn Love Coins"
             >
-              <Coins className="w-4 h-4 fill-white text-white drop-shadow-xs" />
+              <Coins className="w-3.5 h-3.5 fill-white text-white drop-shadow-xs" />
               <span className="font-extrabold text-xs tracking-tight">
                 {balance.toLocaleString()}
               </span>
@@ -229,248 +247,62 @@ export function MarketScreen() {
         </div>
       </header>
 
-      <main className="max-w-md mx-auto px-4 py-4 space-y-5">
-        {/* Dreamy Hero Banner */}
-        <div className="relative rounded-3xl overflow-hidden shadow-xl shadow-rose-200/50 border border-white/60 group">
-          <div className="aspect-[16/9] w-full relative">
-            <img 
-              src={LOVEVERSE_ASSETS.heroBanner} 
-              alt="Loveverse Sky Castle" 
-              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-            />
-            {/* Atmospheric overlay */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent flex flex-col justify-end p-5 text-white">
-              <span className="text-[10px] font-extrabold uppercase tracking-widest text-pink-200 flex items-center gap-1">
+      <main className="max-w-md mx-auto px-4 py-4 space-y-4">
+        {/* Subtle Welcome Hero Bar */}
+        <div className="relative rounded-2xl overflow-hidden p-4 bg-gradient-to-r from-rose-500 via-pink-500 to-purple-600 text-white shadow-md shadow-rose-200/50">
+          <div className="flex items-center justify-between relative z-10">
+            <div>
+              <span className="text-[10px] font-extrabold uppercase tracking-wider text-pink-200 flex items-center gap-1">
                 <Sparkles className="w-3 h-3 text-amber-300" />
-                Loveverse Universe
+                Couple Rewards & Surprises
               </span>
-              <h2 className="text-xl font-serif font-black leading-tight mt-1 drop-shadow-sm">
-                Make Your Little World Magical
+              <h2 className="text-base font-serif font-black mt-0.5 leading-tight">
+                Romantic Gifts, Themes & Keepsakes
               </h2>
-              <p className="text-xs text-white/95 mt-1 max-w-[300px] drop-shadow-xs font-medium">
-                Collect beautiful moments, surprise your partner, and unlock your Loveverse.
+              <p className="text-[11px] text-white/90 mt-0.5">
+                Each gift delivers directly with sound & confetti to your partner's screen.
               </p>
-
-              <div className="flex items-center gap-2 mt-3">
-                <button
-                  onClick={() => {
-                    sound.tap();
-                    setActiveSection('gifts');
-                  }}
-                  className="px-3.5 py-1.5 rounded-full bg-white text-rose-600 text-xs font-bold shadow-md hover:bg-rose-50 active:scale-95 transition-all"
-                >
-                  Explore Gifts
-                </button>
-                <button
-                  onClick={() => {
-                    sound.tap();
-                    navigate('/earn-coins');
-                  }}
-                  className="px-3.5 py-1.5 rounded-full bg-black/40 backdrop-blur-md text-white text-xs font-medium border border-white/30 hover:bg-black/60 transition-all flex items-center gap-1"
-                >
-                  <span>Earn Coins</span>
-                  <ArrowRight className="w-3 h-3" />
-                </button>
-              </div>
             </div>
+            <button
+              onClick={() => {
+                sound.tap();
+                navigate('/earn-coins');
+              }}
+              className="px-3 py-1.5 rounded-xl bg-white text-rose-600 text-xs font-bold shadow hover:bg-rose-50 active:scale-95 transition-all shrink-0 ml-3"
+            >
+              Earn Coins
+            </button>
           </div>
         </div>
 
-        {/* 4 Main Destination Cards (Grid with 3D Style Artwork) */}
-        <div className="grid grid-cols-2 gap-3">
-          {/* Card 1: Virtual Gifts (Gift Garden) */}
-          <button
-            onClick={() => {
-              sound.tap();
-              setActiveSection('gifts');
-            }}
-            className={`p-3.5 rounded-2xl border text-left transition-all relative overflow-hidden flex flex-col justify-between ${
-              activeSection === 'gifts'
-                ? 'bg-gradient-to-br from-rose-500 to-pink-500 text-white border-rose-500 shadow-lg shadow-rose-300/40 scale-[1.02]'
-                : 'bg-white text-[#2B1A2E] border-rose-100 hover:border-rose-300 shadow-2xs'
-            }`}
-          >
-            <div className="flex items-start justify-between">
-              <div className="w-10 h-10 rounded-xl overflow-hidden bg-rose-50 shadow-inner">
-                <img 
-                  src={LOVEVERSE_ASSETS.gifts.bouquetOfLove} 
-                  alt="Virtual Gifts" 
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <Sparkles className={`w-4 h-4 ${activeSection === 'gifts' ? 'text-white' : 'text-rose-400'}`} />
-            </div>
-            <div className="mt-3">
-              <h3 className="font-bold text-sm leading-tight">Virtual Gifts</h3>
-              <p className={`text-[11px] mt-0.5 ${activeSection === 'gifts' ? 'text-white/80' : 'text-[#9B7A87]'}`}>
-                Gift Garden surprises
-              </p>
-            </div>
-          </button>
-
-          {/* Card 2: Dream Skies — App Themes */}
-          <button
-            onClick={() => {
-              sound.tap();
-              setActiveSection('themes');
-            }}
-            className={`p-3.5 rounded-2xl border text-left transition-all relative overflow-hidden flex flex-col justify-between ${
-              activeSection === 'themes'
-                ? 'bg-gradient-to-br from-purple-600 to-indigo-600 text-white border-purple-600 shadow-lg shadow-purple-300/40 scale-[1.02]'
-                : 'bg-white text-[#2B1A2E] border-rose-100 hover:border-purple-300 shadow-2xs'
-            }`}
-          >
-            <div className="flex items-start justify-between">
-              <div className="w-10 h-10 rounded-xl overflow-hidden bg-purple-50 shadow-inner">
-                <img 
-                  src={LOVEVERSE_ASSETS.themes.moonlightDreams} 
-                  alt="App Themes" 
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <Palette className={`w-4 h-4 ${activeSection === 'themes' ? 'text-white' : 'text-purple-400'}`} />
-            </div>
-            <div className="mt-3">
-              <h3 className="font-bold text-sm leading-tight">Dream Skies</h3>
-              <p className={`text-[11px] mt-0.5 ${activeSection === 'themes' ? 'text-white/80' : 'text-[#9B7A87]'}`}>
-                Live app color themes
-              </p>
-            </div>
-          </button>
-
-          {/* Card 3: Constellation Collection — Badges & Frames */}
-          <button
-            onClick={() => {
-              sound.tap();
-              setActiveSection('badges');
-            }}
-            className={`p-3.5 rounded-2xl border text-left transition-all relative overflow-hidden flex flex-col justify-between ${
-              activeSection === 'badges'
-                ? 'bg-gradient-to-br from-amber-500 to-orange-500 text-white border-amber-500 shadow-lg shadow-amber-300/40 scale-[1.02]'
-                : 'bg-white text-[#2B1A2E] border-rose-100 hover:border-amber-300 shadow-2xs'
-            }`}
-          >
-            <div className="flex items-start justify-between">
-              <div className="w-10 h-10 rounded-xl overflow-hidden bg-amber-50 shadow-inner">
-                <img 
-                  src={LOVEVERSE_ASSETS.badges.goldenFrame} 
-                  alt="Badges & Frames" 
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <Award className={`w-4 h-4 ${activeSection === 'badges' ? 'text-white' : 'text-amber-500'}`} />
-            </div>
-            <div className="mt-3">
-              <h3 className="font-bold text-sm leading-tight">Constellations</h3>
-              <p className={`text-[11px] mt-0.5 ${activeSection === 'badges' ? 'text-white/80' : 'text-[#9B7A87]'}`}>
-                Badges and frames
-              </p>
-            </div>
-          </button>
-
-          {/* Card 4: Achievements & Rewards */}
-          <button
-            onClick={() => {
-              sound.tap();
-              navigate('/earn-coins');
-            }}
-            className="p-3.5 rounded-2xl border text-left transition-all relative overflow-hidden flex flex-col justify-between bg-white text-[#2B1A2E] border-rose-100 hover:border-rose-300 shadow-2xs group"
-          >
-            <div className="flex items-start justify-between">
-              <div className="w-10 h-10 rounded-xl overflow-hidden bg-rose-50 shadow-inner flex items-center justify-center">
-                <img 
-                  src={LOVEVERSE_ASSETS.badges.crystalHeartEmblem} 
-                  alt="Achievements & Rewards" 
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <Coins className="w-4 h-4 text-amber-500" />
-            </div>
-            <div className="mt-3">
-              <h3 className="font-bold text-sm leading-tight flex items-center gap-1">
-                <span>Achievements</span>
-                <ChevronRight className="w-3.5 h-3.5 text-rose-500 transition-transform group-hover:translate-x-0.5" />
-              </h3>
-              <p className="text-[11px] mt-0.5 text-[#9B7A87]">
-                Missions & rewards
-              </p>
-            </div>
-          </button>
+        {/* Search Bar */}
+        <div className="relative">
+          <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search gifts, themes, or frames..."
+            className="w-full pl-10 pr-9 py-2.5 bg-white border border-rose-100 rounded-2xl text-xs text-[#2B1A2E] placeholder:text-gray-400 focus:outline-hidden focus:border-rose-400 transition-colors shadow-2xs"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-0.5"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
 
-        {/* Featured Collections Showcase */}
-        {activeSection === 'all' && (
-          <div className="space-y-2.5">
-            <div className="flex items-center justify-between">
-              <h3 className="font-serif font-bold text-sm text-[#2B1A2E] tracking-tight">
-                Featured Collections
-              </h3>
-              <button 
-                onClick={() => setActiveSection('gifts')}
-                className="text-xs text-rose-500 font-semibold flex items-center hover:underline"
-              >
-                <span>See All</span>
-                <ChevronRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
-
-            <div className="grid grid-cols-3 gap-2.5">
-              <div 
-                onClick={() => {
-                  sound.tap();
-                  setActiveSection('gifts');
-                  setGiftSubCategory('Romantic Classics');
-                }}
-                className="bg-gradient-to-b from-rose-50 to-white p-2.5 rounded-2xl border border-rose-200/70 text-center cursor-pointer hover:shadow-md transition-all active:scale-95"
-              >
-                <div className="aspect-square w-full rounded-xl overflow-hidden shadow-inner mb-2">
-                  <img src={LOVEVERSE_ASSETS.gifts.singleRose} alt="Romantic Classics" className="w-full h-full object-cover" />
-                </div>
-                <h4 className="font-bold text-[11px] leading-tight">Romantic Classics</h4>
-                <p className="text-[10px] text-rose-500 font-semibold mt-0.5">From 50 coins</p>
-              </div>
-
-              <div 
-                onClick={() => {
-                  sound.tap();
-                  setActiveSection('gifts');
-                  setGiftSubCategory('Dreamy Surprises');
-                }}
-                className="bg-gradient-to-b from-purple-50 to-white p-2.5 rounded-2xl border border-purple-200/70 text-center cursor-pointer hover:shadow-md transition-all active:scale-95"
-              >
-                <div className="aspect-square w-full rounded-xl overflow-hidden shadow-inner mb-2">
-                  <img src={LOVEVERSE_ASSETS.gifts.snowGlobe} alt="Dreamy Surprises" className="w-full h-full object-cover" />
-                </div>
-                <h4 className="font-bold text-[11px] leading-tight">Dreamy Surprises</h4>
-                <p className="text-[10px] text-purple-600 font-semibold mt-0.5">From 300 coins</p>
-              </div>
-
-              <div 
-                onClick={() => {
-                  sound.tap();
-                  setActiveSection('gifts');
-                  setGiftSubCategory('Celestial Gifts');
-                }}
-                className="bg-gradient-to-b from-amber-50 to-white p-2.5 rounded-2xl border border-amber-200/70 text-center cursor-pointer hover:shadow-md transition-all active:scale-95"
-              >
-                <div className="aspect-square w-full rounded-xl overflow-hidden shadow-inner mb-2">
-                  <img src={LOVEVERSE_ASSETS.gifts.shootingStar} alt="Celestial Gifts" className="w-full h-full object-cover" />
-                </div>
-                <h4 className="font-bold text-[11px] leading-tight">Celestial Gifts</h4>
-                <p className="text-[10px] text-amber-600 font-semibold mt-0.5">From 1200 coins</p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Section Navigation Tabs */}
-        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1">
+        {/* Category Tabs (Segmented Buttons) */}
+        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide py-1">
           {[
-            { id: 'all', label: 'All Items' },
-            { id: 'gifts', label: 'Virtual Gifts' },
-            { id: 'themes', label: 'Dream Skies' },
-            { id: 'badges', label: 'Constellations' },
-            { id: 'game_packs', label: 'Game Packs' }
+            { id: 'all', label: `All (${categoryCounts.all})` },
+            { id: 'gifts', label: `Virtual Gifts (${categoryCounts.gifts})` },
+            { id: 'themes', label: `App Themes (${categoryCounts.themes})` },
+            { id: 'badges', label: `Frames & Badges (${categoryCounts.badges})` },
+            { id: 'game_packs', label: `Game Decks (${categoryCounts.game_packs})` }
           ].map(tab => (
             <button
               key={tab.id}
@@ -478,10 +310,10 @@ export function MarketScreen() {
                 sound.tap();
                 setActiveSection(tab.id as MarketSection);
               }}
-              className={`px-3 py-1.5 rounded-full text-xs font-bold shrink-0 transition-all ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all ${
                 activeSection === tab.id
-                  ? 'bg-rose-500 text-white shadow-md shadow-rose-300/40'
-                  : 'bg-white text-[#9B7A87] border border-rose-100 hover:text-rose-600'
+                  ? 'bg-rose-500 text-white shadow-sm shadow-rose-300/40'
+                  : 'bg-white text-[#9B7A87] border border-rose-100 hover:text-rose-600 hover:border-rose-200'
               }`}
             >
               {tab.label}
@@ -489,20 +321,20 @@ export function MarketScreen() {
           ))}
         </div>
 
-        {/* Sub-Category Pills for Virtual Gifts */}
+        {/* Sub-Category Filter (Only for Virtual Gifts) */}
         {activeSection === 'gifts' && (
-          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
-            {['All', 'Romantic Classics', 'Cuddle Corner', 'Dreamy Surprises', 'Celestial Gifts', 'Legendary Keepsakes'].map(sub => (
+          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide py-0.5">
+            {['All', 'Romantic Classics', 'Cuddle Corner', 'Dreamy Surprises', 'Celestial Gifts'].map(sub => (
               <button
                 key={sub}
                 onClick={() => {
                   sound.tap();
                   setGiftSubCategory(sub);
                 }}
-                className={`px-2.5 py-1 rounded-full text-[11px] font-semibold shrink-0 transition-all ${
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold shrink-0 transition-all ${
                   giftSubCategory === sub
                     ? 'bg-rose-100 text-rose-700 border border-rose-300 font-bold'
-                    : 'bg-white/80 text-gray-500 border border-gray-200'
+                    : 'bg-white text-gray-500 border border-gray-200 hover:text-gray-700'
                 }`}
               >
                 {sub}
@@ -511,154 +343,148 @@ export function MarketScreen() {
           </div>
         )}
 
-        {/* Grid Catalog */}
-        <div className="grid grid-cols-2 gap-3">
-          {displayedItems.map(item => {
-            const owned = isItemOwned(item);
-            const isTheme = item.category === 'themes';
-            const isGift = item.category === 'gifts';
-            const isActiveTheme = isTheme && activeThemeId === item.id;
+        {/* Section Heading & Result Count */}
+        <div className="flex items-center justify-between text-xs text-[#9B7A87] px-1">
+          <span className="font-medium">
+            Showing <strong className="text-[#2B1A2E]">{displayedItems.length}</strong> items
+          </span>
+          <span className="text-[11px]">
+            {activeSection === 'gifts' ? 'Delivered straight to chat' : 'Instant account unlock'}
+          </span>
+        </div>
 
-            return (
-              <div
-                key={item.id}
-                className="bg-white rounded-3xl p-3 border border-rose-100/90 shadow-sm flex flex-col justify-between hover:shadow-md transition-all relative overflow-hidden group"
-              >
-                {/* Popularity or Animated Badge */}
-                {item.popularity && (
-                  <span className="absolute top-2 left-2 z-10 px-2 py-0.5 rounded-full bg-rose-500 text-white text-[9px] font-bold shadow-xs">
-                    {item.popularity}
-                  </span>
-                )}
-                {item.isAnimated && !item.popularity && (
-                  <span className="absolute top-2 left-2 z-10 px-1.5 py-0.5 rounded-full bg-purple-500/90 backdrop-blur-xs text-white text-[9px] font-bold flex items-center gap-0.5">
-                    <Play className="w-2 h-2 fill-white" />
-                    Live
-                  </span>
-                )}
+        {/* Products Grid (Clean, Zero Duplicates, Every Item Distinct) */}
+        {displayedItems.length === 0 ? (
+          <div className="text-center py-12 bg-white rounded-3xl border border-rose-100 p-6 space-y-2">
+            <Gift className="w-10 h-10 text-rose-300 mx-auto" />
+            <h4 className="font-bold text-sm text-[#2B1A2E]">No items match your search</h4>
+            <p className="text-xs text-[#9B7A87]">Try searching for something else or reset your filter.</p>
+            <button
+              onClick={() => {
+                setSearchQuery('');
+                setActiveSection('all');
+                setGiftSubCategory('All');
+              }}
+              className="mt-2 text-xs font-bold text-rose-600 underline"
+            >
+              View all products
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-3">
+            {displayedItems.map(item => {
+              const owned = isItemOwned(item);
+              const isTheme = item.category === 'themes';
+              const isGift = item.category === 'gifts';
+              const isActiveTheme = isTheme && activeThemeId === item.id;
 
-                {/* 3D Asset Image Showcase */}
-                <div className="aspect-square w-full rounded-2xl overflow-hidden bg-gradient-to-tr from-rose-50 to-pink-50/40 relative mb-2.5 flex items-center justify-center">
-                  {item.image ? (
-                    <img 
-                      src={item.image} 
-                      alt={item.name} 
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      loading="lazy"
-                    />
-                  ) : (
-                    <div className="text-4xl">{item.icon}</div>
-                  )}
-
-                  {/* Quick Preview Eye */}
-                  {isTheme && (
-                    <button
-                      onClick={() => handleOpenPurchase(item)}
-                      className="absolute bottom-2 right-2 w-7 h-7 rounded-full bg-white/90 backdrop-blur-md shadow flex items-center justify-center text-gray-700 hover:text-rose-600 transition-colors"
-                      title="Preview Theme"
-                    >
-                      <Eye className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                </div>
-
-                {/* Metadata */}
-                <div className="flex-1 flex flex-col justify-between">
-                  <div>
-                    <h4 className="font-bold text-xs text-[#2B1A2E] leading-tight line-clamp-1">
-                      {item.name}
-                    </h4>
-                    <p className="text-[10px] text-[#9B7A87] mt-0.5 line-clamp-2 leading-tight">
-                      {item.description}
-                    </p>
-                  </div>
-
-                  <div className="mt-3 flex items-center justify-between pt-2 border-t border-rose-50">
-                    {/* Price Tag */}
-                    <div className="flex items-center gap-1">
-                      <Coins className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
-                      <span className="font-black text-xs text-[#2B1A2E]">
-                        {item.cost === 0 ? 'Free' : item.cost}
+              return (
+                <div
+                  key={item.id}
+                  className="bg-white rounded-2xl p-3 border border-rose-100 shadow-2xs flex flex-col justify-between hover:shadow-md transition-all group"
+                >
+                  {/* Image Container with Badges */}
+                  <div className="aspect-square w-full rounded-xl overflow-hidden bg-rose-50/50 relative mb-2.5 flex items-center justify-center border border-rose-50">
+                    {/* Animated Tag */}
+                    {item.isAnimated && (
+                      <span className="absolute top-2 left-2 z-10 px-1.5 py-0.5 rounded-md bg-purple-600/90 text-white text-[9px] font-bold flex items-center gap-0.5 shadow-xs">
+                        <Play className="w-2 h-2 fill-white" />
+                        Live FX
                       </span>
-                    </div>
+                    )}
 
-                    {/* Action Button */}
-                    {isGift ? (
-                      <button
-                        onClick={() => handleOpenGiftModal(item)}
-                        className="px-3 py-1.5 rounded-full bg-gradient-to-r from-rose-500 to-pink-500 text-white text-[11px] font-bold shadow-xs hover:brightness-105 active:scale-95 transition-all flex items-center gap-1"
-                      >
-                        <Send className="w-3 h-3" />
-                        <span>Send</span>
-                      </button>
-                    ) : owned ? (
-                      isTheme ? (
-                        <button
-                          onClick={() => {
-                            sound.tap();
-                            setActiveTheme(item.id);
-                          }}
-                          className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all ${
-                            isActiveTheme
-                              ? 'bg-emerald-100 text-emerald-700'
-                              : 'bg-rose-50 text-rose-600 hover:bg-rose-100'
-                          }`}
-                        >
-                          {isActiveTheme ? 'Active' : 'Use'}
-                        </button>
-                      ) : (
-                        <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
-                          Owned
-                        </span>
-                      )
+                    {/* Category Label */}
+                    <span className="absolute bottom-2 left-2 z-10 px-1.5 py-0.5 rounded-md bg-black/50 backdrop-blur-xs text-white text-[9px] font-medium">
+                      {isGift ? 'Gift' : isTheme ? 'Theme' : item.category === 'badges' ? 'Badge' : 'Deck'}
+                    </span>
+
+                    {item.image ? (
+                      <img 
+                        src={item.image} 
+                        alt={item.name} 
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        loading="lazy"
+                      />
                     ) : (
+                      <div className="text-4xl">{item.icon}</div>
+                    )}
+
+                    {/* Quick Preview Eye for Themes */}
+                    {isTheme && (
                       <button
                         onClick={() => handleOpenPurchase(item)}
-                        className="px-3 py-1 rounded-full bg-rose-50 text-rose-600 hover:bg-rose-100 text-[11px] font-bold border border-rose-200 transition-colors"
+                        className="absolute bottom-2 right-2 w-7 h-7 rounded-full bg-white/90 backdrop-blur-md shadow-xs flex items-center justify-center text-gray-700 hover:text-rose-600 transition-colors"
+                        title="Preview Theme"
                       >
-                        Unlock
+                        <Eye className="w-3.5 h-3.5" />
                       </button>
                     )}
                   </div>
+
+                  {/* Metadata */}
+                  <div className="flex-1 flex flex-col justify-between">
+                    <div>
+                      <h3 className="font-bold text-xs text-[#2B1A2E] leading-tight line-clamp-1">
+                        {item.name}
+                      </h3>
+                      <p className="text-[10px] text-[#9B7A87] mt-1 line-clamp-2 leading-relaxed">
+                        {item.description}
+                      </p>
+                    </div>
+
+                    <div className="mt-3 flex items-center justify-between pt-2 border-t border-rose-50">
+                      {/* Price Tag */}
+                      <div className="flex items-center gap-1">
+                        <Coins className="w-3.5 h-3.5 fill-amber-500 text-amber-500 shrink-0" />
+                        <span className="font-black text-xs text-[#2B1A2E]">
+                          {item.cost === 0 ? 'Free' : item.cost}
+                        </span>
+                      </div>
+
+                      {/* Action Button */}
+                      {isGift ? (
+                        <button
+                          onClick={() => handleOpenGiftModal(item)}
+                          className="px-2.5 py-1 rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 text-white text-[11px] font-bold shadow-2xs hover:brightness-105 active:scale-95 transition-all flex items-center gap-1"
+                        >
+                          <Send className="w-3 h-3" />
+                          <span>Send</span>
+                        </button>
+                      ) : owned ? (
+                        isTheme ? (
+                          <button
+                            onClick={() => {
+                              sound.tap();
+                              setActiveTheme(item.id);
+                            }}
+                            className={`px-2.5 py-1 rounded-xl text-[11px] font-bold transition-all ${
+                              isActiveTheme
+                                ? 'bg-emerald-100 text-emerald-700'
+                                : 'bg-rose-50 text-rose-600 hover:bg-rose-100'
+                            }`}
+                          >
+                            {isActiveTheme ? 'Active' : 'Equip'}
+                          </button>
+                        ) : (
+                          <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-100">
+                            Owned
+                          </span>
+                        )
+                      ) : (
+                        <button
+                          onClick={() => handleOpenPurchase(item)}
+                          className="px-2.5 py-1 rounded-xl bg-rose-50 text-rose-600 hover:bg-rose-100 text-[11px] font-bold border border-rose-200 transition-colors"
+                        >
+                          Unlock
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Live Partner Achievement Progress Section */}
-        <div className="bg-gradient-to-r from-rose-100/60 via-purple-50 to-pink-100/60 rounded-3xl p-4 border border-rose-200/80 shadow-sm flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-white shadow-md p-1.5 flex items-center justify-center shrink-0">
-              <img 
-                src={LOVEVERSE_ASSETS.badges.crystalHeartEmblem} 
-                alt="Devotion Crest" 
-                className="w-full h-full object-cover rounded-xl"
-              />
-            </div>
-            <div>
-              <span className="text-[10px] uppercase font-bold text-rose-500 tracking-wider block">
-                Next Couple Milestone
-              </span>
-              <h4 className="font-serif font-black text-xs text-[#2B1A2E]">
-                True Devotion Crest
-              </h4>
-              <p className="text-[11px] text-[#9B7A87]">
-                Together {space?.createdAt ? Math.floor((Date.now() - space.createdAt) / 86400000) : 1} days • Keep streak going!
-              </p>
-            </div>
+              );
+            })}
           </div>
-
-          <button
-            onClick={() => {
-              sound.tap();
-              navigate('/my-collection');
-            }}
-            className="px-3 py-1.5 rounded-full bg-white text-rose-600 font-bold text-xs shadow-xs hover:bg-rose-50 active:scale-95 transition-all shrink-0"
-          >
-            Badges
-          </button>
-        </div>
+        )}
       </main>
 
       {/* ========================================================= */}
@@ -666,13 +492,13 @@ export function MarketScreen() {
       {/* ========================================================= */}
       <AnimatePresence>
         {selectedGift && (
-          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-xs">
             <motion.div
               initial={{ y: '100%', opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: '100%', opacity: 0 }}
               transition={{ type: 'spring', damping: 26, stiffness: 260 }}
-              className="bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl max-h-[92vh] overflow-y-auto p-5 shadow-2xl relative"
+              className="bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl max-h-[90vh] overflow-y-auto p-5 shadow-2xl relative"
             >
               <button
                 onClick={() => setSelectedGift(null)}
@@ -683,7 +509,7 @@ export function MarketScreen() {
 
               <div className="text-center pt-2">
                 <span className="text-[10px] font-black uppercase tracking-widest text-rose-500">
-                  Send Virtual Surprise
+                  Deliver Surprise to Partner
                 </span>
                 <h3 className="font-serif font-black text-xl text-[#2B1A2E] mt-0.5">
                   {selectedGift.name}
@@ -691,24 +517,24 @@ export function MarketScreen() {
               </div>
 
               {/* Big 3D Gift Artwork Display */}
-              <div className="mt-4 relative rounded-3xl overflow-hidden aspect-[4/3] bg-gradient-to-tr from-pink-100 via-rose-50 to-purple-100 shadow-inner flex items-center justify-center p-3 border border-rose-100">
+              <div className="mt-4 relative rounded-2xl overflow-hidden aspect-[4/3] bg-gradient-to-tr from-pink-50 via-rose-50 to-purple-50 shadow-inner flex items-center justify-center p-3 border border-rose-100">
                 {selectedGift.image ? (
                   <img 
                     src={selectedGift.image} 
                     alt={selectedGift.name} 
-                    className="w-full h-full object-cover rounded-2xl shadow-md"
+                    className="w-full h-full object-cover rounded-xl shadow-md"
                   />
                 ) : (
                   <div className="text-6xl">{selectedGift.icon}</div>
                 )}
 
-                <div className="absolute bottom-3 left-3 bg-black/50 backdrop-blur-md px-3 py-1 rounded-full text-white text-xs font-bold flex items-center gap-1.5">
+                <div className="absolute bottom-3 left-3 bg-black/60 backdrop-blur-md px-3 py-1 rounded-full text-white text-xs font-bold flex items-center gap-1.5">
                   <Coins className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
                   <span>{selectedGift.cost} Coins</span>
                 </div>
               </div>
 
-              <p className="text-xs text-center text-[#9B7A87] mt-3 px-2">
+              <p className="text-xs text-center text-[#9B7A87] mt-3 px-2 leading-relaxed">
                 {selectedGift.description}
               </p>
 
@@ -737,7 +563,7 @@ export function MarketScreen() {
               {/* Optional Personal Love Message Note */}
               <div className="mt-3">
                 <label className="text-[11px] font-bold text-[#2B1A2E] flex justify-between">
-                  <span>Add a message (optional)</span>
+                  <span>Add a whisper message (optional)</span>
                   <span className="text-gray-400 font-normal">{giftNote.length}/100</span>
                 </label>
                 <textarea
@@ -749,8 +575,8 @@ export function MarketScreen() {
                 />
               </div>
 
-              {/* Live Preview Effect Banner */}
-              <div className="mt-3 bg-gradient-to-r from-purple-500/10 via-pink-500/10 to-rose-500/10 p-2.5 rounded-2xl border border-rose-100 flex items-center gap-2 text-rose-700 text-[11px]">
+              {/* Delivery info */}
+              <div className="mt-3 bg-gradient-to-r from-purple-500/10 via-pink-500/10 to-rose-500/10 p-2.5 rounded-xl border border-rose-100 flex items-center gap-2 text-rose-700 text-[11px]">
                 <Sparkles className="w-4 h-4 text-rose-500 shrink-0" />
                 <span>
                   Delivers instantly into your partner's chat with magical particle animation and sound!
@@ -789,7 +615,7 @@ export function MarketScreen() {
       {/* ========================================================= */}
       <AnimatePresence>
         {selectedThemePreview && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
@@ -813,7 +639,7 @@ export function MarketScreen() {
                     {partnerData?.displayName?.charAt(0) || '❤️'}
                   </div>
                   <div>
-                    <h5 className="font-bold text-xs">{partnerData?.displayName || 'My Love'} 💕</h5>
+                    <h4 className="font-bold text-xs">{partnerData?.displayName || 'My Love'} 💕</h4>
                     <span className="text-[9px] text-white/80">Online</span>
                   </div>
                 </div>
@@ -833,22 +659,22 @@ export function MarketScreen() {
               >
                 <div className="space-y-2">
                   <div className="flex justify-start">
-                    <div className="bg-white/95 backdrop-blur-sm p-2 rounded-2xl rounded-tl-none shadow-xs text-[11px] max-w-[200px] text-gray-800">
+                    <div className="bg-white/95 backdrop-blur-xs p-2 rounded-2xl rounded-tl-none shadow-2xs text-[11px] max-w-[200px] text-gray-800">
                       This theme looks so dreamy! ✨
                     </div>
                   </div>
                   <div className="flex justify-end">
                     <div 
-                      className="p-2 rounded-2xl rounded-tr-none shadow-xs text-[11px] max-w-[200px] text-white"
+                      className="p-2 rounded-2xl rounded-tr-none shadow-2xs text-[11px] max-w-[200px] text-white"
                       style={{ backgroundColor: selectedThemePreview.primary || '#E8547A' }}
                     >
-                      It's like our own magical Loveverse universe! ❤️
+                      Our own magical Loveverse space ❤️
                     </div>
                   </div>
                 </div>
 
                 {/* Mock input bar */}
-                <div className="bg-white/90 backdrop-blur-sm rounded-full px-3 py-1.5 flex items-center justify-between border border-white/60 text-gray-400 text-[10px]">
+                <div className="bg-white/90 backdrop-blur-xs rounded-full px-3 py-1.5 flex items-center justify-between border border-white/60 text-gray-400 text-[10px]">
                   <span>Type a message...</span>
                   <div 
                     className="w-5 h-5 rounded-full flex items-center justify-center text-white text-[10px]"
@@ -919,7 +745,7 @@ export function MarketScreen() {
       {/* ========================================================= */}
       <AnimatePresence>
         {selectedItemToBuy && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}

@@ -124,8 +124,32 @@ export const TermsAndConditionsModal: React.FC<TermsAndConditionsModalProps> = (
                     Appropriate Use & Safety
                   </h3>
                   <p className="text-xs text-gray-600">
-                    Users must be at least 13 years old (or the legal age of digital consent in their jurisdiction). Harassment, abusive behavior, or non-consensual sharing of private media violates our community standards and will terminate access.
+                    Users must be at least 18 years old (or legal digital adulthood in India). Harassment, abusive behavior, non-consensual sharing of intimate media, or unauthorized access violates community standards and terminates service immediately.
                   </p>
+                </div>
+
+                <div className="space-y-3 pt-2 border-t border-rose-150">
+                  <div className="p-3 rounded-2xl bg-amber-50/90 border border-amber-200 text-[10px] text-amber-900 font-mono">
+                    <strong>[LEGAL REVIEW REQUIRED - STATUTORY DATA PROTECTION CLAUSE UNDER DIGITAL PERSONAL DATA PROTECTION ACT, 2023]</strong>
+                  </div>
+                  <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                    <span className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 text-xs flex items-center justify-center font-bold">5</span>
+                    Data Protection Clause (DPDP Act, 2023)
+                  </h3>
+                  <div className="text-xs text-gray-600 space-y-2 leading-relaxed">
+                    <p>
+                      <strong>5.1 Roles:</strong> For the purposes of the Digital Personal Data Protection Act, 2023 ("DPDP Act"), you acknowledge and agree that you are the <em>Data Principal</em> and Love Link Digital Sanctuary (India) Private Limited acts as the <em>Data Fiduciary</em>.
+                    </p>
+                    <p>
+                      <strong>5.2 Consent & Lawful Processing:</strong> We process your digital personal data solely on the basis of your affirmative, specific, and unconditional consent obtained under Section 6 of the DPDP Act. You may withdraw consent at any time via App Settings or by submitting a statutory request.
+                    </p>
+                    <p>
+                      <strong>5.3 Security Safeguards & Breach Notice:</strong> In compliance with Section 8(5) and Section 8(6) of the DPDP Act, we implement reasonable technical and organizational safeguards (including AES-GCM encryption and access control). In the event of a verified personal data breach, we will notify the Data Protection Board of India (DPBI) and affected Data Principals within 72 hours.
+                    </p>
+                    <p>
+                      <strong>5.4 Grievance Redressal & Escalation:</strong> If you have any complaint regarding data processing, you may contact our designated Data Protection Grievance Officer at <code>grievance-dpdp@love-link.app</code>. We commit to acknowledging grievances within 48 hours and resolving them within 30 calendar days. If unresolved, you may appeal to the Data Protection Board of India pursuant to Section 13(3).
+                    </p>
+                  </div>
                 </div>
               </>
             ) : (

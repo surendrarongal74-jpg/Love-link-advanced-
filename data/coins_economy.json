@@ -3,12 +3,12 @@
     "NHr32VQ0sZT9Fdxh6xFoQ6lKNDy2": {
       "userId": "NHr32VQ0sZT9Fdxh6xFoQ6lKNDy2",
       "balance": 50,
-      "totalEarned": 50,
-      "totalSpent": 0,
-      "dailyEarnedToday": 0,
-      "lastEarnDate": "2026-10-15",
+      "totalEarned": 150,
+      "totalSpent": 100,
+      "dailyEarnedToday": 100,
+      "lastEarnDate": "2026-10-18",
       "maxDailyQuota": 250,
-      "updatedAt": 1792054961113
+      "updatedAt": 1792323423586
     },
     "test_user_qa": {
       "userId": "test_user_qa",
@@ -21,6 +21,26 @@
       "updatedAt": 1792060591300,
       "streakDays": 1,
       "lastCheckInDate": "2026-10-15"
+    },
+    "test_user": {
+      "userId": "test_user",
+      "balance": 40,
+      "totalEarned": 50,
+      "totalSpent": 10,
+      "dailyEarnedToday": 0,
+      "lastEarnDate": "2026-10-18",
+      "maxDailyQuota": 250,
+      "updatedAt": 1792323510307
+    },
+    "test_user_2": {
+      "userId": "test_user_2",
+      "balance": 40,
+      "totalEarned": 50,
+      "totalSpent": 10,
+      "dailyEarnedToday": 0,
+      "lastEarnDate": "2026-10-18",
+      "maxDailyQuota": 250,
+      "updatedAt": 1792323875875
     }
   },
   "inventories": {
@@ -32,9 +52,11 @@
       "activeTheme": "theme_blush_romance",
       "ownedBadges": [],
       "equippedBadge": "",
-      "ownedGamePacks": [],
+      "ownedGamePacks": [
+        "pack_deep_intimacy"
+      ],
       "streakFreezeTokens": 0,
-      "updatedAt": 1792054961113
+      "updatedAt": 1792323423586
     },
     "test_user_qa": {
       "userId": "test_user_qa",
@@ -48,6 +70,32 @@
       "ownedGamePacks": [],
       "streakFreezeTokens": 0,
       "updatedAt": 1792060599719
+    },
+    "test_user": {
+      "userId": "test_user",
+      "ownedThemes": [
+        "theme_cloud_romance",
+        "theme_blush_romance"
+      ],
+      "activeTheme": "theme_cloud_romance",
+      "ownedBadges": [],
+      "equippedBadge": "",
+      "ownedGamePacks": [],
+      "streakFreezeTokens": 0,
+      "updatedAt": 1792323510307
+    },
+    "test_user_2": {
+      "userId": "test_user_2",
+      "ownedThemes": [
+        "theme_cloud_romance",
+        "theme_blush_romance"
+      ],
+      "activeTheme": "theme_cloud_romance",
+      "ownedBadges": [],
+      "equippedBadge": "",
+      "ownedGamePacks": [],
+      "streakFreezeTokens": 0,
+      "updatedAt": 1792323875875
     }
   },
   "transactions": [
@@ -58,9 +106,53 @@
       "type": "daily_checkin",
       "description": "Daily Love Streak: Day 1 (+20 coins)",
       "createdAt": 1792060591300
+    },
+    {
+      "id": "tx_1792323405295_ecv70",
+      "userId": "NHr32VQ0sZT9Fdxh6xFoQ6lKNDy2",
+      "amount": 100,
+      "type": "mission_reward",
+      "description": "Completed: Sunset Walk or Outdoor Date",
+      "referenceId": "mission_sunset_stroll",
+      "createdAt": 1792323405295
+    },
+    {
+      "id": "tx_1792323423586_03mgn",
+      "userId": "NHr32VQ0sZT9Fdxh6xFoQ6lKNDy2",
+      "amount": -100,
+      "type": "item_purchase",
+      "description": "Unlocked: Truth or Dare: Deep Vulnerability Pack",
+      "referenceId": "pack_deep_intimacy",
+      "createdAt": 1792323423586
+    },
+    {
+      "id": "tx_1792323510307_56e6b",
+      "userId": "test_user",
+      "amount": -10,
+      "type": "item_purchase",
+      "description": "Unlocked: test_item",
+      "referenceId": "test_item",
+      "createdAt": 1792323510307
+    },
+    {
+      "id": "tx_1792323875875_046ec",
+      "userId": "test_user_2",
+      "amount": -10,
+      "type": "item_purchase",
+      "description": "Unlocked: coupon_123",
+      "referenceId": "coupon_123",
+      "createdAt": 1792323875875
     }
   ],
-  "submittedHashes": {},
+  "submittedHashes": {
+    "32df6d4929ef0624b36c24e96f392919233b90ab8546164240528319cc8b8c55": {
+      "userId": "NHr32VQ0sZT9Fdxh6xFoQ6lKNDy2",
+      "timestamp": 1792323405295,
+      "missionId": "mission_sunset_stroll"
+    }
+  },
   "claimedReferrals": {},
-  "recentMissionCompletions": {}
+  "recentMissionCompletions": {
+    "NHr32VQ0sZT9Fdxh6xFoQ6lKNDy2_mission_sunset_stroll": 1792323405295
+  }
 }

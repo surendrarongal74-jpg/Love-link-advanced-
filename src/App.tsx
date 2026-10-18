@@ -35,6 +35,7 @@ import { LiveNotificationOverlay } from './components/notifications/LiveNotifica
 import { NotificationDrawer } from './components/notifications/NotificationDrawer';
 import { IncomingGiftCelebrationModal } from './components/widgets/IncomingGiftCelebrationModal';
 import { PublicInfoScreen } from './screens/PublicInfoScreen';
+import { ConsentBanner } from './components/legal/ConsentBanner';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -140,7 +141,7 @@ export default function App() {
 
   return (
     <LoveCoinsProvider>
-      <div className="min-h-screen bg-white max-w-md mx-auto shadow-2xl overflow-hidden relative border-x border-rose-100">
+      <div className="min-h-screen bg-white max-w-md mx-auto shadow-2xl relative border-x border-rose-100 overflow-x-clip">
         <Routes>
           <Route path="/auth" element={<AuthScreen />} />
         
@@ -312,10 +313,12 @@ export default function App() {
 
         <Route path="/install" element={<InstallAPKScreen />} />
         
-        {/* Public Information, Feature Showcase & Privacy routes */}
+        {/* Public Information, Feature Showcase, DPDP Privacy & Data Rights routes */}
         <Route path="/features" element={<PublicInfoScreen />} />
         <Route path="/about" element={<PublicInfoScreen />} />
         <Route path="/privacy" element={<PublicInfoScreen />} />
+        <Route path="/privacy-notice" element={<PublicInfoScreen />} />
+        <Route path="/data-rights" element={<PublicInfoScreen />} />
         <Route path="/terms" element={<PublicInfoScreen />} />
 
         {/* Graceful 404 Not Found route */}
@@ -326,6 +329,7 @@ export default function App() {
       <LiveNotificationOverlay />
       <NotificationDrawer />
       <IncomingGiftCelebrationModal />
+      <ConsentBanner />
       </div>
     </LoveCoinsProvider>
   );

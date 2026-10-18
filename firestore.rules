@@ -451,5 +451,18 @@ service cloud.firestore {
       allow get, list: if isSignedIn() && resource.data.userId == request.auth.uid;
       allow write: if false;
     }
+
+    // DPDP Act 2023: User Consent Records (Strictly accessible by the authenticating Data Principal)
+    match /users/{userId}/dpdp_consents/{consentId} {
+      allow read, write: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    // DPDP Act 2023: Data Principal Rights Requests (Submitter access only, immutable audit log)
+    match /dpdp_requests/{requestId} {
+      allow get: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid;
+      allow update, delete: if false;
+    }
   }
 }

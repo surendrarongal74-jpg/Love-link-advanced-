@@ -28,6 +28,7 @@ import { useLoveCoins } from '../contexts/LoveCoinsContext';
 import { LOVEVERSE_ASSETS } from '../assets/loveverseAssets';
 import { SHOP_CATALOG } from '../types/coins';
 import { sound } from '../lib/sound';
+import { triggerHeartBurstConfetti } from '../lib/celebrationEffects';
 
 const preloadedMessages = [
   "I love you ❤️",
@@ -226,7 +227,8 @@ export function ChatScreen() {
         if (Date.now() - (giftData.createdAt || 0) < 20000) {
           setLiveVirtualGift(giftData);
           sound.playLoveAlert();
-          setTimeout(() => setLiveVirtualGift(null), 5000);
+          triggerHeartBurstConfetti(0.5, 0.45);
+          setTimeout(() => setLiveVirtualGift(null), 7000);
         }
       }
     }, (err) => {

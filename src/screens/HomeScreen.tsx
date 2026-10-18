@@ -19,6 +19,7 @@ import { LinkedCelebration } from '../components/LinkedCelebration';
 import { analyzeMoodAndSuggestAction, generateDailyQuestion } from '../lib/ai';
 import { DailyQuestionAttachmentPreview, QuestionAttachmentItem, processFileToAttachment } from '../components/DailyQuestionAttachmentPreview';
 import { TermsAndConditionsModal } from '../components/legal/TermsAndConditionsModal';
+import { DataRightsRequestModal } from '../components/legal/DataRightsRequestModal';
 import { GoogleSearchConsoleModal } from '../components/seo/GoogleSearchConsoleModal';
 import { PartnerPermissionsChecklist } from '../components/permissions/PartnerPermissionsChecklist';
 import { CallPromptModal } from '../components/calling/CallPromptModal';
@@ -54,6 +55,7 @@ export function HomeScreen() {
   const [showSettings, setShowSettings] = useState(false);
   const [showCallPrompt, setShowCallPrompt] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
+  const [showDataRightsModal, setShowDataRightsModal] = useState(false);
   const [showGscModal, setShowGscModal] = useState(false);
   const [showPermissionsModal, setShowPermissionsModal] = useState(false);
   const [showWallpaperModal, setShowWallpaperModal] = useState(false);
@@ -430,7 +432,7 @@ export function HomeScreen() {
   const isSyncCompleted = activeGame?.status === 'completed';
 
   return (
-    <div className="flex flex-col min-h-[100dvh] bg-rose-50/70 pb-28 font-sans relative overflow-x-hidden">
+    <div className="flex flex-col min-h-[100dvh] bg-rose-50/70 pb-32 font-sans relative overflow-x-hidden overflow-y-auto">
       {/* Subtle Living Ambient Blobs */}
       <div className="fixed top-0 right-0 w-80 h-80 bg-rose-200/30 rounded-full blur-[90px] -mr-28 -mt-28 pointer-events-none" />
       <div className="fixed bottom-32 left-0 w-72 h-72 bg-pink-200/30 rounded-full blur-[80px] -ml-28 pointer-events-none" />
@@ -1241,6 +1243,16 @@ export function HomeScreen() {
                   <button
                     onClick={() => {
                       setShowSettings(false);
+                      setShowDataRightsModal(true);
+                    }}
+                    className="w-full bg-emerald-50 text-emerald-800 hover:bg-emerald-100 font-semibold py-3 rounded-xl transition-colors flex items-center justify-center gap-2 border border-emerald-200/60"
+                  >
+                    <span>⚖️ Data Principal Rights (DPDP)</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setShowSettings(false);
                       setShowGscModal(true);
                     }}
                     className="w-full bg-gradient-to-r from-rose-50 to-pink-50 text-rose-700 hover:bg-rose-100 font-semibold py-3 rounded-xl transition-colors flex items-center justify-center gap-2 border border-rose-200/60"
@@ -1352,6 +1364,12 @@ export function HomeScreen() {
       <TermsAndConditionsModal
         isOpen={showTermsModal}
         onClose={() => setShowTermsModal(false)}
+      />
+
+      {/* DPDP Data Rights Request Modal */}
+      <DataRightsRequestModal
+        isOpen={showDataRightsModal}
+        onClose={() => setShowDataRightsModal(false)}
       />
 
       {/* Google Search Console & SEO Modal */}
