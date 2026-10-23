@@ -27,7 +27,9 @@ import { LoveCouponsScreen } from './screens/LoveCouponsScreen';
 import { MarketScreen } from './screens/MarketScreen';
 import { EarnCoinsScreen } from './screens/EarnCoinsScreen';
 import { MyCollectionScreen } from './screens/MyCollectionScreen';
+import { LoveverseThemesScreen } from './screens/LoveverseThemesScreen';
 import { LoveCoinsProvider } from './contexts/LoveCoinsContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 import { InstallAPKScreen } from './screens/InstallAPKScreen';
 import { OfflineIndicator } from './components/pwa/OfflineIndicator';
 import { ActiveCallOverlay } from './components/calling/ActiveCallOverlay';
@@ -113,6 +115,7 @@ const ROUTE_TITLES: Record<string, string> = {
   '/aira': 'AIRA Love Companion • Love Link',
   '/date-planner': 'AI Date Planner • Love Link',
   '/playhouse': 'Loveverse Playhouse • Love Link',
+  '/themes': 'Loveverse Themes & Visual Worlds • Love Link',
   '/vision-board': 'Couple Vision Board • Love Link',
   '/love-coupons': 'Love Coupons Vault • Love Link',
   '/install': 'Install Love Link App • Love Link',
@@ -141,9 +144,10 @@ export default function App() {
 
   return (
     <LoveCoinsProvider>
-      <div className="min-h-screen bg-white max-w-md mx-auto shadow-2xl relative border-x border-rose-100 overflow-x-clip">
-        <Routes>
-          <Route path="/auth" element={<AuthScreen />} />
+      <ThemeProvider>
+        <div className="min-h-screen bg-white max-w-md mx-auto shadow-2xl relative border-x border-rose-100 overflow-x-clip">
+          <Routes>
+            <Route path="/auth" element={<AuthScreen />} />
         
         <Route path="/onboarding" element={
           <ProtectedRoute>
@@ -271,6 +275,14 @@ export default function App() {
           </ProtectedRoute>
         } />
 
+        <Route path="/themes" element={
+          <ProtectedRoute>
+            <ActiveSpaceRoute>
+              <LoveverseThemesScreen />
+            </ActiveSpaceRoute>
+          </ProtectedRoute>
+        } />
+
         <Route path="/vision-board" element={
           <ProtectedRoute>
             <ActiveSpaceRoute>
@@ -331,6 +343,7 @@ export default function App() {
       <IncomingGiftCelebrationModal />
       <ConsentBanner />
       </div>
+      </ThemeProvider>
     </LoveCoinsProvider>
   );
 }

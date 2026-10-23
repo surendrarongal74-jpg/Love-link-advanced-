@@ -59,6 +59,18 @@ export const THEMES_LIST: ThemeDefinition[] = [
     description: 'Dreamy cosmic lavender, glowing stars, glass hearts, and deep violet accents.',
     cost: 5000,
     image: '/src/assets/images/theme_soulmate_galaxy_1791976959294.jpg'
+  },
+  {
+    id: 'theme_default',
+    name: 'Classic Love Link',
+    primary: '#F43F5E',
+    primarySoft: '#FFE4E6',
+    bgLight: '#FFF8FA',
+    textDark: '#1F2937',
+    accent: '#FB7185',
+    description: 'Clean modern romantic blush, warm whites, and crisp rose highlights.',
+    cost: 0,
+    image: '/src/assets/images/theme_cloud_romance_1791977048928.jpg'
   }
 ];
 
