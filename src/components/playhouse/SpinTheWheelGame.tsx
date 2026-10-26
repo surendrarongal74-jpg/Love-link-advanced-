@@ -38,11 +38,13 @@ export function SpinTheWheelGame() {
 
     // Pick a random target
     const randomIndex = Math.floor(Math.random() * WHEEL_ACTIVITIES.length);
-    const segmentAngle = 360 / WHEEL_ACTIVITIES.length;
-    // Calculate new rotation: multiple full spins + target segment offset
-    const extraSpins = 5 + Math.floor(Math.random() * 3);
-    const targetAngle = 360 * extraSpins + (WHEEL_ACTIVITIES.length - randomIndex) * segmentAngle;
-    const finalRotation = rotation + targetAngle;
+    const segmentCenterAngle = randomIndex * 45 + 22.5;
+    const currentModulo = ((rotation % 360) + 360) % 360;
+    const desiredModulo = (360 - segmentCenterAngle) % 360;
+    let delta = desiredModulo - currentModulo;
+    if (delta <= 0) delta += 360;
+    const extraSpins = (5 + Math.floor(Math.random() * 3)) * 360;
+    const finalRotation = rotation + extraSpins + delta;
 
     setRotation(finalRotation);
 

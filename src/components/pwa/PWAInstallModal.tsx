@@ -106,15 +106,15 @@ export const PWAInstallModal: React.FC<PWAInstallModalProps> = ({ isOpen, onClos
             <Smartphone className="w-9 h-9 text-white" />
           </div>
 
-          <h2 className="text-xl font-bold tracking-tight">Love Link for Mobile & APK</h2>
+          <h2 className="text-xl font-bold tracking-tight">Love Link on Every Device</h2>
           <p className="text-xs text-rose-100 mt-1 max-w-xs mx-auto">
-            Install directly on your Android phone as a native APK app with offline encrypted storage & zero lag!
+            Install Love Link on your Phone, Tablet, or Desktop PC as a native standalone app with offline encrypted storage & zero lag!
           </p>
 
           {isInstalled && (
             <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/80 text-white text-xs font-semibold">
               <CheckCircle2 className="w-3.5 h-3.5" />
-              <span>Already Running as Installed APK / App</span>
+              <span>Already Running as Installed App</span>
             </div>
           )}
         </div>
@@ -132,7 +132,7 @@ export const PWAInstallModal: React.FC<PWAInstallModalProps> = ({ isOpen, onClos
                 : 'text-gray-500 hover:text-gray-700'
             }`}
           >
-            📱 1-Tap APK Install
+            ⚡ 1-Tap Install
           </button>
           <button
             onClick={() => {
@@ -145,7 +145,7 @@ export const PWAInstallModal: React.FC<PWAInstallModalProps> = ({ isOpen, onClos
                 : 'text-gray-500 hover:text-gray-700'
             }`}
           >
-            📲 Phone QR Link
+            📲 Mobile & Tab QR
           </button>
           <button
             onClick={() => {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useCoupleSpace } from '../contexts/CoupleSpaceContext';
 import { useAuth } from '../contexts/AuthContext';
-import { collection, query, orderBy, limit, onSnapshot, addDoc, deleteDoc, doc } from 'firebase/firestore';
+import { collection, query, orderBy, limit, onSnapshot, addDoc, deleteDoc, doc, setDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { handleFirestoreError, OperationType } from '../lib/errorHandler';
 import { BottomNav } from '../components/BottomNav';
@@ -25,6 +25,7 @@ import { CallPromptModal } from '../components/calling/CallPromptModal';
 import { useCall } from '../contexts/CallContext';
 import { useLiveNotifications } from '../contexts/LiveNotificationContext';
 import { useLoveCoins } from '../contexts/LoveCoinsContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { LOVEVERSE_ASSETS } from '../assets/loveverseAssets';
 import { SHOP_CATALOG } from '../types/coins';
 import { sound } from '../lib/sound';
@@ -162,6 +163,7 @@ function VoiceMessageBubble({
 export function ChatScreen() {
   const { space, partnerData } = useCoupleSpace();
   const { userData } = useAuth();
+  const { theme, isDark } = useTheme();
   
   // Local messages state (Stored in Mobile Phone's IndexedDB)
   const [messages, setMessages] = useState<LocalEncryptedMessage[]>([]);
@@ -195,8 +197,190 @@ export function ChatScreen() {
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [showCallPrompt, setShowCallPrompt] = useState(false);
   const [activeWallpaperId, setActiveWallpaperId] = useState<string>(getStoredWallpaper());
+  const [customWallpaper, setCustomWallpaper] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem('lovelink_custom_wallpaper');
+    } catch {
+      return null;
+    }
+  });
+  const customWallpaperInputRef = useRef<HTMLInputElement>(null);
   const [showWallpaperPicker, setShowWallpaperPicker] = useState<boolean>(false);
   const [liveVirtualGift, setLiveVirtualGift] = useState<any | null>(null);
+
+  // Real-time Partner Typing State
+  const [isPartnerTyping, setIsPartnerTyping] = useState(false);
+  const typingTimeoutRef = useRef<any>(null);
+  const lastTypingSentRef = useRef<number>(0);
+
+  // Floating Love Reactions State
+  interface FloatingHeartItem {
+    id: number;
+    startX: number;
+    driftX: number;
+    scale: number;
+    duration: number;
+    color: string;
+    rotation: number;
+    emoji: string;
+  }
+  const [floatingHearts, setFloatingHearts] = useState<FloatingHeartItem[]>([]);
+
+  const sendTypingStatus = async (isTyping: boolean) => {
+    if (!space?.id || !userData?.id) return;
+    try {
+      await setDoc(doc(db, `coupleSpaces/${space.id}/typing/${userData.id}`), {
+        userId: userData.id,
+        isTyping,
+        userName: userData.displayName || 'Partner',
+        updatedAt: Date.now()
+      }, { merge: true });
+    } catch {}
+  };
+
+  const handleInputChange = (val: string) => {
+    setNewMessage(val);
+    if (!space?.id || !userData?.id) return;
+
+    if (val.trim().length > 0) {
+      const now = Date.now();
+      if (now - lastTypingSentRef.current > 2000) {
+        lastTypingSentRef.current = now;
+        sendTypingStatus(true);
+      }
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = setTimeout(() => {
+        sendTypingStatus(false);
+      }, 2500);
+    } else {
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      sendTypingStatus(false);
+    }
+  };
+
+  const spawnFloatingHearts = React.useCallback(() => {
+    const colors = ['#F43F5E', '#E11D48', '#BE185D', '#FB7185', '#FF4D8D', '#D946EF', '#EC4899'];
+    const emojis = ['💖', '💕', '✨', '❤️', '🌹', '🥰', '💓'];
+    const newHearts: FloatingHeartItem[] = Array.from({ length: 6 }).map((_, i) => ({
+      id: Date.now() + Math.random() + i,
+      startX: 20 + Math.random() * 60,
+      driftX: (Math.random() - 0.5) * 30,
+      scale: 0.8 + Math.random() * 0.6,
+      duration: 1.8 + Math.random() * 1.0,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      rotation: (Math.random() - 0.5) * 40,
+      emoji: emojis[Math.floor(Math.random() * emojis.length)]
+    }));
+
+    setFloatingHearts(prev => [...prev.slice(-24), ...newHearts]);
+
+    setTimeout(() => {
+      setFloatingHearts(prev => prev.filter(h => !newHearts.some(nh => nh.id === h.id)));
+    }, 3200);
+  }, []);
+
+  const triggerQuickLoveReaction = async () => {
+    sound.playHeartbeat();
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      navigator.vibrate(35);
+    }
+    spawnFloatingHearts();
+
+    if (space?.id && userData?.id) {
+      try {
+        await addDoc(collection(db, `coupleSpaces/${space.id}/reactions`), {
+          senderId: userData.id,
+          type: 'heart',
+          emoji: '❤️',
+          createdAt: Date.now()
+        });
+      } catch (err) {
+        console.warn('Could not broadcast live reaction:', err);
+      }
+    }
+  };
+
+  // Real-time listener for partner typing state
+  useEffect(() => {
+    if (!space?.id || !partnerData?.id) return;
+
+    const unsubscribe = onSnapshot(
+      doc(db, `coupleSpaces/${space.id}/typing/${partnerData.id}`),
+      (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          const isFresh = Date.now() - (data.updatedAt || 0) < 5000;
+          setIsPartnerTyping(Boolean(data.isTyping && isFresh));
+        } else {
+          setIsPartnerTyping(false);
+        }
+      },
+      (err) => console.warn('Typing state listener:', err)
+    );
+
+    return () => {
+      unsubscribe();
+      sendTypingStatus(false);
+    };
+  }, [space?.id, partnerData?.id]);
+
+  // Real-time listener for live incoming heart reactions from partner
+  useEffect(() => {
+    if (!space?.id || !userData?.id) return;
+
+    const q = query(
+      collection(db, `coupleSpaces/${space.id}/reactions`),
+      orderBy('createdAt', 'desc'),
+      limit(5)
+    );
+
+    const unsubscribe = onSnapshot(q, (snap) => {
+      snap.docChanges().forEach((change) => {
+        if (change.type === 'added') {
+          const data = change.doc.data();
+          if (Date.now() - (data.createdAt || 0) < 6000 && data.senderId !== userData.id) {
+            sound.playHeartbeat();
+            spawnFloatingHearts();
+          }
+        }
+      });
+    }, (err) => console.warn('Reactions listener:', err));
+
+    return () => unsubscribe();
+  }, [space?.id, userData?.id, spawnFloatingHearts]);
+
+  const handleCustomWallpaperUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    sound.tap();
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 900;
+        const scale = Math.min(1, MAX_WIDTH / img.width);
+        canvas.width = img.width * scale;
+        canvas.height = img.height * scale;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.75);
+
+        try {
+          localStorage.setItem('lovelink_custom_wallpaper', compressedDataUrl);
+          localStorage.setItem('lovelink_wallpaper', 'custom');
+        } catch {}
+
+        setCustomWallpaper(compressedDataUrl);
+        setActiveWallpaperId('custom');
+        sound.playSuccess();
+      };
+      img.src = reader.result as string;
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
 
   const { startCall } = useCall();
   const { markAllAsRead } = useLiveNotifications();
@@ -583,6 +767,9 @@ export function ChatScreen() {
     e?.preventDefault();
     if (!space?.id || !userData?.id || isEncryptingAndSending) return;
 
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    sendTypingStatus(false);
+
     // --- 1. SEND VOICE NOTE ---
     if (audioBlob) {
       setIsEncryptingAndSending(true);
@@ -838,11 +1025,14 @@ export function ChatScreen() {
   };
 
   const currentWp = WALLPAPER_PRESETS.find(w => w.id === activeWallpaperId) || WALLPAPER_PRESETS[0];
+  const activeBgStyle = activeWallpaperId === 'custom' && customWallpaper
+    ? { backgroundImage: `url(${customWallpaper})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+    : currentWp.customBgStyle;
 
   return (
     <div 
-      className={`flex flex-col h-screen ${currentWp.styleClass} relative pb-20 overflow-hidden transition-all duration-300`}
-      style={currentWp.customBgStyle}
+      className={`flex flex-col h-screen ${activeWallpaperId === 'custom' ? 'bg-cover bg-center' : currentWp.styleClass} relative pb-20 overflow-hidden transition-all duration-300`}
+      style={activeBgStyle}
     >
       
       {/* Hidden file input for photos */}
@@ -1072,7 +1262,7 @@ export function ChatScreen() {
       </div>
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto px-5 py-5 space-y-3.5 relative z-10">
+      <div className="flex-1 overflow-y-auto px-4 md:px-8 py-5 space-y-3.5 relative z-10 max-w-4xl mx-auto w-full">
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-center p-8 space-y-3 text-rose-900/60">
             <div className="w-16 h-16 rounded-full bg-white/60 backdrop-blur-md flex items-center justify-center shadow-inner">
@@ -1113,11 +1303,16 @@ export function ChatScreen() {
                 transition={{ type: "spring", stiffness: 220, damping: 22 }}
                 className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} group select-none`}
               >
-                <div className={`px-4 py-3 max-w-[85%] relative shadow-sm ${
-                  isMe 
-                    ? 'bg-gradient-to-br from-rose-500 to-pink-500 text-white rounded-[1.8rem] rounded-br-[4px]' 
-                    : 'bg-white/75 backdrop-blur-md border border-white text-rose-950 rounded-[1.8rem] rounded-bl-[4px]'
-                }`}>
+                <div 
+                  className="px-4 py-3 max-w-[85%] relative shadow-sm rounded-[1.8rem] backdrop-blur-md"
+                  style={{
+                    background: isMe ? theme.colors.bubbleMine : theme.colors.bubblePartner,
+                    color: isMe ? theme.colors.bubbleMineText : theme.colors.bubblePartnerText,
+                    border: !isMe ? `1px solid ${theme.colors.cardBorder}` : undefined,
+                    borderBottomRightRadius: isMe ? '4px' : undefined,
+                    borderBottomLeftRadius: !isMe ? '4px' : undefined,
+                  }}
+                >
                   
                   {/* VOICE NOTE */}
                   {msg.type === 'voice' && (
@@ -1247,7 +1442,32 @@ export function ChatScreen() {
           )}
         </AnimatePresence>
 
-        <div className="px-4 pb-5 flex items-center gap-2">
+        {/* Real-time Partner Typing Indicator Bubble */}
+        <div className="max-w-4xl mx-auto w-full px-4 mb-1.5 min-h-[26px] flex items-center">
+          <AnimatePresence>
+            {isPartnerTyping && (
+              <motion.div
+                initial={{ opacity: 0, y: 6, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 4, scale: 0.95 }}
+                transition={{ type: "spring", stiffness: 450, damping: 28 }}
+                className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white/95 backdrop-blur-xl border border-rose-200/90 shadow-xs pointer-events-none"
+              >
+                <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
+                <span className="text-xs font-serif font-bold text-rose-800">
+                  {partnerData?.displayName || 'Your love'} is typing
+                </span>
+                <div className="flex items-center gap-1 ml-0.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        <div className="max-w-4xl mx-auto w-full px-4 pb-5 flex items-center gap-2">
           
           {/* AI Assist toggle */}
           <button 
@@ -1360,40 +1580,50 @@ export function ChatScreen() {
                      </div>
                   )}
                </div>
-            ) : (
-              <form onSubmit={sendMessage} className="flex-1 flex items-center bg-white/85 backdrop-blur-xl border border-white rounded-[2rem] p-1.5 shadow-lg shadow-rose-100/50 transition-all">
-                <input 
-                  type="text" 
-                  value={newMessage}
-                  onChange={e => setNewMessage(e.target.value)}
-                  placeholder="Type your encrypted message..."
-                  className="flex-1 bg-transparent border-none outline-none text-rose-950 placeholder:text-rose-300 px-3 text-[14.5px] font-medium min-w-0"
-                />
-                <button 
-                  type="button" 
-                  onClick={() => sendReaction('💌')}
-                  className="p-2 text-rose-400 hover:text-rose-500 transition-transform active:scale-95 flex-shrink-0"
-                >
-                  <Smile className="w-4 h-4" />
-                </button>
-                {newMessage.trim() ? (
-                  <button 
-                    type="submit"
-                    className="p-3 bg-gradient-to-r from-rose-500 to-pink-500 text-white rounded-full transition-transform active:scale-95 shadow-md flex-shrink-0"
-                  >
-                    <Heart className="w-3.5 h-3.5 fill-white" />
-                  </button>
-                ) : (
+             ) : (
+              <div className="flex-1 flex items-center gap-2">
+                <form onSubmit={sendMessage} className="flex-1 flex items-center bg-white/85 backdrop-blur-xl border border-white rounded-[2rem] p-1.5 shadow-lg shadow-rose-100/50 transition-all">
+                  <input 
+                    type="text" 
+                    value={newMessage}
+                    onChange={e => handleInputChange(e.target.value)}
+                    placeholder="Type your encrypted message..."
+                    className="flex-1 bg-transparent border-none outline-none text-rose-950 placeholder:text-rose-300 px-3 text-[14.5px] font-medium min-w-0"
+                  />
                   <button 
                     type="button" 
-                    onClick={startRecording}
-                    className="p-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full transition-transform active:scale-95 shadow-md flex-shrink-0"
-                    title="Hold or tap to record voice note"
+                    onClick={() => sendReaction('💌')}
+                    className="p-2 text-rose-400 hover:text-rose-500 transition-transform active:scale-95 flex-shrink-0"
                   >
-                    <Mic className="w-3.5 h-3.5 fill-white" />
+                    <Smile className="w-4 h-4" />
                   </button>
-                )}
-              </form>
+                  {newMessage.trim() ? (
+                    <button 
+                      type="submit"
+                      className="p-3 bg-gradient-to-r from-rose-500 to-pink-500 text-white rounded-full transition-transform active:scale-95 shadow-md flex-shrink-0"
+                    >
+                      <Heart className="w-3.5 h-3.5 fill-white" />
+                    </button>
+                  ) : (
+                    <button 
+                      type="button" 
+                      onClick={startRecording}
+                      className="p-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full transition-transform active:scale-95 shadow-md flex-shrink-0"
+                      title="Hold or tap to record voice note"
+                    >
+                      <Mic className="w-3.5 h-3.5 fill-white" />
+                    </button>
+                  )}
+                </form>
+                <button
+                  type="button"
+                  onClick={triggerQuickLoveReaction}
+                  className="p-3 rounded-full transition-all active:scale-90 hover:scale-105 flex-shrink-0 bg-gradient-to-tr from-rose-500 via-pink-500 to-rose-400 text-white shadow-lg shadow-rose-300/40 hover:shadow-rose-400/50 cursor-pointer group"
+                  title="Send floating live hearts"
+                >
+                  <Heart className="w-4 h-4 fill-white group-hover:scale-125 transition-transform animate-pulse" />
+                </button>
+              </div>
             )}
           </div>
         </div>
@@ -1423,6 +1653,51 @@ export function ChatScreen() {
               </div>
 
               <div className="space-y-2.5">
+                {/* Custom Photo Wallpaper Option */}
+                <input
+                  ref={customWallpaperInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleCustomWallpaperUpload}
+                />
+
+                <div
+                  onClick={() => customWallpaperInputRef.current?.click()}
+                  className={`p-3 rounded-2xl border cursor-pointer flex items-center justify-between transition-all ${
+                    activeWallpaperId === 'custom'
+                      ? 'border-rose-500 ring-2 ring-rose-200 bg-rose-50/50 shadow-xs'
+                      : 'border-dashed border-rose-200 hover:border-rose-400 bg-rose-50/30'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div 
+                      className="w-10 h-10 rounded-xl shadow-xs border border-white/50 bg-rose-100 flex items-center justify-center overflow-hidden"
+                      style={customWallpaper ? { backgroundImage: `url(${customWallpaper})`, backgroundSize: 'cover' } : {}}
+                    >
+                      {!customWallpaper && <ImageIcon className="w-5 h-5 text-rose-500" />}
+                    </div>
+                    <div>
+                      <span className="font-bold text-xs text-gray-800 block">
+                        {customWallpaper ? 'Custom Couple Photo' : 'Upload Custom Photo'}
+                      </span>
+                      <span className="text-[10px] text-gray-500">Pick from camera or gallery</span>
+                    </div>
+                  </div>
+
+                  {activeWallpaperId === 'custom' ? (
+                    <span className="w-6 h-6 rounded-full bg-rose-500 text-white flex items-center justify-center text-xs shadow-2xs">
+                      ✓
+                    </span>
+                  ) : (
+                    <span className="text-xs font-bold text-rose-500 hover:underline">Choose</span>
+                  )}
+                </div>
+
+                <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 px-1 pt-1">
+                  Romantic Sky Presets
+                </div>
+
                 {WALLPAPER_PRESETS.map((wp) => {
                   const isSelected = activeWallpaperId === wp.id;
                   return (
@@ -1517,6 +1792,40 @@ export function ChatScreen() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Floating Hearts Reaction Overlay */}
+      <div className="fixed inset-0 pointer-events-none z-[120] overflow-hidden select-none">
+        <AnimatePresence>
+          {floatingHearts.map(heart => (
+            <motion.div
+              key={heart.id}
+              initial={{
+                opacity: 0,
+                y: 100,
+                x: `${heart.startX}vw`,
+                scale: 0.4,
+                rotate: heart.rotation - 20,
+              }}
+              animate={{
+                opacity: [0, 1, 1, 0.9, 0],
+                y: '-25vh',
+                x: `${heart.startX + heart.driftX}vw`,
+                scale: [0.4, heart.scale, heart.scale * 1.15, heart.scale * 0.9],
+                rotate: heart.rotation + 25,
+              }}
+              exit={{ opacity: 0 }}
+              transition={{
+                duration: heart.duration,
+                ease: 'easeOut',
+              }}
+              className="absolute bottom-16 text-rose-500 drop-shadow-[0_4px_12px_rgba(244,63,94,0.5)]"
+              style={{ fontSize: `${28 * heart.scale}px` }}
+            >
+              {heart.emoji}
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
 
       <div className="z-20 bg-white shadow-[0_-4px_20px_rgba(0,0,0,0.03)] border-t border-rose-100/50">
         <BottomNav />

@@ -28,8 +28,12 @@ import { MarketScreen } from './screens/MarketScreen';
 import { EarnCoinsScreen } from './screens/EarnCoinsScreen';
 import { MyCollectionScreen } from './screens/MyCollectionScreen';
 import { LoveverseThemesScreen } from './screens/LoveverseThemesScreen';
+import { LoveverseGiftsScreen } from './screens/LoveverseGiftsScreen';
+import { StandaloneGiftViewScreen } from './screens/StandaloneGiftViewScreen';
 import { LoveCoinsProvider } from './contexts/LoveCoinsContext';
-import { ThemeProvider } from './contexts/ThemeContext';
+import { ThemeProvider, useTheme } from './contexts/ThemeContext';
+import { LivingAtmosphere } from './components/LivingAtmosphere';
+import { SidebarNav } from './components/SidebarNav';
 import { InstallAPKScreen } from './screens/InstallAPKScreen';
 import { OfflineIndicator } from './components/pwa/OfflineIndicator';
 import { ActiveCallOverlay } from './components/calling/ActiveCallOverlay';
@@ -38,6 +42,8 @@ import { NotificationDrawer } from './components/notifications/NotificationDrawe
 import { IncomingGiftCelebrationModal } from './components/widgets/IncomingGiftCelebrationModal';
 import { PublicInfoScreen } from './screens/PublicInfoScreen';
 import { ConsentBanner } from './components/legal/ConsentBanner';
+import { ContextualInspector } from './components/ContextualInspector';
+import { ThemeTransitionWrapper } from './components/ThemeTransitionWrapper';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -118,6 +124,7 @@ const ROUTE_TITLES: Record<string, string> = {
   '/themes': 'Loveverse Themes & Visual Worlds • Love Link',
   '/vision-board': 'Couple Vision Board • Love Link',
   '/love-coupons': 'Love Coupons Vault • Love Link',
+  '/loveverse/gifts': 'Loveverse Digital Gifts & Worlds • Love Link',
   '/install': 'Install Love Link App • Love Link',
   '/features': 'Features & Highlights • Love Link',
   '/about': 'About Us • Love Link',
@@ -125,7 +132,8 @@ const ROUTE_TITLES: Record<string, string> = {
   '/terms': 'Terms of Service • Love Link',
 };
 
-export default function App() {
+function AppContent() {
+  const { theme } = useTheme();
   const location = useLocation();
 
   useEffect(() => {
@@ -143,206 +151,241 @@ export default function App() {
   }, [location.pathname]);
 
   return (
-    <LoveCoinsProvider>
-      <ThemeProvider>
-        <div className="min-h-screen bg-white max-w-md mx-auto shadow-2xl relative border-x border-rose-100 overflow-x-clip">
-          <Routes>
-            <Route path="/auth" element={<AuthScreen />} />
-        
-        <Route path="/onboarding" element={
-          <ProtectedRoute>
-            <OnboardingScreen />
-          </ProtectedRoute>
-        } />
-        
-        <Route path="/" element={
-          <ProtectedRoute>
-            <SpaceRoute>
-              <HomeScreen />
-            </SpaceRoute>
-          </ProtectedRoute>
-        } />
-        
-        <Route path="/chat" element={
-          <ProtectedRoute>
-            <ActiveSpaceRoute>
-              <ChatScreen />
-            </ActiveSpaceRoute>
-          </ProtectedRoute>
-        } />
+    <ThemeTransitionWrapper>
+      <div 
+        className="min-h-screen transition-colors duration-500 font-sans relative flex flex-col md:flex-row w-full overflow-x-hidden"
+        style={{
+          backgroundColor: theme.colors.screenBg,
+          color: theme.colors.textMain
+        }}
+      >
+        <LivingAtmosphere />
+        <SidebarNav />
 
-        <Route path="/memories" element={
-          <ProtectedRoute>
-            <ActiveSpaceRoute>
-              <MemoriesScreen />
-            </ActiveSpaceRoute>
-          </ProtectedRoute>
-        } />
+        {/* Main Responsive Viewport Canvas */}
+        <main className="flex-1 min-w-0 max-w-full md:max-w-2xl lg:max-w-4xl xl:max-w-5xl 2xl:max-w-6xl mx-auto w-full relative z-10 px-0 sm:px-2 md:px-4">
+        <Routes>
+          <Route path="/auth" element={<AuthScreen />} />
+      
+          <Route path="/onboarding" element={
+            <ProtectedRoute>
+              <OnboardingScreen />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/" element={
+            <ProtectedRoute>
+              <SpaceRoute>
+                <HomeScreen />
+              </SpaceRoute>
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/chat" element={
+            <ProtectedRoute>
+              <ActiveSpaceRoute>
+                <ChatScreen />
+              </ActiveSpaceRoute>
+            </ProtectedRoute>
+          } />
 
-        <Route path="/game" element={
-          <ProtectedRoute>
-            <ActiveSpaceRoute>
-              <GameScreen />
-            </ActiveSpaceRoute>
-          </ProtectedRoute>
-        } />
+          <Route path="/memories" element={
+            <ProtectedRoute>
+              <ActiveSpaceRoute>
+                <MemoriesScreen />
+              </ActiveSpaceRoute>
+            </ProtectedRoute>
+          } />
 
-        <Route path="/lovelanguage" element={
-          <ProtectedRoute>
-            <ActiveSpaceRoute>
-              <LoveLanguageScreen />
-            </ActiveSpaceRoute>
-          </ProtectedRoute>
-        } />
+          <Route path="/game" element={
+            <ProtectedRoute>
+              <ActiveSpaceRoute>
+                <GameScreen />
+              </ActiveSpaceRoute>
+            </ProtectedRoute>
+          } />
 
-        <Route path="/notes" element={
-          <ProtectedRoute>
-            <ActiveSpaceRoute>
-              <DailyNotesScreen />
-            </ActiveSpaceRoute>
-          </ProtectedRoute>
-        } />
+          <Route path="/lovelanguage" element={
+            <ProtectedRoute>
+              <ActiveSpaceRoute>
+                <LoveLanguageScreen />
+              </ActiveSpaceRoute>
+            </ProtectedRoute>
+          } />
 
-        <Route path="/scheduler" element={
-          <ProtectedRoute>
-            <ActiveSpaceRoute>
-              <SurpriseSchedulerScreen />
-            </ActiveSpaceRoute>
-          </ProtectedRoute>
-        } />
+          <Route path="/notes" element={
+            <ProtectedRoute>
+              <ActiveSpaceRoute>
+                <DailyNotesScreen />
+              </ActiveSpaceRoute>
+            </ProtectedRoute>
+          } />
 
-        <Route path="/map" element={
-          <ProtectedRoute>
-            <ActiveSpaceRoute>
-              <LoveMapScreen />
-            </ActiveSpaceRoute>
-          </ProtectedRoute>
-        } />
-        
-        <Route path="/diary" element={
-          <ProtectedRoute>
-            <ActiveSpaceRoute>
-              <DiaryScreen />
-            </ActiveSpaceRoute>
-          </ProtectedRoute>
-        } />
+          <Route path="/scheduler" element={
+            <ProtectedRoute>
+              <ActiveSpaceRoute>
+                <SurpriseSchedulerScreen />
+              </ActiveSpaceRoute>
+            </ProtectedRoute>
+          } />
 
-        <Route path="/truth-or-dare" element={
-          <ProtectedRoute>
-            <ActiveSpaceRoute>
-              <TruthOrDareScreen />
-            </ActiveSpaceRoute>
-          </ProtectedRoute>
-        } />
+          <Route path="/map" element={
+            <ProtectedRoute>
+              <ActiveSpaceRoute>
+                <LoveMapScreen />
+              </ActiveSpaceRoute>
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/diary" element={
+            <ProtectedRoute>
+              <ActiveSpaceRoute>
+                <DiaryScreen />
+              </ActiveSpaceRoute>
+            </ProtectedRoute>
+          } />
 
-        <Route path="/reminders" element={
-          <ProtectedRoute>
-            <ActiveSpaceRoute>
-              <SmartRemindersScreen />
-            </ActiveSpaceRoute>
-          </ProtectedRoute>
-        } />
+          <Route path="/truth-or-dare" element={
+            <ProtectedRoute>
+              <ActiveSpaceRoute>
+                <TruthOrDareScreen />
+              </ActiveSpaceRoute>
+            </ProtectedRoute>
+          } />
 
-        <Route path="/who-loves-more" element={
-          <ProtectedRoute>
-            <ActiveSpaceRoute>
-              <WhoLovesMoreScreen />
-            </ActiveSpaceRoute>
-          </ProtectedRoute>
-        } />
+          <Route path="/reminders" element={
+            <ProtectedRoute>
+              <ActiveSpaceRoute>
+                <SmartRemindersScreen />
+              </ActiveSpaceRoute>
+            </ProtectedRoute>
+          } />
 
-        <Route path="/aira" element={
-          <ProtectedRoute>
-            <ActiveSpaceRoute>
-              <AiraScreen />
-            </ActiveSpaceRoute>
-          </ProtectedRoute>
-        } />
+          <Route path="/who-loves-more" element={
+            <ProtectedRoute>
+              <ActiveSpaceRoute>
+                <WhoLovesMoreScreen />
+              </ActiveSpaceRoute>
+            </ProtectedRoute>
+          } />
 
-        <Route path="/date-planner" element={
-          <ProtectedRoute>
-            <ActiveSpaceRoute>
-              <AIPlannerScreen />
-            </ActiveSpaceRoute>
-          </ProtectedRoute>
-        } />
+          <Route path="/aira" element={
+            <ProtectedRoute>
+              <ActiveSpaceRoute>
+                <AiraScreen />
+              </ActiveSpaceRoute>
+            </ProtectedRoute>
+          } />
 
-        <Route path="/playhouse" element={
-          <ProtectedRoute>
-            <ActiveSpaceRoute>
-              <LoveversePlayhouseScreen />
-            </ActiveSpaceRoute>
-          </ProtectedRoute>
-        } />
+          <Route path="/date-planner" element={
+            <ProtectedRoute>
+              <ActiveSpaceRoute>
+                <AIPlannerScreen />
+              </ActiveSpaceRoute>
+            </ProtectedRoute>
+          } />
 
-        <Route path="/themes" element={
-          <ProtectedRoute>
-            <ActiveSpaceRoute>
-              <LoveverseThemesScreen />
-            </ActiveSpaceRoute>
-          </ProtectedRoute>
-        } />
+          <Route path="/playhouse" element={
+            <ProtectedRoute>
+              <ActiveSpaceRoute>
+                <LoveversePlayhouseScreen />
+              </ActiveSpaceRoute>
+            </ProtectedRoute>
+          } />
 
-        <Route path="/vision-board" element={
-          <ProtectedRoute>
-            <ActiveSpaceRoute>
-              <VisionBoardScreen />
-            </ActiveSpaceRoute>
-          </ProtectedRoute>
-        } />
+          <Route path="/themes" element={
+            <ProtectedRoute>
+              <ActiveSpaceRoute>
+                <LoveverseThemesScreen />
+              </ActiveSpaceRoute>
+            </ProtectedRoute>
+          } />
 
-        <Route path="/love-coupons" element={
-          <ProtectedRoute>
-            <ActiveSpaceRoute>
-              <LoveCouponsScreen />
-            </ActiveSpaceRoute>
-          </ProtectedRoute>
-        } />
+          <Route path="/vision-board" element={
+            <ProtectedRoute>
+              <ActiveSpaceRoute>
+                <VisionBoardScreen />
+              </ActiveSpaceRoute>
+            </ProtectedRoute>
+          } />
 
-        <Route path="/market" element={
-          <ProtectedRoute>
-            <ActiveSpaceRoute>
-              <MarketScreen />
-            </ActiveSpaceRoute>
-          </ProtectedRoute>
-        } />
+          <Route path="/love-coupons" element={
+            <ProtectedRoute>
+              <ActiveSpaceRoute>
+                <LoveCouponsScreen />
+              </ActiveSpaceRoute>
+            </ProtectedRoute>
+          } />
 
-        <Route path="/earn-coins" element={
-          <ProtectedRoute>
-            <ActiveSpaceRoute>
-              <EarnCoinsScreen />
-            </ActiveSpaceRoute>
-          </ProtectedRoute>
-        } />
+          <Route path="/market" element={
+            <ProtectedRoute>
+              <ActiveSpaceRoute>
+                <MarketScreen />
+              </ActiveSpaceRoute>
+            </ProtectedRoute>
+          } />
 
-        <Route path="/my-collection" element={
-          <ProtectedRoute>
-            <ActiveSpaceRoute>
-              <MyCollectionScreen />
-            </ActiveSpaceRoute>
-          </ProtectedRoute>
-        } />
+          <Route path="/earn-coins" element={
+            <ProtectedRoute>
+              <ActiveSpaceRoute>
+                <EarnCoinsScreen />
+              </ActiveSpaceRoute>
+            </ProtectedRoute>
+          } />
 
-        <Route path="/install" element={<InstallAPKScreen />} />
-        
-        {/* Public Information, Feature Showcase, DPDP Privacy & Data Rights routes */}
-        <Route path="/features" element={<PublicInfoScreen />} />
-        <Route path="/about" element={<PublicInfoScreen />} />
-        <Route path="/privacy" element={<PublicInfoScreen />} />
-        <Route path="/privacy-notice" element={<PublicInfoScreen />} />
-        <Route path="/data-rights" element={<PublicInfoScreen />} />
-        <Route path="/terms" element={<PublicInfoScreen />} />
+          <Route path="/my-collection" element={
+            <ProtectedRoute>
+              <ActiveSpaceRoute>
+                <MyCollectionScreen />
+              </ActiveSpaceRoute>
+            </ProtectedRoute>
+          } />
 
-        {/* Graceful 404 Not Found route */}
-        <Route path="*" element={<NotFoundScreen />} />
-      </Routes>
+          {/* Loveverse Digital Gifts & Interactive Experiences */}
+          <Route path="/loveverse/gifts" element={
+            <ProtectedRoute>
+              <ActiveSpaceRoute>
+                <LoveverseGiftsScreen />
+              </ActiveSpaceRoute>
+            </ProtectedRoute>
+          } />
+
+          {/* Standalone Shareable Gift Link Route (Accessible on all devices without login barrier) */}
+          <Route path="/gift/:shareToken" element={<StandaloneGiftViewScreen />} />
+
+          <Route path="/install" element={<InstallAPKScreen />} />
+          
+          {/* Public Information, Feature Showcase, DPDP Privacy & Data Rights routes */}
+          <Route path="/features" element={<PublicInfoScreen />} />
+          <Route path="/about" element={<PublicInfoScreen />} />
+          <Route path="/privacy" element={<PublicInfoScreen />} />
+          <Route path="/privacy-notice" element={<PublicInfoScreen />} />
+          <Route path="/data-rights" element={<PublicInfoScreen />} />
+          <Route path="/terms" element={<PublicInfoScreen />} />
+
+          {/* Graceful 404 Not Found route */}
+          <Route path="*" element={<NotFoundScreen />} />
+        </Routes>
+      </main>
+
+      <ContextualInspector />
+
       <OfflineIndicator />
       <ActiveCallOverlay />
       <LiveNotificationOverlay />
       <NotificationDrawer />
       <IncomingGiftCelebrationModal />
       <ConsentBanner />
-      </div>
+    </div>
+  </ThemeTransitionWrapper>
+);
+}
+
+export default function App() {
+  return (
+    <LoveCoinsProvider>
+      <ThemeProvider>
+        <AppContent />
       </ThemeProvider>
     </LoveCoinsProvider>
   );

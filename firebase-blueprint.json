@@ -230,6 +230,68 @@
         "createdAt": { "type": "integer" }
       },
       "required": ["id", "coupleSpaceId", "senderId", "giftId", "giftName", "cost", "createdAt"]
+    },
+    "TypingState": {
+      "title": "Typing State",
+      "description": "Real-time indicator showing if partner is actively typing in chat",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "isTyping": { "type": "boolean" },
+        "userName": { "type": "string" },
+        "updatedAt": { "type": "integer" }
+      },
+      "required": ["userId", "isTyping", "updatedAt"]
+    },
+    "LiveReaction": {
+      "title": "Live Floating Reaction",
+      "description": "Instant live heart reaction sent during couple chat session",
+      "type": "object",
+      "properties": {
+        "senderId": { "type": "string" },
+        "type": { "type": "string" },
+        "emoji": { "type": "string" },
+        "createdAt": { "type": "integer" }
+      },
+      "required": ["senderId", "type", "createdAt"]
+    },
+    "DigitalGift": {
+      "title": "Digital Gift",
+      "description": "Personalized digital gift experience for a partner in the couple space",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "coupleSpaceId": { "type": "string" },
+        "creatorId": { "type": "string" },
+        "creatorName": { "type": "string" },
+        "productId": { "type": "string" },
+        "title": { "type": "string" },
+        "theme": { "type": "string" },
+        "status": { "type": "string" },
+        "isPublicShare": { "type": "boolean" },
+        "shareToken": { "type": "string" },
+        "createdAt": { "type": "integer" },
+        "updatedAt": { "type": "integer" }
+      },
+      "required": ["id", "coupleSpaceId", "creatorId", "productId", "title", "createdAt", "updatedAt"]
+    },
+    "PublicDigitalGift": {
+      "title": "Public Digital Gift",
+      "description": "Public view-only representation of a digital gift accessible via unguessable share token",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "shareToken": { "type": "string" },
+        "creatorId": { "type": "string" },
+        "creatorName": { "type": "string" },
+        "productId": { "type": "string" },
+        "title": { "type": "string" },
+        "theme": { "type": "string" },
+        "isPublicShare": { "type": "boolean" },
+        "createdAt": { "type": "integer" },
+        "updatedAt": { "type": "integer" }
+      },
+      "required": ["id", "shareToken", "creatorId", "productId", "title", "createdAt", "updatedAt"]
     }
   },
   "firestore": {
@@ -288,6 +350,22 @@
     "/coupleSpaces/{spaceId}/virtualGifts/{giftId}": {
       "schema": { "$ref": "#/entities/VirtualGift" },
       "description": "Virtual romantic gifts triggered in the couple space"
+    },
+    "/coupleSpaces/{spaceId}/typing/{userId}": {
+      "schema": { "$ref": "#/entities/TypingState" },
+      "description": "Real-time indicator showing if partner is actively typing"
+    },
+    "/coupleSpaces/{spaceId}/reactions/{reactionId}": {
+      "schema": { "$ref": "#/entities/LiveReaction" },
+      "description": "Live floating reactions triggered during chat"
+    },
+    "/coupleSpaces/{spaceId}/digitalGifts/{giftId}": {
+      "schema": { "$ref": "#/entities/DigitalGift" },
+      "description": "Personalized digital gift experiences created within couple space"
+    },
+    "/public_digital_gifts/{shareToken}": {
+      "schema": { "$ref": "#/entities/PublicDigitalGift" },
+      "description": "Public shareable view-only digital gift documents"
     }
   }
 }

@@ -31,11 +31,11 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({
       {variant === 'header' && (
         <button
           onClick={handleOpen}
-          aria-label="Install Mobile APK"
+          aria-label="Install App"
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-rose-500 to-pink-500 text-white text-xs font-semibold shadow-md shadow-rose-300/40 hover:opacity-95 active:scale-95 transition ${className}`}
         >
-          <Smartphone className="w-3.5 h-3.5" />
-          <span>Get APK</span>
+          <Download className="w-3.5 h-3.5" />
+          <span>Install App</span>
         </button>
       )}
 
@@ -46,11 +46,11 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({
         >
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl bg-rose-500 text-white flex items-center justify-center shadow-sm">
-              <Smartphone className="w-4 h-4" />
+              <Download className="w-4 h-4" />
             </div>
             <div className="text-left">
-              <p className="font-bold text-gray-800 text-xs">Love Link Mobile APK</p>
-              <p className="text-[10px] text-gray-500">Install native app on Android & iOS</p>
+              <p className="font-bold text-gray-800 text-xs">Love Link Everywhere</p>
+              <p className="text-[10px] text-gray-500">Install app on Phone, Tablet & PC</p>
             </div>
           </div>
           <span className="px-2.5 py-1 rounded-full bg-rose-500 text-white text-[11px] font-bold flex items-center gap-1">
@@ -64,18 +64,18 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({
         <div className={`p-4 rounded-3xl bg-gradient-to-r from-rose-500 via-pink-500 to-rose-400 text-white shadow-lg shadow-rose-300/40 flex items-center justify-between gap-3 ${className}`}>
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shrink-0 border border-white/30">
-              <Smartphone className="w-5 h-5 text-white" />
+              <Download className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h4 className="text-xs font-bold uppercase tracking-wider text-rose-100">Android Mobile Version</h4>
-              <p className="text-sm font-extrabold leading-tight">Install Love Link APK</p>
+              <h4 className="text-xs font-bold uppercase tracking-wider text-rose-100">Universal App</h4>
+              <p className="text-sm font-extrabold leading-tight">Install on Phone, Tablet & PC</p>
             </div>
           </div>
           <button
             onClick={handleOpen}
             className="px-3.5 py-2 rounded-xl bg-white text-rose-600 font-bold text-xs shadow-md hover:bg-rose-50 active:scale-95 transition whitespace-nowrap"
           >
-            Get APK
+            Install
           </button>
         </div>
       )}

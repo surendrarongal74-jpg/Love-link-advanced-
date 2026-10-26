@@ -9,6 +9,7 @@ import { sound } from '../lib/sound';
 
 interface LoveCoinsContextType {
   wallet: UserWallet | null;
+  balance: number;
   inventory: UserInventory | null;
   transactions: CoinTransaction[];
   missions: (RomanticMission & { canSubmit: boolean; nextAvailableInHours: number })[];
@@ -328,19 +329,19 @@ export function LoveCoinsProvider({ children }: { children: React.ReactNode }) {
     // Update inventory if relevant
     const currentInv = inventory || getLocalInventory(userData.id);
     const updatedInv: UserInventory = { ...currentInv };
-    if (itemType === 'themes') {
+    if (itemType === 'themes' || itemType === 'theme') {
       if (!updatedInv.ownedThemes.includes(itemId)) {
         updatedInv.ownedThemes = [...updatedInv.ownedThemes, itemId];
       }
       updatedInv.activeTheme = itemId;
-    } else if (itemType === 'badges') {
+    } else if (itemType === 'badges' || itemType === 'badge') {
       if (itemId === 'token_streak_freeze') {
         updatedInv.streakFreezeTokens = (updatedInv.streakFreezeTokens || 0) + 1;
       } else if (!updatedInv.ownedBadges.includes(itemId)) {
         updatedInv.ownedBadges = [...updatedInv.ownedBadges, itemId];
         updatedInv.equippedBadge = itemId;
       }
-    } else if (itemType === 'game_packs') {
+    } else if (itemType === 'game_packs' || itemType === 'game_pack' || itemType === 'game') {
       if (!updatedInv.ownedGamePacks.includes(itemId)) {
         updatedInv.ownedGamePacks = [...updatedInv.ownedGamePacks, itemId];
       }
@@ -656,6 +657,7 @@ export function LoveCoinsProvider({ children }: { children: React.ReactNode }) {
     <LoveCoinsContext.Provider
       value={{
         wallet,
+        balance: wallet?.balance ?? 0,
         inventory,
         transactions,
         missions,

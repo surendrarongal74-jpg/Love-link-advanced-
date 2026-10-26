@@ -397,7 +397,7 @@ Keep responses concise, clear, and well-spaced. Use soft emojis (💗, 🌸, ✨
       </div>
 
       {/* 3. CHAT MESSAGES AREA (Proper spacing and light theme) */}
-      <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-5 space-y-4 relative z-10 scroll-smooth">
+      <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-5 space-y-4 relative z-10 scroll-smooth max-w-3xl mx-auto w-full">
         {messages.map((msg) => (
           <motion.div 
             key={msg.id}

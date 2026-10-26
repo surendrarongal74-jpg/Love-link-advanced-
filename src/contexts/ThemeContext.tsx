@@ -337,17 +337,39 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     document.body.style.color = theme.colors.textMain;
   }, [theme]);
 
+  const runWithViewTransition = (callback: () => void) => {
+    if (typeof document !== 'undefined' && 'startViewTransition' in document) {
+      try {
+        (document as any).startViewTransition(() => {
+          callback();
+        });
+        return;
+      } catch {
+        // Fallback gracefully
+      }
+    }
+    callback();
+  };
+
   const isThemeOwned = (id: string): boolean => {
     if (id === 'theme_cloud_romance' || id === 'theme_default') return true;
     const owned = inventory?.ownedThemes || ['theme_cloud_romance', 'theme_default'];
     return owned.includes(id);
   };
 
+  const setPreviewTheme = (themeId: string | null) => {
+    runWithViewTransition(() => {
+      setPreviewThemeId(themeId);
+    });
+  };
+
   const applyTheme = async (themeId: string) => {
     if (!LOVEVERSE_THEMES[themeId]) return;
     sound.tap();
-    setActiveThemeId(themeId);
-    setPreviewThemeId(null);
+    runWithViewTransition(() => {
+      setActiveThemeId(themeId);
+      setPreviewThemeId(null);
+    });
     try {
       localStorage.setItem(THEME_STORAGE_KEY, themeId);
     } catch {}
@@ -393,7 +415,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         activeTheme,
         isDark: theme.isDark,
         isPreviewing: previewThemeId !== null,
-        setPreviewTheme: setPreviewThemeId,
+        setPreviewTheme,
         applyTheme,
         unlockTheme,
         isThemeOwned,

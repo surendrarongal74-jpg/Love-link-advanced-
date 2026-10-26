@@ -17,6 +17,78 @@ export interface PlayhouseGameDef {
 
 export const PLAYHOUSE_GAMES: PlayhouseGameDef[] = [
   {
+    id: 'truth-or-dare',
+    title: 'Truth or Dare',
+    tagline: 'Alternate turns, choose Truth or Dare, and reveal prompts.',
+    category: 'Intimacy',
+    icon: '🍾',
+    badge: 'Classic',
+    gradient: 'from-rose-500 via-pink-500 to-purple-600',
+    accentColor: 'rose-500',
+    cost: 0,
+    isLockedByDefault: false,
+    description: 'Spin the bottle, alternate turns, and reveal heartfelt truths or playful romantic dares with your partner.',
+    rules: [
+      'Take turns spinning the romantic bottle',
+      'Choose Truth for deep confessions or Dare for playful romantic actions',
+      'Complete the prompt and earn couple intimacy points!'
+    ],
+    features: [
+      'Interactive spinning bottle with sound feedback',
+      'Curated romantic & playful prompt deck',
+      'AIRA shuffle and completion counter'
+    ],
+    image: 'https://images.unsplash.com/photo-1518199266791-5375a83190b7?auto=format&fit=crop&w=800&q=80'
+  },
+  {
+    id: 'love-quiz',
+    title: 'Love Quiz',
+    tagline: 'Ask questions about preferences and relationship memories.',
+    category: 'Intimacy',
+    icon: '💌',
+    badge: 'Popular',
+    gradient: 'from-pink-500 via-rose-500 to-amber-500',
+    accentColor: 'pink-500',
+    cost: 0,
+    isLockedByDefault: false,
+    description: 'Answer 5 deep questions about date habits, comfort languages, and dreams, then predict your partner’s picks to compare scores.',
+    rules: [
+      'Choose your honest personal preference for each question',
+      'Predict what your partner would select',
+      'Reveal answers side-by-side to celebrate your couple intuition!'
+    ],
+    features: [
+      'Multi-category couple questions',
+      'Side-by-side answer breakdown',
+      'Celebratory particle burst'
+    ],
+    image: 'https://images.unsplash.com/photo-1529333166437-7750a6dd5a70?auto=format&fit=crop&w=800&q=80'
+  },
+  {
+    id: 'daily-love-mission',
+    title: 'Daily Love Mission',
+    tagline: 'Daily romantic activity with streak tracking and 24h reset.',
+    category: 'Playful',
+    icon: '🎯',
+    badge: 'Daily Streak',
+    gradient: 'from-amber-400 via-rose-400 to-pink-500',
+    accentColor: 'amber-500',
+    cost: 0,
+    isLockedByDefault: false,
+    description: 'A fresh, actionable daily micro-ritual designed to keep the spark alive every single day.',
+    rules: [
+      'Check today’s couple mission card',
+      'Perform the romantic activity together in real life',
+      'Tap to mark completed and build your daily connection streak!'
+    ],
+    features: [
+      'Automatic daily deterministic rotation',
+      'Persistent streak counter in storage',
+      'Sensible midnight reset logic'
+    ],
+    image: 'https://images.unsplash.com/photo-1517486808906-6ca8b3f04846?auto=format&fit=crop&w=800&q=80'
+  },
+  {
     id: 'draw-guess',
     title: 'Draw It, Guess It',
     tagline: 'One partner sketches, the other guesses!',

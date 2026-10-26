@@ -1,55 +1,69 @@
-# Implementation Plan — Multi-Device Responsiveness, Custom Map Pin & Chat Theme Images, and Snap It Overhaul
+# Love Link: 3D Loveverse Experience Upgrade Plan
 
-Transform Love Link into an adaptive, multi-device experience (smartphone, tablet, desktop PC) with custom image uploads for Map Pins and Chat Themes, and an overhauled, fully working camera and gallery workflow for Snap It.
-
----
-
-## 1. User Choices & Design Alignment
-
-*   **Responsive Layout Architecture**: Full responsive adaptation. Instead of constraining the application to a narrow `max-w-md` mobile container on large displays, the layout will adapt into a desktop/tablet-optimized interface featuring an ergonomic navigation sidebar, multi-column grid dashboard, and wide-screen canvases for Chat, Maps, and Playhouse.
-*   **Photo Capture & Upload Strategy**: Camera capture (`MediaDevices.getUserMedia` + HTML5 file input with `capture="environment"` fallback) and gallery selection with fast client-side canvas compression (~800×800 WebP/JPEG, ~50–80KB) for instant sync across devices.
-*   **Chat Themes Engine**: Curated romantic preset wallpapers (Cloud Sunset, Starlight Constellation, Royal Rose Gold, Celestial Galaxy) plus custom couple photo background upload with adjustable opacity and blur.
+## Overview
+Elevate the existing lightweight Loveverse digital gifts into premium, fully interactive 3D experiences with high-fidelity procedural geometry, solid collision detection, partner exploration mode, and complete Creative Commons attribution.
 
 ---
 
-## 2. Architecture & Key Changes
+## Implemented Architecture & Upgrades
 
-### Component 1: Multi-Device Responsive Layout System
-*   **Layout Container in `src/App.tsx`**:
-    *   Transition outer wrapper from static `max-w-md mx-auto` to responsive container (`w-full min-h-screen lg:flex lg:flex-row bg-[#FFF8FA] dark:bg-slate-950`).
-    *   On desktop/tablet (`lg:`), introduce a responsive **Sidebar Navigation** (`src/components/SidebarNav.tsx`) with active theme styling, partner connection radar, quick actions, and route links.
-    *   Maintain `BottomNav` on mobile (`<lg`), automatically hidden on desktop where `SidebarNav` is active.
-    *   Update key views (`HomeScreen`, `ChatScreen`, `LoveMapScreen`, `MemoriesScreen`) with responsive grid/flex layouts (`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3` where appropriate).
+### 1. Collision & Physics System (`CollisionSystem.ts`)
+- **Solid Obstacle Boundaries**:
+  - Box colliders (`BoxCollider`) for walls, facades, crates, benches, desks.
+  - Cylinder colliders (`CylinderCollider`) for palm tree trunks, lampposts, columns, barrels.
+  - Circular / Polygon perimeters preventing walking off cliffs, into deep ocean water, or through balustrades.
+- **Sliding Collision Response**:
+  - Circle-vs-box swept collision with normal slide resolution.
+  - Avatars slide smoothly along walls and barriers without snagging or clipping through.
 
-### Component 2: Custom Image Uploads for Map Pins
-*   **In `src/screens/LoveMapScreen.tsx`**:
-    *   Add **"Upload from Gallery"** and **"Take Photo"** buttons in the `Add Special Place` modal alongside existing preset choices.
-    *   Implement client-side image compression via canvas utility (`compressImageFile`) producing clean, fast base64 image strings.
-    *   Render custom uploaded photos in both the in-map `InfoWindow` and the interactive bottom preview tooltip.
+### 2. Partner Exploration Mode & Couple Avatars (`ExplorationEngine.ts`, `CoupleAvatars.ts`)
+- **Exploration with Partner**:
+  - Player and partner avatars rendered with customizable sweaters/colors, animated swinging limbs and bouncing walk cycles.
+  - Floating nameplate canvas badges above avatars ("You" and partner's real name/photo from `useCoupleSpace`).
+  - Partner AI companion walking alongside player, stopping gracefully, turning to face each other, and emitting romantic heart sparkles when standing or walking close.
+- **Responsive Controls**:
+  - Desktop: Keyboard WASD / Arrow keys, Shift to sprint, pointer drag to look around.
+  - Mobile: Virtual on-screen touch joystick on the bottom-left + touch look on right.
+  - Click-to-move / Tap-to-move on ground with raycasting.
+  - Mode Switcher: Smooth toggle between "🚶 Walk Partner" and "🎥 Orbit View".
 
-### Component 3: Chat Themes & Custom Wallpaper Customization
-*   **In `src/screens/ChatScreen.tsx` & `src/contexts/ThemeContext.tsx`**:
-    *   Add a **Chat Appearance / Theme Sheet** accessed via the palette icon in the chat header.
-    *   Provide romantic preset wallpapers (Blush Romance, Moonlight Sky, Royal Gold, Nebula Dreams) and an **"Upload Couple Wallpaper"** button (gallery/camera).
-    *   Store the couple's active chat wallpaper persistently in couple space / local storage.
-    *   Render message bubbles and timestamps with accessible contrast over wallpapers using subtle frosted glass backdrops.
+### 3. High-Fidelity 3D Worlds & Procedural Props
+- **Ever Tide — Our Sunset Island**:
+  - Stylized Tropical Beach Diorama base with curved shoreline and sandy dunes.
+  - Multi-part palm trees with segmented curved trunks, coconuts, and fanning fronds (yadrogames reference).
+  - Suspended string fairy lights with glowing bulbs (TrixtheProtogen reference).
+  - Rustic wooden pier with wooden support posts, crates with metal corner bands, and aged wooden barrels with iron hoops (CGlads reference).
+  - Weathered wooden signboard reading "EVER TIDE - Our Sunset Island 🌴" (Pasindu.Anjana reference).
+  - Vintage brass & glass oil lamps with flickering amber flames (rudavin reference).
+  - Weathered wooden rowboat with oars pulled onto the sand (donnichols reference).
+  - Striped beach umbrella and wooden lounger chair (Edwin3D & SkinOmegaProductions references).
+  - Classic park bench overlooking the horizon (berkgedik reference).
+  - Toon airplane with rotating propeller trailing personalized recipient question banner (animanyarty reference).
+  - Interactive bobbing message in a bottle.
+  - Circular island barrier preventing falling into deep water.
+- **Paris Together — Romantic 3D Invitation**:
+  - Haussmann-style building blocks with zinc mansard roofs, French windows, and wrought-iron balconies (kingdome & maheylah references).
+  - Cafe OZ ground floor storefront with red-and-white striped canopy awning and chalkboard menu (alban reference).
+  - Six-sided Parisian dark cast-iron lampposts with warm amber lantern glow (edemaistre reference).
+  - Distant Arc de Triomphe classical arch (HoangHiepVu reference) and Eiffel Tower with multi-tier lattice framework and spinning beacon light (Lambo_SC04 reference).
+  - Bistro table with candle, champagne flutes, and wax-sealed 3D invitation letter.
+  - Solid wall and balustrade colliders preventing walking through buildings or falling off the Seine terrace.
+- **Our Museum — Interactive 3D Photo Gallery**:
+  - Grand classical gallery hall with reflective parquet wood floor, baseboards, and fluted marble columns (Richard's Art Gallery reference by shinymagic).
+  - Fancy molded gold picture frames with linen mat boards and brass exhibition plaques (jamiemcfarlane reference).
+  - Classical velvet museum viewing benches in the central aisle (berkgedik reference).
+  - Solid perimeter gallery walls (left, right, back, front entrance) and column colliders.
+- **Kitty Letter — Animated 3D Character and Letter**:
+  - Cute chibi kitten with chubby cheeks, pointed ears with pink liners, animated twitching tail, paws holding the letter, and collar with golden bell (_polybit_ reference).
+  - Cozy bedroom with fluffy pastel rug, velvet cushion, and writing desk.
+  - Interactive wax-sealed love letter with floating heart aura.
+  - Solid bedroom wall and desk colliders.
 
-### Component 4: Snap It UI/UX Overhaul & Camera/Gallery Fix
-*   **In `src/components/widgets/QuickSnapModal.tsx` & `src/components/widgets/QuickSnapWidget.tsx`**:
-    *   Refactor camera stream lifecycle: support front/back flip, graceful camera permission fallback, and instant device gallery picker (`<input type="file" accept="image/*">`).
-    *   Streamlined interactive snap editor:
-        *   Image preview with filters/stickers and caption text with contrast pill.
-        *   Expiry timer selector (5m, 15m, 1h, 3h, 24h).
-        *   Fast compression before saving to `coupleSpaces/{spaceId}/quickSnaps/active`.
-    *   Responsive viewing modal supporting fullscreen touch on mobile and floating modal on tablet/desktop.
+### 4. 3D Model Inspirations & Credits Modal (`ModelCreditsModal.tsx`)
+- In-scene dialog giving attribution to all 21 Sketchfab reference items, authors, CC Attribution 4.0 licenses, and links.
+- Accessible via a button in the viewer and bottom control dock.
 
----
-
-## 3. Verification & Validation Plan
-
-### Verification Steps
-1.  **TypeScript & Build Health**: Run `npm run lint` (`tsc --noEmit`) and `compile_applet` (`npm run build`) to ensure 0 type errors.
-2.  **Multi-Device Viewport Testing**: Verify responsive styling across mobile (375px–430px), tablet (768px–1024px), and desktop (1280px–1920px).
-3.  **Map Pin Image Upload Test**: Verify dropping a pin with custom gallery image compresses quickly and appears on the map.
-4.  **Chat Wallpaper Test**: Verify selecting preset wallpapers or uploading a custom background renders cleanly in chat with readable text.
-5.  **Snap It Workflow Test**: Open camera, switch to gallery, capture/select an image, add caption, and send to active widget.
+### 5. Silky Smooth Pacing & Zero Viewport Occlusion
+- Three.js r160+ ACESFilmicToneMapping and `RoomEnvironment` PMREM reflections.
+- Low-occlusion collapsible bottom dock with hide/show drawer toggle.
+- Zero per-frame memory allocation (GC-free animation loop).

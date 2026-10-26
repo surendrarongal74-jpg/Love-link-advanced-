@@ -10,10 +10,13 @@ export interface CoupleSpaceData {
   partner2Id: string;
   inviteCode: string;
   streak: number;
+  streakDays?: number;
   lastInteractionAt: number;
   createdAt: number;
   xp: number;
   level: number;
+  anniversaryDate?: string;
+  members?: string[];
 }
 
 export interface PartnerData {
@@ -21,6 +24,8 @@ export interface PartnerData {
   displayName: string;
   mood?: string;
   loveLanguage?: string;
+  photoURL?: string;
+  batteryLevel?: number;
 }
 
 export interface CoupleSpaceContextType {

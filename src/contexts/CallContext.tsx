@@ -8,8 +8,7 @@ import {
   query, 
   where, 
   orderBy, 
-  limit, 
-  deleteDoc 
+  limit
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from './AuthContext';
@@ -62,8 +61,12 @@ const RTC_CONFIG: RTCConfiguration = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
-    { urls: 'stun:stun2.l.google.com:19302' }
-  ]
+    { urls: 'stun:stun2.l.google.com:19302' },
+    { urls: 'stun:stun3.l.google.com:19302' },
+    { urls: 'stun:stun4.l.google.com:19302' },
+    { urls: 'stun:global.stun.twilio.com:3478' }
+  ],
+  iceCandidatePoolSize: 10
 };
 
 export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -87,7 +90,8 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const stopAudioRef = useRef<(() => void) | null>(null);
   const durationTimerRef = useRef<any>(null);
   const ringTimeoutRef = useRef<any>(null);
-  const hasAnsweredRef = useRef(false);
+  const pendingCandidatesRef = useRef<any[]>([]);
+  const processedCandidatesRef = useRef<Set<string>>(new Set());
 
   // Stop current ringing or dial tone sound
   const stopTone = useCallback(() => {
@@ -97,7 +101,45 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  // Cleanup local media stream
+  // Safely add candidate or queue if remote description isn't set yet
+  const addCandidateSafely = useCallback(async (pc: RTCPeerConnection, candidate: any) => {
+    if (!candidate || !candidate.candidate) return;
+    const candKey = `${candidate.candidate}_${candidate.sdpMid}_${candidate.sdpMLineIndex}`;
+    if (processedCandidatesRef.current.has(candKey)) return;
+
+    if (pc.remoteDescription && pc.remoteDescription.type) {
+      try {
+        processedCandidatesRef.current.add(candKey);
+        await pc.addIceCandidate(new RTCIceCandidate(candidate));
+      } catch (err) {
+        console.warn('addIceCandidate error:', err);
+      }
+    } else {
+      // Queue for later when remoteDescription is set
+      pendingCandidatesRef.current.push(candidate);
+    }
+  }, []);
+
+  // Drain all pending ICE candidates once remoteDescription has been applied
+  const drainPendingCandidates = useCallback(async (pc: RTCPeerConnection) => {
+    if (!pc.remoteDescription) return;
+    const pending = [...pendingCandidatesRef.current];
+    pendingCandidatesRef.current = [];
+    for (const cand of pending) {
+      if (!cand || !cand.candidate) continue;
+      const candKey = `${cand.candidate}_${cand.sdpMid}_${cand.sdpMLineIndex}`;
+      if (!processedCandidatesRef.current.has(candKey)) {
+        try {
+          processedCandidatesRef.current.add(candKey);
+          await pc.addIceCandidate(new RTCIceCandidate(cand));
+        } catch (err) {
+          console.warn('Error draining ICE candidate:', err);
+        }
+      }
+    }
+  }, []);
+
+  // Cleanup local media stream & connection
   const cleanupMedia = useCallback(() => {
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach(track => {
@@ -117,6 +159,8 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setRemoteStream(null);
     clearInterval(durationTimerRef.current);
     clearTimeout(ringTimeoutRef.current);
+    pendingCandidatesRef.current = [];
+    processedCandidatesRef.current.clear();
     stopTone();
   }, [stopTone]);
 
@@ -166,7 +210,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (!isCaller && !isReceiver) return;
 
-      // Handle Incoming Call
+      // Handle Incoming Call on Receiver
       if (isReceiver && callData.status === 'calling') {
         if (callStatus !== 'incoming' && callStatus !== 'connected') {
           setCallStatus('incoming');
@@ -186,28 +230,39 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
 
-      // Handle Connected State for Caller
+      // Handle Connected State on Caller
       if (isCaller && callData.status === 'connected' && callData.answer && peerConnectionRef.current) {
         stopTone();
-        if (peerConnectionRef.current.signalingState === 'have-local-offer') {
+        const pc = peerConnectionRef.current;
+        if (pc.signalingState === 'have-local-offer') {
           try {
             const answerDesc = new RTCSessionDescription(JSON.parse(callData.answer));
-            await peerConnectionRef.current.setRemoteDescription(answerDesc);
+            await pc.setRemoteDescription(answerDesc);
             setCallStatus('connected');
+
+            // Apply all receiver candidates that were gathered
+            if (callData.receiverCandidates && callData.receiverCandidates.length > 0) {
+              for (const cand of callData.receiverCandidates) {
+                await addCandidateSafely(pc, cand);
+              }
+            }
+            await drainPendingCandidates(pc);
           } catch (e) {
-            console.error('Error setting remote answer:', e);
+            console.error('Error setting remote answer on caller:', e);
           }
         }
       }
 
-      // Handle remote ICE candidates
+      // Stream new incoming remote ICE candidates
       if (peerConnectionRef.current) {
+        const pc = peerConnectionRef.current;
         const candidates = isCaller ? callData.receiverCandidates : callData.callerCandidates;
         if (candidates && candidates.length > 0) {
           for (const cand of candidates) {
-            try {
-              await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(cand));
-            } catch {}
+            await addCandidateSafely(pc, cand);
+          }
+          if (pc.remoteDescription) {
+            await drainPendingCandidates(pc);
           }
         }
       }
@@ -219,34 +274,37 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
       unsubscribe();
       stopTone();
     };
-  }, [space?.id, userData?.id, callStatus, cleanupMedia, stopTone]);
+  }, [space?.id, userData?.id, callStatus, cleanupMedia, stopTone, addCandidateSafely, drainPendingCandidates]);
 
-  // Request user media
+  // Request user media with clean echo cancellation & fallbacks
   const getMedia = async (type: CallType, frontCam: boolean = true): Promise<MediaStream> => {
-    const constraints: MediaStreamConstraints = {
-      audio: {
-        echoCancellation: true,
-        noiseSuppression: true,
-        autoGainControl: true
-      },
-      video: type === 'video' ? {
-        facingMode: frontCam ? 'user' : 'environment',
-        width: { ideal: 1280 },
-        height: { ideal: 720 }
-      } : false
+    const audioConstraints = {
+      echoCancellation: true,
+      noiseSuppression: true,
+      autoGainControl: true
     };
 
+    const videoConstraints = type === 'video' ? {
+      facingMode: frontCam ? 'user' : 'environment',
+      width: { ideal: 1280, max: 1920 },
+      height: { ideal: 720, max: 1080 },
+      frameRate: { ideal: 30 }
+    } : false;
+
     try {
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: audioConstraints,
+        video: videoConstraints
+      });
       localStreamRef.current = stream;
       setLocalStream(stream);
       setIsMuted(false);
       setIsVideoOff(type === 'voice');
       return stream;
     } catch (err) {
-      console.warn('getUserMedia error, falling back to audio-only:', err);
-      // Fallback to audio if video camera permission denied or unavailable
-      const fallbackStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      console.warn('getUserMedia camera/mic request error, trying audio fallback:', err);
+      // Fallback to audio-only if camera unavailable or denied
+      const fallbackStream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints });
       localStreamRef.current = fallbackStream;
       setLocalStream(fallbackStream);
       setIsMuted(false);
@@ -271,15 +329,23 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const pc = new RTCPeerConnection(RTC_CONFIG);
       peerConnectionRef.current = pc;
 
-      // Add local tracks to WebRTC connection
+      // Add local audio and video tracks
       stream.getTracks().forEach(track => {
         pc.addTrack(track, stream);
       });
 
-      // Handle remote tracks
+      // Handle remote incoming tracks (both audio and video)
       pc.ontrack = (event) => {
         if (event.streams && event.streams[0]) {
           setRemoteStream(event.streams[0]);
+        } else {
+          setRemoteStream(prev => {
+            const newStream = prev ? new MediaStream(prev.getTracks()) : new MediaStream();
+            if (!newStream.getTracks().some(t => t.id === event.track.id)) {
+              newStream.addTrack(event.track);
+            }
+            return newStream;
+          });
         }
       };
 
@@ -298,7 +364,10 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       };
 
-      const offer = await pc.createOffer();
+      const offer = await pc.createOffer({
+        offerToReceiveAudio: true,
+        offerToReceiveVideo: type === 'video'
+      });
       await pc.setLocalDescription(offer);
 
       const callDocData: CallSession = {
@@ -329,7 +398,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error('Failed to initiate call:', err);
       cleanupMedia();
       setCallStatus('idle');
-      alert('Could not start call. Please check microphone/camera permissions.');
+      alert('Could not start call. Please check microphone/camera permissions in your browser or device.');
     }
   };
 
@@ -338,30 +407,39 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!activeCall || !space?.id || !userData?.id) return;
     stopTone();
     sound.chime();
-    hasAnsweredRef.current = true;
 
     try {
       const stream = await getMedia(activeCall.type, true);
       const pc = new RTCPeerConnection(RTC_CONFIG);
       peerConnectionRef.current = pc;
 
+      // Add local tracks
       stream.getTracks().forEach(track => {
         pc.addTrack(track, stream);
       });
 
+      // Handle remote incoming tracks (voice and video)
       pc.ontrack = (event) => {
         if (event.streams && event.streams[0]) {
           setRemoteStream(event.streams[0]);
+        } else {
+          setRemoteStream(prev => {
+            const newStream = prev ? new MediaStream(prev.getTracks()) : new MediaStream();
+            if (!newStream.getTracks().some(t => t.id === event.track.id)) {
+              newStream.addTrack(event.track);
+            }
+            return newStream;
+          });
         }
       };
 
-      const iceCandidates: any[] = [];
+      const receiverCandidates: any[] = [];
       pc.onicecandidate = async (event) => {
         if (event.candidate) {
-          iceCandidates.push(event.candidate.toJSON());
+          receiverCandidates.push(event.candidate.toJSON());
           try {
             await updateDoc(doc(db, `coupleSpaces/${space.id}/calls`, activeCall.id), {
-              receiverCandidates: iceCandidates,
+              receiverCandidates,
               updatedAt: Date.now()
             });
           } catch {}
@@ -369,11 +447,26 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
 
       if (activeCall.offer) {
+        // 1. Set Remote Description (Offer from caller)
         const offerDesc = new RTCSessionDescription(JSON.parse(activeCall.offer));
         await pc.setRemoteDescription(offerDesc);
-        const answer = await pc.createAnswer();
+
+        // 2. Immediately add all initial caller candidates that were collected while ringing
+        if (activeCall.callerCandidates && activeCall.callerCandidates.length > 0) {
+          for (const cand of activeCall.callerCandidates) {
+            await addCandidateSafely(pc, cand);
+          }
+        }
+        await drainPendingCandidates(pc);
+
+        // 3. Create Answer and set Local Description
+        const answer = await pc.createAnswer({
+          offerToReceiveAudio: true,
+          offerToReceiveVideo: activeCall.type === 'video'
+        });
         await pc.setLocalDescription(answer);
 
+        // 4. Update Firestore call session
         await updateDoc(doc(db, `coupleSpaces/${space.id}/calls`, activeCall.id), {
           status: 'connected',
           answer: JSON.stringify(answer),
@@ -386,7 +479,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error('Error answering call:', err);
       cleanupMedia();
       setCallStatus('idle');
-      alert('Could not connect call. Please check microphone/camera permissions.');
+      alert('Could not connect call. Please check microphone/camera permissions in your browser or device.');
     }
   };
 

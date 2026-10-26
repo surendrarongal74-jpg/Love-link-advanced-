@@ -104,7 +104,7 @@ export const TermsAndConditionsModal: React.FC<TermsAndConditionsModalProps> = (
                     <li><strong className="text-gray-800">Microphone:</strong> For voice notes, audio whispers, and playful voice messages.</li>
                     <li><strong className="text-gray-800">Camera & Photos:</strong> For couple drawings, photo memories, and avatars.</li>
                     <li><strong className="text-gray-800">Notifications:</strong> For real-time love alerts, pings, and questions.</li>
-                    <li><strong className="text-gray-800">Local Mobile Vault:</strong> For storing all encrypted chats and media on your phone.</li>
+                    <li><strong className="text-gray-800">Local Device Vault:</strong> For storing all encrypted chats and media securely on your device.</li>
                   </ul>
                 </div>
 
@@ -157,7 +157,7 @@ export const TermsAndConditionsModal: React.FC<TermsAndConditionsModalProps> = (
                 <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 text-xs text-emerald-900 flex items-start gap-3">
                   <Lock className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                   <div>
-                    <strong className="font-semibold">Local-Only Mobile Storage Guarantee:</strong> All your voice notes, pictures, and chats are encrypted and stored inside your mobile devices. No central servers read or keep your intimate media.
+                    <strong className="font-semibold">Local-Only Device Storage Guarantee:</strong> All your voice notes, pictures, and chats are encrypted and stored inside your devices (Phone, Tablet & PC). No central servers read or keep your intimate media.
                   </div>
                 </div>
 
@@ -167,7 +167,7 @@ export const TermsAndConditionsModal: React.FC<TermsAndConditionsModalProps> = (
                     How Local Device Storage Works
                   </h3>
                   <p className="text-xs text-gray-600">
-                    When you record a voice note or share an image, the file is securely encoded and written to your device&apos;s local IndexedDB encrypted storage. When your partner is connected, the encrypted packet synchronizes directly to their phone and is stored locally on their device as well.
+                    When you record a voice note or share an image, the file is securely encoded and written to your device&apos;s local IndexedDB encrypted storage. When your partner is connected, the encrypted packet synchronizes directly to their device and is stored locally on their device as well.
                   </p>
                 </div>
 
@@ -177,7 +177,7 @@ export const TermsAndConditionsModal: React.FC<TermsAndConditionsModalProps> = (
                     Offline Access
                   </h3>
                   <p className="text-xs text-gray-600">
-                    Because your chat history, voice recordings, and memories reside directly in your phone&apos;s storage, you can browse, listen to past voice notes, and review memories even when in airplane mode or with no internet connectivity!
+                    Because your chat history, voice recordings, and memories reside directly in your device&apos;s storage, you can browse, listen to past voice notes, and review memories even when in airplane mode or with no internet connectivity!
                   </p>
                 </div>
 
@@ -197,7 +197,7 @@ export const TermsAndConditionsModal: React.FC<TermsAndConditionsModalProps> = (
                     Right to Delete & Export
                   </h3>
                   <p className="text-xs text-gray-600">
-                    You can clear local chat history or wipe your phone&apos;s local vault at any time in App Settings. Deleting the app removes all locally cached chats and voice notes.
+                    You can clear local chat history or wipe your device&apos;s local vault at any time in App Settings. Deleting the app removes all locally cached chats and voice notes.
                   </p>
                 </div>
 

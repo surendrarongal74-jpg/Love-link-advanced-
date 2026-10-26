@@ -17,6 +17,7 @@ import { sound } from '../lib/sound';
 import confetti from 'canvas-confetti';
 import { triggerHeartBurstConfetti } from '../lib/celebrationEffects';
 import { LOVEVERSE_ASSETS } from '../assets/loveverseAssets';
+import { GiftUnwrapModal } from '../components/ui/GiftUnwrapModal';
 
 type MainTab = 'owned' | 'gifts' | 'history';
 type CategoryFilter = 'themes' | 'badges' | 'frames' | 'special';
@@ -120,14 +121,14 @@ export function MyCollectionScreen() {
     <div className="min-h-screen bg-[#FFF6F9] text-[#2B1A2E] pb-32 select-none font-sans overflow-y-auto">
       {/* Top Header */}
       <header className="bg-white/90 backdrop-blur-xl sticky top-0 z-30 border-b border-rose-100/80 px-4 py-3.5 shadow-2xs">
-        <div className="max-w-md mx-auto flex items-center justify-between">
+        <div className="max-w-4xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <button
               onClick={() => {
                 sound.tap();
                 navigate(-1);
               }}
-              className="w-9 h-9 rounded-2xl bg-rose-50 hover:bg-rose-100 flex items-center justify-center text-rose-600 transition-colors"
+              className="w-9 h-9 rounded-2xl bg-rose-50 hover:bg-rose-100 flex items-center justify-center text-rose-600 transition-colors apple-press"
             >
               <ArrowLeft className="w-4 h-4" />
             </button>
@@ -137,20 +138,32 @@ export function MyCollectionScreen() {
             </div>
           </div>
 
-          <button
-            onClick={() => {
-              sound.tap();
-              navigate('/market');
-            }}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-rose-50 text-rose-600 border border-rose-200/80 text-xs font-bold hover:bg-rose-100 transition-colors"
-          >
-            <ShoppingBag className="w-3.5 h-3.5" />
-            <span>Store</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                sound.tap();
+                navigate('/loveverse/gifts');
+              }}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-rose-600 text-white text-xs font-bold hover:bg-rose-700 transition-colors apple-press shadow-xs"
+            >
+              <Gift className="w-3.5 h-3.5" />
+              <span>Digital Gifts</span>
+            </button>
+            <button
+              onClick={() => {
+                sound.tap();
+                navigate('/market');
+              }}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-rose-50 text-rose-600 border border-rose-200/80 text-xs font-bold hover:bg-rose-100 transition-colors apple-press"
+            >
+              <ShoppingBag className="w-3.5 h-3.5" />
+              <span>Store</span>
+            </button>
+          </div>
         </div>
       </header>
 
-      <main className="px-4 py-4 space-y-4 max-w-md mx-auto">
+      <main className="px-4 py-4 space-y-4 max-w-4xl mx-auto">
         {/* Collection Stats Summary */}
         <div className="grid grid-cols-3 gap-2">
           <div className="bg-white rounded-2xl p-3 border border-rose-100 text-center shadow-2xs">
@@ -691,63 +704,7 @@ export function MyCollectionScreen() {
 
       {/* Floating 3D Replay Celebration Overlay */}
       {replayGift && (
-        <div 
-          onClick={() => setReplayGift(null)}
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200"
-        >
-          <div 
-            onClick={e => e.stopPropagation()}
-            className="bg-white rounded-3xl p-6 border border-rose-200 shadow-2xl text-center space-y-4 max-w-xs w-full relative overflow-hidden"
-          >
-            <button
-              onClick={() => setReplayGift(null)}
-              className="absolute top-3 right-3 w-8 h-8 rounded-full bg-rose-50 text-gray-500 hover:text-rose-600 flex items-center justify-center transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
-
-            <span className="text-[10px] uppercase font-extrabold tracking-widest text-rose-500 block">
-              Loveverse Keepsake Replay
-            </span>
-
-            {/* 3D Gift Artwork Container with Glowing Rings */}
-            <div className="relative w-32 h-32 mx-auto">
-              <div className="absolute inset-0 rounded-3xl bg-gradient-to-tr from-rose-300 to-amber-200 blur-xl opacity-70 animate-pulse" />
-              <div className="relative w-full h-full rounded-3xl overflow-hidden border-2 border-white shadow-xl bg-rose-50">
-                <img 
-                  src={replayGift.image || LOVEVERSE_ASSETS.gifts.singleRose} 
-                  alt={replayGift.giftName} 
-                  className="w-full h-full object-cover scale-105"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <h3 className="font-serif font-black text-lg text-[#2B1A2E] leading-tight">
-                {replayGift.giftName || replayGift.description}
-              </h3>
-              <p className="text-xs text-rose-600 font-semibold">
-                {replayGift.senderId === userData?.id 
-                  ? `Sent with love to ${partnerData?.displayName || 'partner'}`
-                  : `Gift from ${partnerData?.displayName || 'your partner'}`
-                }
-              </p>
-            </div>
-
-            {replayGift.note && (
-              <div className="bg-rose-50/80 border border-rose-200/80 rounded-2xl p-3 text-xs italic text-gray-800 leading-relaxed shadow-inner">
-                "{replayGift.note}"
-              </div>
-            )}
-
-            <button
-              onClick={() => setReplayGift(null)}
-              className="w-full py-2.5 rounded-2xl bg-gradient-to-r from-rose-500 to-pink-500 text-white font-bold text-xs shadow-md shadow-rose-300/40 hover:opacity-95 active:scale-95 transition-all"
-            >
-              Keep in Heart ❤️
-            </button>
-          </div>
-        </div>
+        <GiftUnwrapModal gift={replayGift} onClose={() => setReplayGift(null)} />
       )}
 
       <BottomNav />

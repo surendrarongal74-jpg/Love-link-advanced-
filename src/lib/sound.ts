@@ -29,6 +29,14 @@ class SoundManager {
   celebration() { this.playSuccess(); }
   error() { this.playError(); }
 
+  haptic(pattern: number | number[] = 10) {
+    if (typeof window !== 'undefined' && 'navigator' in window && 'vibrate' in navigator) {
+      try {
+        navigator.vibrate(pattern);
+      } catch {}
+    }
+  }
+
   playError() {
     if (this.isMuted) return;
     try {
@@ -51,6 +59,7 @@ class SoundManager {
 
   // Double warm heartbeat thud
   playHeartbeat() {
+    this.haptic([20, 60, 30]);
     if (this.isMuted) return;
     try {
       const ctx = this.getContext();
@@ -86,6 +95,7 @@ class SoundManager {
 
   // Soft tactile pop when removing items or selecting
   playPop() {
+    this.haptic(10);
     if (this.isMuted) return;
     try {
       const ctx = this.getContext();

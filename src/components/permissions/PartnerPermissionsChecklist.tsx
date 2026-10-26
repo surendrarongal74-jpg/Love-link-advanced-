@@ -238,7 +238,7 @@ export const PartnerPermissionsChecklist: React.FC<PartnerPermissionsChecklistPr
       key: 'microphone' as const,
       icon: <Mic className="w-5 h-5 text-rose-500" />,
       title: 'Microphone (Voice Notes)',
-      desc: 'Record voice whispers & audio notes stored securely on your phone',
+      desc: 'Record voice whispers & audio notes stored securely on your device',
       isGranted: status.microphone,
       action: requestMic,
       required: true,
@@ -265,7 +265,7 @@ export const PartnerPermissionsChecklist: React.FC<PartnerPermissionsChecklistPr
       key: 'localVault' as const,
       icon: <HardDrive className="w-5 h-5 text-emerald-500" />,
       title: 'Encrypted Local Device Vault',
-      desc: 'Ensures zero unencrypted cloud storage; all data stays on your phones',
+      desc: 'Ensures zero unencrypted cloud storage; all data stays on your devices',
       isGranted: status.localVault,
       action: requestLocalVault,
       required: true,
@@ -393,7 +393,7 @@ export const PartnerPermissionsChecklist: React.FC<PartnerPermissionsChecklistPr
         <div className="text-center py-1">
           <p className="text-xs text-emerald-700 font-semibold flex items-center justify-center gap-1.5">
             <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-            All required permissions granted for this mobile device!
+            All required permissions granted for this device!
           </p>
         </div>
       )}

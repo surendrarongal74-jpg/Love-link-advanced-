@@ -1732,13 +1732,17 @@ Respond strictly in JSON format:
     const shopItem = SHOP_CATALOG.find(i => i.id === itemId);
     const itemName = shopItem?.name || itemId;
 
-    if (shopItem?.category === 'themes') {
+    const isTheme = shopItem?.category === 'themes' || params.itemType === 'theme' || params.itemType === 'themes';
+    const isGame = shopItem?.category === 'game_packs' || params.itemType === 'game_pack' || params.itemType === 'game_packs' || params.itemType === 'game';
+    const isBadge = shopItem?.category === 'badges' || params.itemType === 'badge' || params.itemType === 'badges';
+
+    if (isTheme) {
       if (inventory.ownedThemes.includes(itemId)) {
         return { success: false, error: 'You already own this theme! You can equip it anytime in My Collection.' };
       }
       inventory.ownedThemes.push(itemId);
       inventory.activeTheme = itemId;
-    } else if (shopItem?.category === 'badges') {
+    } else if (isBadge) {
       if (itemId === 'token_streak_freeze') {
         inventory.streakFreezeTokens = (inventory.streakFreezeTokens || 0) + 1;
       } else {
@@ -1748,7 +1752,7 @@ Respond strictly in JSON format:
         inventory.ownedBadges.push(itemId);
         inventory.equippedBadge = itemId;
       }
-    } else if (shopItem?.category === 'game_packs') {
+    } else if (isGame) {
       if (inventory.ownedGamePacks.includes(itemId)) {
         return { success: false, error: 'You already own this game pack!' };
       }

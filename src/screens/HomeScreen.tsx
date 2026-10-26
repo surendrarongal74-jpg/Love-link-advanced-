@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useLoveCoins } from '../contexts/LoveCoinsContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { SHOP_CATALOG } from '../types/coins';
 import { WALLPAPER_PRESETS, getStoredWallpaper, applyWallpaper } from '../lib/themeEngine';
 import { doc, updateDoc, addDoc, collection, query, orderBy, limit, onSnapshot, getDocs, setDoc } from 'firebase/firestore';
@@ -45,6 +46,7 @@ export function HomeScreen() {
   const { userData, signOut } = useAuth();
   const { unreadCount, setIsDrawerOpen, triggerNotification } = useLiveNotifications();
   const { wallet, inventory } = useLoveCoins();
+  const { theme, isDark } = useTheme();
   const navigate = useNavigate();
 
   const equippedBadgeItem = SHOP_CATALOG.find(i => i.id === inventory?.equippedBadge);
@@ -432,11 +434,13 @@ export function HomeScreen() {
   const isSyncCompleted = activeGame?.status === 'completed';
 
   return (
-    <div className="flex flex-col min-h-[100dvh] bg-rose-50/70 pb-32 font-sans relative overflow-x-hidden overflow-y-auto">
-      {/* Subtle Living Ambient Blobs */}
-      <div className="fixed top-0 right-0 w-80 h-80 bg-rose-200/30 rounded-full blur-[90px] -mr-28 -mt-28 pointer-events-none" />
-      <div className="fixed bottom-32 left-0 w-72 h-72 bg-pink-200/30 rounded-full blur-[80px] -ml-28 pointer-events-none" />
-
+    <div 
+      className="flex flex-col min-h-[100dvh] pb-32 font-sans relative overflow-x-hidden overflow-y-auto transition-colors duration-500"
+      style={{
+        backgroundColor: theme.colors.screenBg,
+        color: theme.colors.textMain
+      }}
+    >
       {/* Floating Hearts Feedback */}
       {floatingHearts.map((heart) => (
         <motion.div
@@ -444,8 +448,13 @@ export function HomeScreen() {
           initial={{ opacity: 1, y: 0, scale: 0.6 }}
           animate={{ opacity: 0, y: -180, scale: 1.4 }}
           transition={{ duration: 1.8, ease: 'easeOut' }}
-          className="fixed z-50 pointer-events-none text-rose-500 fill-rose-500"
-          style={{ left: `${heart.x}%`, top: '45%' }}
+          className="fixed z-50 pointer-events-none drop-shadow-md"
+          style={{ 
+            left: `${heart.x}%`, 
+            top: '45%',
+            color: theme.colors.primary,
+            fill: theme.colors.primary
+          }}
         >
           <Heart className="w-8 h-8 fill-current drop-shadow-md" />
         </motion.div>
@@ -458,24 +467,40 @@ export function HomeScreen() {
             initial={{ opacity: 0, y: -20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -20, scale: 0.95 }}
-            className="fixed top-5 inset-x-0 mx-auto z-[150] w-fit max-w-xs bg-rose-950/90 text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-xl backdrop-blur-md flex items-center gap-2 border border-rose-300/30"
+            className="fixed top-5 inset-x-0 mx-auto z-[150] w-fit max-w-xs text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-xl backdrop-blur-md flex items-center gap-2 border"
+            style={{
+              backgroundColor: theme.isDark ? 'rgba(30, 20, 50, 0.95)' : 'rgba(40, 20, 35, 0.92)',
+              borderColor: theme.colors.cardBorder
+            }}
           >
-            <Sparkles className="w-3.5 h-3.5 text-rose-300 fill-rose-300 shrink-0" />
+            <Sparkles className="w-3.5 h-3.5 text-amber-300 fill-amber-300 shrink-0" />
             <span className="truncate">{heartbeatToast}</span>
           </motion.div>
         )}
       </AnimatePresence>
 
       {/* Header Container */}
-      <div className="bg-white rounded-b-[2.5rem] shadow-sm px-6 pt-10 pb-7 border-b border-rose-100/90 relative z-10">
+      <div 
+        className="rounded-b-[2.5rem] shadow-sm px-6 pt-10 pb-7 border-b relative z-10 transition-colors duration-500"
+        style={{
+          backgroundColor: theme.colors.headerBg,
+          borderColor: theme.colors.cardBorder
+        }}
+      >
         {/* Top Profile / Couple Bar */}
         <div className="flex justify-between items-center mb-6">
           <div>
-            <span className="text-[11px] font-bold uppercase tracking-widest text-rose-500/80 mb-0.5 block">
+            <span 
+              className="text-[11px] font-bold uppercase tracking-widest mb-0.5 block"
+              style={{ color: theme.colors.primary }}
+            >
               {greeting}
             </span>
             <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-2xl font-serif font-bold text-gray-900 tracking-tight leading-tight">
+              <h1 
+                className="text-2xl font-serif font-bold tracking-tight leading-tight"
+                style={{ color: theme.colors.textMain }}
+              >
                 {userData?.displayName?.split(' ')[0]} & {partnerData?.displayName?.split(' ')[0]}
               </h1>
               {equippedBadgeItem && !isEquippedFrame && (
@@ -886,10 +911,15 @@ export function HomeScreen() {
               <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Our Daily Connection</h2>
               <span className="text-[11px] text-rose-500 font-semibold">Live & Synced</span>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4">
               <Link
                 to="/chat"
-                className="bg-white p-4 rounded-2xl border border-rose-100 shadow-2xs hover:shadow-md transition-all active:scale-[0.98] flex items-center gap-3 group"
+                className="p-4 rounded-2xl border love-card-interactive apple-press flex items-center gap-3 group"
+                style={{
+                  backgroundColor: theme.colors.cardBg,
+                  borderColor: theme.colors.cardBorder,
+                  boxShadow: theme.colors.cardShadow
+                }}
               >
                 <div className="w-11 h-11 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center group-hover:scale-105 transition-transform">
                   <MessageCircle className="w-5 h-5" />
@@ -941,6 +971,36 @@ export function HomeScreen() {
             </div>
           </div>
 
+          {/* Section: Loveverse Digital Gifts & Interactive Experiences */}
+          <div>
+            <div className="flex items-center justify-between mb-2.5 px-1">
+              <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Digital Gifts & Worlds</h2>
+              <span className="text-[11px] font-bold text-rose-500">Loveverse ✨</span>
+            </div>
+
+            <Link
+              to="/loveverse/gifts"
+              onClick={() => sound.playPop()}
+              className="block mb-3 rounded-3xl overflow-hidden relative border border-rose-300 shadow-lg hover:shadow-xl transition-all group bg-gradient-to-r from-amber-400 via-rose-500 to-indigo-900 text-white p-4"
+            >
+              <div className="relative z-10 flex items-center justify-between">
+                <div>
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <span className="text-lg">🏝️</span>
+                    <span className="text-[10px] font-extrabold uppercase tracking-widest bg-white/25 px-2 py-0.5 rounded-full backdrop-blur-xs">
+                      7 Interactive Experiences
+                    </span>
+                  </div>
+                  <h3 className="font-serif font-black text-base text-white">Loveverse Digital Gifts</h3>
+                  <p className="text-[11px] text-rose-100 font-medium">Sunset island, 3D art museum, Paris invitation & kitty love letters.</p>
+                </div>
+                <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white group-hover:scale-110 transition-transform shrink-0 shadow-md">
+                  <Gift className="w-5 h-5" />
+                </div>
+              </div>
+            </Link>
+          </div>
+
           {/* Section 2: Play & Intimacy — Loveverse Playhouse */}
           <div>
             <div className="flex items-center justify-between mb-2.5 px-1">
@@ -976,10 +1036,15 @@ export function HomeScreen() {
               </div>
             </Link>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4">
               <Link
                 to="/truth-or-dare"
-                className="bg-white p-4 rounded-2xl border border-rose-100 shadow-2xs hover:shadow-md transition-all active:scale-[0.98] flex items-center gap-3 group"
+                className="p-4 rounded-2xl border love-card-interactive apple-press flex items-center gap-3 group"
+                style={{
+                  backgroundColor: theme.colors.cardBg,
+                  borderColor: theme.colors.cardBorder,
+                  boxShadow: theme.colors.cardShadow
+                }}
               >
                 <div className="w-11 h-11 bg-orange-100 text-orange-600 rounded-xl flex items-center justify-center group-hover:scale-105 transition-transform">
                   <Sparkles className="w-5 h-5" />

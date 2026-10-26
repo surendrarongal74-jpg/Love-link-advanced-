@@ -5,6 +5,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>Love Link – Private Relationship App for Couples</title>
     
+    <!-- Immediate Theme Hydration Script: Prevents Flash of Unstyled Content (FOUC) on load -->
+    <script>
+      (function() {
+        try {
+          var saved = localStorage.getItem('lovelink_active_theme') || 'theme_cloud_romance';
+          var palette = {
+            theme_cloud_romance: { bg: '#FFF6F9', text: '#2B1A2E' },
+            theme_moonlight_sky: { bg: '#130E24', text: '#F8FAFC' },
+            theme_royal_hearts: { bg: '#FFFDF9', text: '#361521' },
+            theme_soulmate_galaxy: { bg: '#0C071E', text: '#FAF5FF' },
+            theme_default: { bg: '#FFF8FA', text: '#1F2937' }
+          };
+          var t = palette[saved] || palette.theme_cloud_romance;
+          var root = document.documentElement;
+          root.setAttribute('data-theme', saved);
+          root.style.backgroundColor = t.bg;
+          root.style.color = t.text;
+        } catch (e) {}
+      })();
+    </script>
+    
     <!-- Google Search Console Verification Meta Tag (exact token provided by Search Console) -->
     <meta name="google-site-verification" content="f9e701bd5d974c1f" id="google-site-verification-meta" />
 

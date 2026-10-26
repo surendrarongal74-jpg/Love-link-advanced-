@@ -327,6 +327,36 @@ service cloud.firestore {
       allow delete: if isSignedIn() && isCoupleMember(spaceId);
     }
 
+    // Real-time Partner Typing State
+    match /coupleSpaces/{spaceId}/typing/{userId} {
+      function isValidTyping(data) {
+        return data.keys().hasAll(['userId', 'isTyping', 'updatedAt']) &&
+               data.keys().size() <= 4 &&
+               isValidString(data.userId, 128) && data.userId == request.auth.uid &&
+               data.isTyping is bool &&
+               (!('userName' in data) || isValidString(data.userName, 128)) &&
+               data.updatedAt is int;
+      }
+      allow list, get: if isSignedIn() && isCoupleMember(spaceId);
+      allow create, update: if isSignedIn() && isCoupleMember(spaceId) && isValidTyping(incoming()) && request.auth.uid == userId;
+      allow delete: if isSignedIn() && isCoupleMember(spaceId) && request.auth.uid == userId;
+    }
+
+    // Real-time Floating Love Reactions
+    match /coupleSpaces/{spaceId}/reactions/{reactionId} {
+      function isValidReaction(data) {
+        return data.keys().hasAll(['senderId', 'type', 'createdAt']) &&
+               data.keys().size() <= 4 &&
+               isValidString(data.senderId, 128) && data.senderId == request.auth.uid &&
+               isValidString(data.type, 32) &&
+               (!('emoji' in data) || isValidString(data.emoji, 16)) &&
+               data.createdAt is int;
+      }
+      allow list, get: if isSignedIn() && isCoupleMember(spaceId);
+      allow create: if isSignedIn() && isCoupleMember(spaceId) && isValidReaction(incoming());
+      allow update, delete: if false;
+    }
+
     match /coupleSpaces/{spaceId}/quickSnaps/{snapId} {
       function isValidQuickSnap(data) {
         return data.keys().hasAll(['id', 'coupleSpaceId', 'senderId', 'senderName', 'imageUrl', 'durationMinutes', 'createdAt', 'expiresAt']) &&
@@ -414,6 +444,55 @@ service cloud.firestore {
       allow list, get: if isSignedIn() && isCoupleMember(spaceId);
       allow create: if isSignedIn() && isCoupleMember(spaceId) && isValidVirtualGift(incoming());
       allow update, delete: if false;
+    }
+
+    // Loveverse Digital Gifts created within Couple Space
+    match /coupleSpaces/{spaceId}/digitalGifts/{giftId} {
+      function isValidDigitalGift(data) {
+        return data.keys().hasAll(['id', 'coupleSpaceId', 'creatorId', 'productId', 'title', 'theme', 'status', 'createdAt', 'updatedAt']) &&
+               data.keys().size() <= 18 &&
+               isValidString(data.id, 128) &&
+               isValidString(data.coupleSpaceId, 128) && data.coupleSpaceId == spaceId &&
+               isValidString(data.creatorId, 128) &&
+               isValidString(data.productId, 64) &&
+               isValidString(data.title, 256) &&
+               isValidString(data.theme, 64) &&
+               (data.status == 'draft' || data.status == 'published') &&
+               (!('recipientId' in data) || isValidString(data.recipientId, 128)) &&
+               (!('recipientName' in data) || isValidString(data.recipientName, 128)) &&
+               (!('creatorName' in data) || isValidString(data.creatorName, 128)) &&
+               (!('shareToken' in data) || isValidString(data.shareToken, 64)) &&
+               (!('isPublicShare' in data) || data.isPublicShare is bool) &&
+               (!('cost' in data) || data.cost is int) &&
+               (!('viewsCount' in data) || data.viewsCount is int) &&
+               data.createdAt is int &&
+               data.updatedAt is int;
+      }
+      allow list, get: if isSignedIn() && isCoupleMember(spaceId);
+      allow create: if isSignedIn() && isCoupleMember(spaceId) && isValidDigitalGift(incoming()) && incoming().creatorId == request.auth.uid;
+      allow update: if isSignedIn() && isCoupleMember(spaceId);
+      allow delete: if isSignedIn() && isCoupleMember(spaceId) && existing().creatorId == request.auth.uid;
+    }
+
+    // Public Digital Gifts (View-only mirror accessed via cryptographically unguessable share token)
+    match /public_digital_gifts/{shareToken} {
+      function isValidPublicDigitalGift(data) {
+        return data.keys().hasAll(['id', 'shareToken', 'creatorId', 'productId', 'title', 'theme', 'createdAt', 'updatedAt']) &&
+               data.keys().size() <= 16 &&
+               isValidString(data.id, 128) &&
+               isValidString(data.shareToken, 64) && data.shareToken == shareToken &&
+               isValidString(data.creatorId, 128) &&
+               isValidString(data.productId, 64) &&
+               isValidString(data.title, 256) &&
+               isValidString(data.theme, 64) &&
+               data.createdAt is int &&
+               data.updatedAt is int;
+      }
+      allow get: if true;
+      allow list: if false;
+      allow create: if isSignedIn() && isValidPublicDigitalGift(incoming()) && incoming().creatorId == request.auth.uid;
+      allow update: if (isSignedIn() && incoming().creatorId == request.auth.uid) || incoming().diff(existing()).affectedKeys().hasOnly(['recipientResponse', 'updatedAt']);
+      allow delete: if isSignedIn() && existing().creatorId == request.auth.uid;
     }
 
     // Shared Canvas Drawings for couples

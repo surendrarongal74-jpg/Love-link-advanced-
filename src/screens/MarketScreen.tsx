@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useLoveCoins } from '../contexts/LoveCoinsContext';
 import { useCoupleSpace } from '../contexts/CoupleSpaceContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { BottomNav } from '../components/BottomNav';
 import { 
   Sparkles, Coins, Gift, Palette, Award, Gamepad2, 
@@ -183,11 +184,25 @@ export function MarketScreen() {
     };
   }, []);
 
+  const { theme } = useTheme();
+
   return (
-    <div className="min-h-screen bg-[#FFF6F9] text-[#2B1A2E] pb-32 font-sans select-none overflow-y-auto">
+    <div 
+      className="min-h-screen pb-32 font-sans select-none overflow-y-auto transition-colors duration-500"
+      style={{
+        backgroundColor: theme.colors.screenBg,
+        color: theme.colors.textMain
+      }}
+    >
       {/* Top Header */}
-      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-xl border-b border-rose-100/90 px-4 py-3 shadow-xs">
-        <div className="max-w-md mx-auto flex items-center justify-between gap-2">
+      <header 
+        className="sticky top-0 z-40 backdrop-blur-2xl border-b px-4 py-3 shadow-xs transition-colors duration-500"
+        style={{
+          backgroundColor: theme.colors.headerBg,
+          borderColor: theme.colors.cardBorder
+        }}
+      >
+        <div className="max-w-5xl mx-auto flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <button
               onClick={() => {
@@ -247,7 +262,7 @@ export function MarketScreen() {
         </div>
       </header>
 
-      <main className="max-w-md mx-auto px-4 py-4 space-y-4">
+      <main className="w-full max-w-5xl mx-auto px-4 py-4 md:px-8 space-y-5">
         {/* Subtle Welcome Hero Bar */}
         <div className="relative rounded-2xl overflow-hidden p-4 bg-gradient-to-r from-rose-500 via-pink-500 to-purple-600 text-white shadow-md shadow-rose-200/50">
           <div className="flex items-center justify-between relative z-10">
@@ -273,6 +288,33 @@ export function MarketScreen() {
               Earn Coins
             </button>
           </div>
+        </div>
+
+        {/* Loveverse Digital Gifts Promotion Card */}
+        <div 
+          onClick={() => {
+            sound.tap();
+            navigate('/loveverse/gifts');
+          }}
+          className="cursor-pointer rounded-2xl overflow-hidden p-4 bg-gradient-to-r from-amber-400 via-rose-500 to-indigo-900 text-white shadow-md border border-rose-300 hover:shadow-lg transition-all group flex items-center justify-between"
+        >
+          <div className="flex items-center gap-3">
+            <span className="text-3xl p-2 rounded-xl bg-white/20 backdrop-blur-xs">🏝️</span>
+            <div>
+              <span className="text-[10px] font-extrabold uppercase tracking-widest bg-white/25 px-2 py-0.5 rounded-full">
+                Loveverse Worlds & Digital Gifts
+              </span>
+              <h3 className="font-serif font-black text-sm text-white mt-0.5">
+                Sunset Island, 3D Art Museum, Paris & Kitty Letters
+              </h3>
+              <p className="text-[11px] text-rose-100">
+                Create personalized interactive worlds and letters with your own photos & questions.
+              </p>
+            </div>
+          </div>
+          <button className="px-3 py-1.5 rounded-xl bg-white text-rose-700 text-xs font-bold shadow hover:bg-rose-50 active:scale-95 transition-all shrink-0 ml-3">
+            Open Studio
+          </button>
         </div>
 
         {/* Search Bar */}
@@ -371,7 +413,7 @@ export function MarketScreen() {
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 md:gap-4">
             {displayedItems.map(item => {
               const owned = isItemOwned(item);
               const isTheme = item.category === 'themes';
@@ -381,7 +423,12 @@ export function MarketScreen() {
               return (
                 <div
                   key={item.id}
-                  className="bg-white rounded-2xl p-3 border border-rose-100 shadow-2xs flex flex-col justify-between hover:shadow-md transition-all group"
+                  className="rounded-2xl p-3 border shadow-2xs flex flex-col justify-between hover:shadow-md hover:-translate-y-0.5 transition-all group"
+                  style={{
+                    backgroundColor: theme.colors.cardBg,
+                    borderColor: theme.colors.cardBorder,
+                    boxShadow: theme.colors.cardShadow
+                  }}
                 >
                   {/* Image Container with Badges */}
                   <div className="aspect-square w-full rounded-xl overflow-hidden bg-rose-50/50 relative mb-2.5 flex items-center justify-center border border-rose-50">

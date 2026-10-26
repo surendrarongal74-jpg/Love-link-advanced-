@@ -174,7 +174,7 @@ export function LoveverseThemesScreen() {
           <span className="text-[11px] font-medium opacity-65">Tap Preview to test</span>
         </div>
 
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {themeList.map((t) => {
             const isOwned = isThemeOwned(t.id);
             const isActive = activeThemeId === t.id;

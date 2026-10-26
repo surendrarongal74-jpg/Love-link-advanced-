@@ -352,7 +352,7 @@ export function OnboardingScreen() {
           </button>
         </motion.div>
       ) : (
-        <div className="space-y-6 relative z-10 max-w-sm mx-auto w-full pb-8">
+        <div className="space-y-6 relative z-10 max-w-xl md:max-w-3xl mx-auto w-full pb-8">
           {/* Permissions Checklist */}
           <PartnerPermissionsChecklist 
             onStatusChange={handlePermissionsChange}
@@ -369,63 +369,64 @@ export function OnboardingScreen() {
             </motion.div>
           )}
 
-          {/* Connect Actions */}
-          <motion.div 
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="bg-white/85 backdrop-blur-xl p-6 rounded-[2rem] shadow-xl border border-white shadow-rose-200/40 ring-1 ring-rose-200"
-          >
-            <div className="flex items-center justify-between mb-2">
-              <h2 className="text-lg font-serif font-bold">Start a new space</h2>
-              <span className="text-[11px] font-semibold text-rose-600 bg-rose-50 px-2.5 py-0.5 rounded-full border border-rose-200 flex items-center gap-1">
-                <Sparkles className="w-3 h-3 text-rose-500" />
-                Instant Link
-              </span>
-            </div>
-            <p className="text-rose-400 text-xs mb-5">Create a private encrypted space and generate an invite code for your partner.</p>
-            
-            {createErrorMsg && (
-              <p className="text-red-500 text-xs font-medium mb-3 bg-red-50 p-2.5 rounded-xl border border-red-200">{createErrorMsg}</p>
-            )}
-
-            <button 
-              onClick={createSpace}
-              disabled={isCreating}
-              className="w-full font-semibold py-3.5 rounded-2xl shadow-lg transition-all flex justify-center items-center gap-2 active:scale-95 bg-gradient-to-r from-rose-500 to-pink-500 text-white shadow-rose-300 hover:shadow-xl hover:shadow-rose-400 hover:-translate-y-0.5 cursor-pointer disabled:opacity-60"
+          {/* Connect Actions: Responsive 2-column grid on tablet & desktop */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <motion.div 
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="bg-white/85 backdrop-blur-xl p-6 rounded-[2rem] shadow-xl border border-white shadow-rose-200/40 ring-1 ring-rose-200 flex flex-col justify-between"
             >
-              <span>{isCreating ? 'Creating Private Space...' : 'Create Private Space'}</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
-          </motion.div>
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <h2 className="text-lg font-serif font-bold">Start a new space</h2>
+                  <span className="text-[11px] font-semibold text-rose-600 bg-rose-50 px-2.5 py-0.5 rounded-full border border-rose-200 flex items-center gap-1">
+                    <Sparkles className="w-3 h-3 text-rose-500" />
+                    Instant Link
+                  </span>
+                </div>
+                <p className="text-rose-400 text-xs mb-5">Create a private encrypted space and generate an invite code for your partner.</p>
+                
+                {createErrorMsg && (
+                  <p className="text-red-500 text-xs font-medium mb-3 bg-red-50 p-2.5 rounded-xl border border-red-200">{createErrorMsg}</p>
+                )}
+              </div>
 
-          <div className="flex items-center gap-4 px-4">
-            <div className="h-px bg-rose-200 flex-1" />
-            <span className="text-rose-400 font-serif italic font-medium text-xs">or join existing</span>
-            <div className="h-px bg-rose-200 flex-1" />
-          </div>
+              <button 
+                onClick={createSpace}
+                disabled={isCreating}
+                className="w-full font-semibold py-3.5 rounded-2xl shadow-lg transition-all flex justify-center items-center gap-2 active:scale-95 bg-gradient-to-r from-rose-500 to-pink-500 text-white shadow-rose-300 hover:shadow-xl hover:shadow-rose-400 hover:-translate-y-0.5 cursor-pointer disabled:opacity-60"
+              >
+                <span>{isCreating ? 'Creating Space...' : 'Create Private Space'}</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </motion.div>
 
-          <motion.div 
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.1 }}
-            className="bg-white/85 backdrop-blur-xl p-6 rounded-[2rem] shadow-xl border border-white shadow-rose-200/40"
-          >
-            <div className="flex items-center justify-between mb-2">
-              <h2 className="text-lg font-serif font-bold">Join partner&apos;s space</h2>
-            </div>
-            <p className="text-rose-400 text-xs mb-5">Enter the 6-digit code received from your partner.</p>
-            <div className="flex flex-col gap-3">
-              <input 
-                type="text" 
-                placeholder="Enter 6-digit code"
-                value={inviteCodeInput}
-                onChange={e => { setInviteCodeInput(e.target.value.toUpperCase()); setErrorMsg(null); }}
-                className="w-full bg-rose-50 border-2 border-transparent rounded-2xl px-4 py-3 font-mono font-bold tracking-[0.2em] text-center text-lg outline-none focus:border-rose-300 focus:bg-white placeholder:text-rose-300 placeholder:font-sans placeholder:tracking-normal transition-all"
-                maxLength={6}
-              />
-              {errorMsg && (
-                <p className="text-red-500 text-xs font-medium text-center bg-red-50 p-2 rounded-xl border border-red-200">{errorMsg}</p>
-              )}
+            <motion.div 
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.1 }}
+              className="bg-white/85 backdrop-blur-xl p-6 rounded-[2rem] shadow-xl border border-white shadow-rose-200/40 flex flex-col justify-between"
+            >
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <h2 className="text-lg font-serif font-bold">Join partner&apos;s space</h2>
+                </div>
+                <p className="text-rose-400 text-xs mb-4">Enter the 6-digit code received from your partner.</p>
+                <div className="flex flex-col gap-2 mb-4">
+                  <input 
+                    type="text" 
+                    placeholder="Enter 6-digit code"
+                    value={inviteCodeInput}
+                    onChange={e => { setInviteCodeInput(e.target.value.toUpperCase()); setErrorMsg(null); }}
+                    className="w-full bg-rose-50 border-2 border-transparent rounded-2xl px-4 py-3 font-mono font-bold tracking-[0.2em] text-center text-lg outline-none focus:border-rose-300 focus:bg-white placeholder:text-rose-300 placeholder:font-sans placeholder:tracking-normal transition-all"
+                    maxLength={6}
+                  />
+                  {errorMsg && (
+                    <p className="text-red-500 text-xs font-medium text-center bg-red-50 p-2 rounded-xl border border-red-200">{errorMsg}</p>
+                  )}
+                </div>
+              </div>
+
               <button 
                 onClick={joinSpace}
                 disabled={isJoining}
@@ -433,8 +434,8 @@ export function OnboardingScreen() {
               >
                 <span>{isJoining ? 'Joining Space...' : 'Join Partner Space'}</span>
               </button>
-            </div>
-          </motion.div>
+            </motion.div>
+          </div>
         </div>
       )}
     </div>

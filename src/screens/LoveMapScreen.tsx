@@ -43,6 +43,7 @@ import { triggerHeartBurstConfetti } from '../lib/celebrationEffects';
 import { ROMANTIC_DESTINATIONS, ROMANTIC_PHOTO_PRESETS, RomanticDestination } from '../data/romanticDestinations';
 import { THEME_MAP_STYLES, MapStyleKey, MAP_STYLE_OPTIONS } from '../data/mapStyles';
 import { Link } from 'react-router-dom';
+import { compressImageFile } from '../lib/imageCompressor';
 
 const mapContainerStyle = {
   width: '100%',
@@ -245,6 +246,31 @@ export function LoveMapScreen() {
   const [newDate, setNewDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loveWaveFeedback, setLoveWaveFeedback] = useState<string | null>(null);
+  const [isCompressingMarkerPhoto, setIsCompressingMarkerPhoto] = useState(false);
+  const markerGalleryInputRef = useRef<HTMLInputElement | null>(null);
+  const markerCameraInputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleMarkerImageFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    sound.tap();
+
+    try {
+      setIsCompressingMarkerPhoto(true);
+      const compressedUrl = await compressImageFile(file, {
+        maxWidth: 800,
+        maxHeight: 800,
+        quality: 0.82,
+        outputFormat: 'image/jpeg'
+      });
+      setNewPhotoUrl(compressedUrl);
+    } catch (err) {
+      console.warn('Failed to compress marker photo:', err);
+    } finally {
+      setIsCompressingMarkerPhoto(false);
+      e.target.value = '';
+    }
+  };
 
   // Pre-generate custom pin icons for each category
   const pinIcons = useMemo(() => {
@@ -1698,7 +1724,7 @@ export function LoveMapScreen() {
             className="absolute bottom-0 left-0 right-0 z-40 max-h-[85vh] overflow-y-auto px-4 pb-8"
           >
             <div
-              className="max-w-md mx-auto rounded-[2.5rem] p-6 shadow-2xl border relative backdrop-blur-3xl"
+              className="max-w-md md:max-w-xl mx-auto rounded-[2.5rem] p-6 shadow-2xl border relative backdrop-blur-3xl"
               style={{
                 backgroundColor: theme.colors.cardBg,
                 borderColor: theme.colors.cardBorder
@@ -1823,11 +1849,80 @@ export function LoveMapScreen() {
                   />
                 </div>
 
-                {/* Photo Presets & Custom URL */}
+                {/* Photo Presets & Custom Upload */}
                 <div>
-                  <label className="text-[10px] font-bold uppercase tracking-wider block mb-1.5 opacity-70">
-                    Photo (Choose Preset or Enter URL)
-                  </label>
+                  {/* Hidden inputs for custom image picking */}
+                  <input
+                    ref={markerGalleryInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleMarkerImageFile}
+                  />
+                  <input
+                    ref={markerCameraInputRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    className="hidden"
+                    onChange={handleMarkerImageFile}
+                  />
+
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-wider opacity-70">
+                      Photo (Gallery, Camera or Presets)
+                    </label>
+                    {newPhotoUrl && (
+                      <button
+                        type="button"
+                        onClick={() => setNewPhotoUrl('')}
+                        className="text-[10px] text-rose-500 font-bold hover:underline"
+                      >
+                        Remove photo
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Custom Upload Action Buttons */}
+                  <div className="grid grid-cols-2 gap-2 mb-2.5">
+                    <button
+                      type="button"
+                      onClick={() => markerGalleryInputRef.current?.click()}
+                      disabled={isCompressingMarkerPhoto}
+                      className="py-2 px-3 rounded-xl border border-rose-200 dark:border-rose-900/40 bg-rose-50/60 dark:bg-rose-950/20 text-rose-600 dark:text-rose-300 font-bold text-xs flex items-center justify-center gap-1.5 hover:bg-rose-100/60 active:scale-95 transition disabled:opacity-50"
+                    >
+                      <ImageIcon className="w-3.5 h-3.5" />
+                      <span>{isCompressingMarkerPhoto ? 'Compressing...' : 'From Gallery'}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => markerCameraInputRef.current?.click()}
+                      disabled={isCompressingMarkerPhoto}
+                      className="py-2 px-3 rounded-xl border border-rose-200 dark:border-rose-900/40 bg-rose-50/60 dark:bg-rose-950/20 text-rose-600 dark:text-rose-300 font-bold text-xs flex items-center justify-center gap-1.5 hover:bg-rose-100/60 active:scale-95 transition disabled:opacity-50"
+                    >
+                      <Camera className="w-3.5 h-3.5" />
+                      <span>Take Photo</span>
+                    </button>
+                  </div>
+
+                  {/* Active Selected Photo Preview Banner */}
+                  {newPhotoUrl && (
+                    <div className="relative mb-2.5 rounded-2xl overflow-hidden border-2 border-rose-300/80 shadow-xs h-32 bg-black/5 flex items-center justify-center group">
+                      <img src={newPhotoUrl} alt="Selected memory preview" className="w-full h-full object-cover" />
+                      <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-md rounded-full p-1 text-white hover:bg-black/80 cursor-pointer"
+                        onClick={() => setNewPhotoUrl('')}
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </div>
+                      <div className="absolute bottom-2 left-2 bg-black/60 backdrop-blur-md px-2 py-0.5 rounded-full text-[10px] text-white font-bold flex items-center gap-1">
+                        <Sparkles className="w-3 h-3 text-amber-300" /> Attached Photo
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Preset photo thumbnails */}
+                  <p className="text-[10px] font-semibold opacity-60 mb-1">Or choose a scenic romantic preset:</p>
                   <div className="flex gap-2 overflow-x-auto pb-1.5 scrollbar-hide">
                     {ROMANTIC_PHOTO_PRESETS.map((preset) => (
                       <button
@@ -1858,7 +1953,7 @@ export function LoveMapScreen() {
                     <input
                       type="url"
                       placeholder="Or paste custom photo URL..."
-                      value={newPhotoUrl}
+                      value={newPhotoUrl.startsWith('data:') ? '' : newPhotoUrl}
                       onChange={(e) => setNewPhotoUrl(e.target.value)}
                       className="w-full rounded-xl pl-9 pr-3 py-2 text-xs border outline-none transition-all shadow-xs"
                       style={{

@@ -20,6 +20,9 @@ import { SpinTheWheelGame } from '../components/playhouse/SpinTheWheelGame';
 import { CompatibilityChallengeGame } from '../components/playhouse/CompatibilityChallengeGame';
 import { CoupleChallengesGame } from '../components/playhouse/CoupleChallengesGame';
 import { MemoryGuessGame } from '../components/playhouse/MemoryGuessGame';
+import { TruthOrDareGame } from '../components/playhouse/TruthOrDareGame';
+import { LoveQuizGame } from '../components/playhouse/LoveQuizGame';
+import { DailyLoveMissionGame } from '../components/playhouse/DailyLoveMissionGame';
 import { sound } from '../lib/sound';
 import { 
   Sparkles, Heart, ChevronLeft, Trophy, Flame, Play, 
@@ -200,7 +203,7 @@ export function LoveversePlayhouseScreen() {
           </div>
 
           {/* Top Games Grid with Real Unlock States */}
-          <div className="space-y-3 mt-1">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 mt-2">
             {filteredGames.map((game, index) => {
               const unlocked = isGameUnlocked(game);
 
@@ -209,7 +212,7 @@ export function LoveversePlayhouseScreen() {
                   key={game.id}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => handleGameCardClick(game)}
-                  className="rounded-3xl p-4 border shadow-xs hover:shadow-md transition-all cursor-pointer flex gap-4 items-center group relative overflow-hidden"
+                  className="rounded-3xl p-4 border shadow-xs hover:shadow-md transition-all cursor-pointer flex gap-4 items-center group relative overflow-hidden love-card-interactive apple-press"
                   style={{
                     backgroundColor: theme.colors.cardBg,
                     borderColor: theme.colors.cardBorder
@@ -368,6 +371,9 @@ export function LoveversePlayhouseScreen() {
           </div>
 
           {/* Render Specific Real Game Interactive Components */}
+          {selectedGameId === 'truth-or-dare' && <TruthOrDareGame />}
+          {selectedGameId === 'love-quiz' && <LoveQuizGame />}
+          {selectedGameId === 'daily-love-mission' && <DailyLoveMissionGame />}
           {selectedGameId === 'draw-guess' && <DrawItGuessItGame />}
           {selectedGameId === 'spin-the-wheel' && <SpinTheWheelGame />}
           {selectedGameId === 'compatibility-challenge' && <CompatibilityChallengeGame />}

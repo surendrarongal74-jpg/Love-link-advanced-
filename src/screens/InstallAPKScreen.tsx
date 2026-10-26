@@ -89,36 +89,36 @@ export const InstallAPKScreen: React.FC = () => {
           <ArrowLeft className="w-5 h-5" />
         </button>
         <div className="text-center">
-          <h1 className="text-base font-bold text-gray-800">Mobile & APK Hub</h1>
-          <p className="text-[11px] text-gray-400">Android APK & Native PWA</p>
+          <h1 className="text-base font-bold text-gray-800">App & Device Hub</h1>
+          <p className="text-[11px] text-gray-400">Phone, Tablet & Desktop PC</p>
         </div>
         <div className="w-10" />
       </div>
 
-      <div className="max-w-md mx-auto p-4 space-y-5">
+      <div className="max-w-2xl mx-auto p-4 md:p-8 space-y-6">
         {/* Hero Card */}
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-rose-500 via-pink-500 to-rose-400 text-white p-6 shadow-xl shadow-rose-300/50">
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-rose-500 via-pink-500 to-rose-400 text-white p-6 md:p-8 shadow-xl shadow-rose-300/50">
           <div className="relative z-10 text-center">
             <div className="w-20 h-20 mx-auto rounded-3xl bg-white/20 backdrop-blur-md p-3.5 flex items-center justify-center shadow-lg border border-white/30 mb-3">
-              <Smartphone className="w-12 h-12 text-white" />
+              <Download className="w-12 h-12 text-white" />
             </div>
-            <h2 className="text-2xl font-black tracking-tight">Love Link APK</h2>
-            <p className="text-xs text-rose-100 mt-1 max-w-xs mx-auto">
-              Get the standalone mobile app for Android. Private, offline-capable, and synced directly between your phones.
+            <h2 className="text-2xl md:text-3xl font-black tracking-tight">Love Link on Every Device</h2>
+            <p className="text-xs md:text-sm text-rose-100 mt-1 max-w-md mx-auto">
+              Enjoy Love Link anywhere: on your smartphone, tablet, laptop, or desktop PC. Standalone app experience with instant syncing, local offline vault, and zero lag.
             </p>
 
             {isInstalled ? (
               <div className="mt-4 inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-emerald-500/90 text-white text-xs font-bold shadow-sm">
                 <CheckCircle2 className="w-4 h-4" />
-                <span>Installed & Running on Device</span>
+                <span>Installed & Running on This Device</span>
               </div>
             ) : (
               <button
                 onClick={handleInstall}
-                className="mt-5 w-full py-3.5 px-6 rounded-2xl bg-white text-rose-600 font-extrabold text-sm shadow-lg shadow-black/10 hover:bg-rose-50 active:scale-95 transition flex items-center justify-center gap-2"
+                className="mt-5 w-full max-w-sm mx-auto py-3.5 px-6 rounded-2xl bg-white text-rose-600 font-extrabold text-sm shadow-lg shadow-black/10 hover:bg-rose-50 active:scale-95 transition flex items-center justify-center gap-2"
               >
                 <Download className="w-5 h-5 text-rose-600" />
-                <span>{isInstallable ? 'Install APK on Android' : 'Add Love Link to Phone'}</span>
+                <span>{isInstallable ? 'Install App on This Device' : 'Add Love Link to Device'}</span>
               </button>
             )}
           </div>
@@ -128,14 +128,14 @@ export const InstallAPKScreen: React.FC = () => {
         </div>
 
         {/* Feature Highlights */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-3 md:gap-4">
           <div className="bg-white rounded-2xl p-4 border border-rose-100 shadow-sm flex flex-col gap-2">
             <div className="w-9 h-9 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center">
               <Zap className="w-5 h-5" />
             </div>
             <div>
               <h3 className="text-xs font-bold text-gray-800">Instant Launch</h3>
-              <p className="text-[11px] text-gray-500 mt-0.5">Runs in standalone mode without browser URL bars</p>
+              <p className="text-[11px] text-gray-500 mt-0.5">Runs in standalone mode on Phone, Tablet & PC</p>
             </div>
           </div>
 
@@ -145,7 +145,7 @@ export const InstallAPKScreen: React.FC = () => {
             </div>
             <div>
               <h3 className="text-xs font-bold text-gray-800">Private Vault</h3>
-              <p className="text-[11px] text-gray-500 mt-0.5">Encrypted locally on both partners' devices</p>
+              <p className="text-[11px] text-gray-500 mt-0.5">Encrypted locally on all your devices</p>
             </div>
           </div>
 
@@ -155,7 +155,7 @@ export const InstallAPKScreen: React.FC = () => {
             </div>
             <div>
               <h3 className="text-xs font-bold text-gray-800">Offline Games</h3>
-              <p className="text-[11px] text-gray-500 mt-0.5">Play Loveverse Playhouse even without internet</p>
+              <p className="text-[11px] text-gray-500 mt-0.5">Play Loveverse Playhouse anytime, everywhere</p>
             </div>
           </div>
 
@@ -164,20 +164,20 @@ export const InstallAPKScreen: React.FC = () => {
               <Sparkles className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-xs font-bold text-gray-800">Soft Blush Theme</h3>
-              <p className="text-[11px] text-gray-500 mt-0.5">Engineered for low-end & high-end phones</p>
+              <h3 className="text-xs font-bold text-gray-800">Adaptive Interface</h3>
+              <p className="text-[11px] text-gray-500 mt-0.5">Designed for phones, tablets & desktop screens</p>
             </div>
           </div>
         </div>
 
-        {/* Scan to Phone */}
+        {/* Scan to Open on Another Device */}
         <div className="bg-white rounded-3xl p-5 border border-rose-100 shadow-sm space-y-3">
           <div className="flex items-center gap-2">
             <Share2 className="w-4 h-4 text-rose-500" />
-            <h3 className="text-xs font-bold uppercase tracking-wider text-gray-600">Scan & Open on Android Phone</h3>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-gray-600">Scan & Open on Phone or Tablet</h3>
           </div>
           <p className="text-xs text-gray-500">
-            Open your Android phone's camera and scan below to launch and install directly on your phone:
+            Open your device's camera to scan and open Love Link instantly on your phone or tablet:
           </p>
 
           <div className="p-4 bg-rose-50/50 rounded-2xl border border-rose-100 flex flex-col items-center justify-center">
