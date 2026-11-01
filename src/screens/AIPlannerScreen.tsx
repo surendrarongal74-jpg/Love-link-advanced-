@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useCoupleSpace } from '../contexts/CoupleSpaceContext';
 import { db } from '../lib/firebase';
@@ -6,7 +7,7 @@ import { collection, query, orderBy, onSnapshot, doc, setDoc, deleteDoc, updateD
 import { handleFirestoreError, OperationType } from '../lib/errorHandler';
 import { BottomNav } from '../components/BottomNav';
 import { motion, AnimatePresence } from 'motion/react';
-import { Map, CalendarHeart, Wand2, Compass, DollarSign, Clock, X, Plus, Trash2 } from 'lucide-react';
+import { Map, CalendarHeart, Wand2, Compass, DollarSign, Clock, X, Plus, Trash2, Dices, Sparkles } from 'lucide-react';
 import { generateText } from '../lib/gemini';
 
 interface DatePlan {
@@ -21,6 +22,7 @@ interface DatePlan {
 }
 
 export function AIPlannerScreen() {
+  const navigate = useNavigate();
   const { space } = useCoupleSpace();
   const { userData } = useAuth();
   
@@ -131,6 +133,32 @@ export function AIPlannerScreen() {
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 space-y-6 pb-6 pt-2">
+         {/* Random Date Night Generator Launch Card */}
+         <div className="bg-gradient-to-r from-purple-900 via-pink-900 to-rose-900 rounded-[2rem] p-5 text-white shadow-xl relative overflow-hidden border border-pink-500/30">
+           <div className="absolute top-0 right-0 w-32 h-32 bg-pink-500/20 rounded-full blur-2xl pointer-events-none" />
+           <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+             <div>
+               <div className="flex items-center gap-2 mb-1">
+                 <span className="text-xl">🎲</span>
+                 <span className="text-[10px] font-black uppercase tracking-wider bg-pink-500/30 text-pink-200 px-2.5 py-0.5 rounded-full border border-pink-400/40">
+                   Spontaneous & Location-Based
+                 </span>
+               </div>
+               <h3 className="text-xl font-bold text-white">Random Date Night Generator</h3>
+               <p className="text-xs text-rose-200 mt-1 max-w-md">
+                 Overcome decision fatigue with Gemini AI. Spin to discover authentic hidden spots, romantic dares, and local evening adventures!
+               </p>
+             </div>
+             <button
+               onClick={() => navigate('/random-date')}
+               className="px-5 py-3 rounded-2xl bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 font-bold text-xs shadow-lg transition active:scale-95 shrink-0 flex items-center justify-center gap-2 text-white border border-white/20"
+             >
+               <Dices className="w-4 h-4" />
+               <span>Spin Date Roulette 🎲</span>
+             </button>
+           </div>
+         </div>
+
          {plans.map(plan => (
             <motion.div 
                initial={{ opacity: 0, y: 20 }}

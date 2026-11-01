@@ -22,7 +22,7 @@ export const THEMES_LIST: ThemeDefinition[] = [
     accent: '#F4BF62',
     description: 'Soft pink clouds, floating hearts, cream surfaces, and gentle rose accents.',
     cost: 0,
-    image: '/src/assets/images/theme_cloud_romance_1791977048928.jpg'
+    image: '/images/theme_cloud_romance_1791977048928.jpg'
   },
   {
     id: 'theme_moonlight_sky',
@@ -34,7 +34,7 @@ export const THEMES_LIST: ThemeDefinition[] = [
     accent: '#F4BF62',
     description: 'Lavender night skies, crescent moons, soft blue-purple surfaces, and tiny stars.',
     cost: 1000,
-    image: '/src/assets/images/theme_moonlight_sky_1791976914876.jpg'
+    image: '/images/theme_moonlight_sky_1791976914876.jpg'
   },
   {
     id: 'theme_royal_hearts',
@@ -46,7 +46,7 @@ export const THEMES_LIST: ThemeDefinition[] = [
     accent: '#F4BF62',
     description: 'Elegant rose gradients, warm gold accents, decorative heart motifs, and refined surfaces.',
     cost: 2500,
-    image: '/src/assets/images/theme_royal_hearts_1791977003556.jpg'
+    image: '/images/theme_royal_hearts_1791977003556.jpg'
   },
   {
     id: 'theme_soulmate_galaxy',
@@ -58,7 +58,7 @@ export const THEMES_LIST: ThemeDefinition[] = [
     accent: '#F4BF62',
     description: 'Dreamy cosmic lavender, glowing stars, glass hearts, and deep violet accents.',
     cost: 5000,
-    image: '/src/assets/images/theme_soulmate_galaxy_1791976959294.jpg'
+    image: '/images/theme_soulmate_galaxy_1791976959294.jpg'
   },
   {
     id: 'theme_default',
@@ -70,7 +70,7 @@ export const THEMES_LIST: ThemeDefinition[] = [
     accent: '#FB7185',
     description: 'Clean modern romantic blush, warm whites, and crisp rose highlights.',
     cost: 0,
-    image: '/src/assets/images/theme_cloud_romance_1791977048928.jpg'
+    image: '/images/theme_cloud_romance_1791977048928.jpg'
   }
 ];
 
@@ -86,10 +86,10 @@ export const WALLPAPER_PRESETS: WallpaperOption[] = [
   {
     id: 'theme_cloud_romance',
     name: 'Cloud Romance Sky',
-    preview: 'url(/src/assets/images/theme_cloud_romance_1791977048928.jpg)',
+    preview: 'url(/images/theme_cloud_romance_1791977048928.jpg)',
     styleClass: 'bg-cover bg-center',
     customBgStyle: {
-      backgroundImage: 'url(/src/assets/images/theme_cloud_romance_1791977048928.jpg)',
+      backgroundImage: 'url(/images/theme_cloud_romance_1791977048928.jpg)',
       backgroundSize: 'cover',
       backgroundPosition: 'center'
     }
@@ -97,10 +97,10 @@ export const WALLPAPER_PRESETS: WallpaperOption[] = [
   {
     id: 'theme_moonlight_sky',
     name: 'Moonlight Dreams Night',
-    preview: 'url(/src/assets/images/theme_moonlight_sky_1791976914876.jpg)',
+    preview: 'url(/images/theme_moonlight_sky_1791976914876.jpg)',
     styleClass: 'bg-cover bg-center',
     customBgStyle: {
-      backgroundImage: 'url(/src/assets/images/theme_moonlight_sky_1791976914876.jpg)',
+      backgroundImage: 'url(/images/theme_moonlight_sky_1791976914876.jpg)',
       backgroundSize: 'cover',
       backgroundPosition: 'center'
     }
@@ -108,10 +108,10 @@ export const WALLPAPER_PRESETS: WallpaperOption[] = [
   {
     id: 'theme_royal_hearts',
     name: 'Royal Hearts Palace',
-    preview: 'url(/src/assets/images/theme_royal_hearts_1791977003556.jpg)',
+    preview: 'url(/images/theme_royal_hearts_1791977003556.jpg)',
     styleClass: 'bg-cover bg-center',
     customBgStyle: {
-      backgroundImage: 'url(/src/assets/images/theme_royal_hearts_1791977003556.jpg)',
+      backgroundImage: 'url(/images/theme_royal_hearts_1791977003556.jpg)',
       backgroundSize: 'cover',
       backgroundPosition: 'center'
     }
@@ -119,10 +119,10 @@ export const WALLPAPER_PRESETS: WallpaperOption[] = [
   {
     id: 'theme_soulmate_galaxy',
     name: 'Soulmate Galaxy Nebula',
-    preview: 'url(/src/assets/images/theme_soulmate_galaxy_1791976959294.jpg)',
+    preview: 'url(/images/theme_soulmate_galaxy_1791976959294.jpg)',
     styleClass: 'bg-cover bg-center',
     customBgStyle: {
-      backgroundImage: 'url(/src/assets/images/theme_soulmate_galaxy_1791976959294.jpg)',
+      backgroundImage: 'url(/images/theme_soulmate_galaxy_1791976959294.jpg)',
       backgroundSize: 'cover',
       backgroundPosition: 'center'
     }

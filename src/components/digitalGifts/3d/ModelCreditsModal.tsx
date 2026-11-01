@@ -12,6 +12,26 @@ export interface ModelCreditItem {
 }
 
 export const MODEL_CREDITS_DATA: ModelCreditItem[] = [
+  // 3D Couple Avatars
+  {
+    world: 'Loveverse Avatars',
+    item: 'Anime Boy Character',
+    model: 'Character Boy 1 FBX',
+    author: 'Sketchfab Creator',
+    license: 'CC Attribution 4.0',
+    creditLine: '"Character Boy 1 FBX" on Sketchfab (skfb.ly/oMnnr), licensed CC BY 4.0',
+    link: 'https://skfb.ly/oMnnr',
+  },
+  {
+    world: 'Loveverse Avatars',
+    item: 'Galaxia Anime Girl Character',
+    model: 'Galaxia - Anime Girl',
+    author: 'Sketchfab Creator',
+    license: 'CC Attribution 4.0',
+    creditLine: '"Galaxia - Anime Girl" on Sketchfab (skfb.ly/o7qwD), licensed CC BY 4.0',
+    link: 'https://skfb.ly/o7qwD',
+  },
+
   // Ever Tide
   {
     world: 'Ever Tide',

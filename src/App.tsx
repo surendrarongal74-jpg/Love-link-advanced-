@@ -30,6 +30,8 @@ import { MyCollectionScreen } from './screens/MyCollectionScreen';
 import { LoveverseThemesScreen } from './screens/LoveverseThemesScreen';
 import { LoveverseGiftsScreen } from './screens/LoveverseGiftsScreen';
 import { StandaloneGiftViewScreen } from './screens/StandaloneGiftViewScreen';
+import { LoveLink3DAdventureScreen } from './screens/LoveLink3DAdventureScreen';
+import { RandomDateGeneratorScreen } from './screens/RandomDateGeneratorScreen';
 import { LoveCoinsProvider } from './contexts/LoveCoinsContext';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import { LivingAtmosphere } from './components/LivingAtmosphere';
@@ -120,11 +122,14 @@ const ROUTE_TITLES: Record<string, string> = {
   '/who-loves-more': 'Who Loves More? • Love Link',
   '/aira': 'AIRA Love Companion • Love Link',
   '/date-planner': 'AI Date Planner • Love Link',
+  '/random-date': 'Random Date Night Generator • Love Link',
+  '/date-generator': 'Random Date Night Generator • Love Link',
   '/playhouse': 'Loveverse Playhouse • Love Link',
   '/themes': 'Loveverse Themes & Visual Worlds • Love Link',
   '/vision-board': 'Couple Vision Board • Love Link',
   '/love-coupons': 'Love Coupons Vault • Love Link',
   '/loveverse/gifts': 'Loveverse Digital Gifts & Worlds • Love Link',
+  '/adventure-3d': 'Love Link 3D — Two Souls, One Adventure • Love Link',
   '/install': 'Install Love Link App • Love Link',
   '/features': 'Features & Highlights • Love Link',
   '/about': 'About Us • Love Link',
@@ -285,6 +290,22 @@ function AppContent() {
             </ProtectedRoute>
           } />
 
+          <Route path="/random-date" element={
+            <ProtectedRoute>
+              <ActiveSpaceRoute>
+                <RandomDateGeneratorScreen />
+              </ActiveSpaceRoute>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/date-generator" element={
+            <ProtectedRoute>
+              <ActiveSpaceRoute>
+                <RandomDateGeneratorScreen />
+              </ActiveSpaceRoute>
+            </ProtectedRoute>
+          } />
+
           <Route path="/playhouse" element={
             <ProtectedRoute>
               <ActiveSpaceRoute>
@@ -346,6 +367,15 @@ function AppContent() {
             <ProtectedRoute>
               <ActiveSpaceRoute>
                 <LoveverseGiftsScreen />
+              </ActiveSpaceRoute>
+            </ProtectedRoute>
+          } />
+
+          {/* Love Link 3D — Two Souls, One Adventure (Real-time Co-Op 3D Game) */}
+          <Route path="/adventure-3d" element={
+            <ProtectedRoute>
+              <ActiveSpaceRoute>
+                <LoveLink3DAdventureScreen />
               </ActiveSpaceRoute>
             </ProtectedRoute>
           } />

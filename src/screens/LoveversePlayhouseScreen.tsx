@@ -180,6 +180,42 @@ export function LoveversePlayhouseScreen() {
             </div>
           </div>
 
+          {/* Featured: Love Link 3D Adventure */}
+          <div 
+            onClick={() => {
+              sound.playChime();
+              navigate('/adventure-3d');
+            }}
+            className="cursor-pointer rounded-3xl p-4.5 border transition-all duration-300 hover:scale-[1.01] shadow-md flex items-center justify-between relative overflow-hidden"
+            style={{
+              background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4c1d95 100%)',
+              borderColor: '#818cf8'
+            }}
+          >
+            <div className="flex items-center gap-3.5 z-10">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-pink-500 to-indigo-500 flex items-center justify-center text-white text-xl shadow-lg shadow-indigo-500/30">
+                <Compass className="w-6 h-6 animate-spin-slow" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-pink-300 bg-pink-950/80 px-2 py-0.5 rounded-full border border-pink-700/50">
+                    REAL-TIME 3D
+                  </span>
+                  <span className="text-[10px] font-bold text-amber-300 bg-amber-950/80 px-2 py-0.5 rounded-full border border-amber-700/50">
+                    WORLD 1 LIVE
+                  </span>
+                </div>
+                <h3 className="text-base font-black text-white mt-0.5">Love Link 3D: Two Souls, One Adventure</h3>
+                <p className="text-xs text-indigo-200 line-clamp-1">Explore floating sky islands, co-op starlight switches & bridge mechanics!</p>
+              </div>
+            </div>
+
+            <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs shrink-0 z-10 border border-white/20">
+              <span>Play Now</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </div>
+          </div>
+
           {/* Category Filter Pills */}
           <div className="flex items-center gap-2 overflow-x-auto scrollbar-none py-3 mt-1">
             {(['All', 'Playful', 'Intimacy', 'Creativity', 'Mystery', 'Memory', 'Rhythm'] as const).map((cat) => (

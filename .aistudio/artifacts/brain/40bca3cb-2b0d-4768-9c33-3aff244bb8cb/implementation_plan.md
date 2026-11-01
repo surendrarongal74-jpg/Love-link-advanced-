@@ -1,69 +1,67 @@
-# Love Link: 3D Loveverse Experience Upgrade Plan
+# Love Link 3D — Two Souls, One Adventure: Implementation Plan & Status
 
 ## Overview
-Elevate the existing lightweight Loveverse digital gifts into premium, fully interactive 3D experiences with high-fidelity procedural geometry, solid collision detection, partner exploration mode, and complete Creative Commons attribution.
+A real-time 3D cooperative multiplayer adventure game integrated natively into the Love Link couples platform, featuring third-person platforming, synchronized co-op puzzle mechanics, procedural PBR environments, Web Audio SFX, and real-time Firestore session synchronization.
 
 ---
 
-## Implemented Architecture & Upgrades
+## 1. Architecture & Components
+- **Game Engine & Rendering**: Three.js r186 with procedural PBR materials, custom tone-mapping, and real-time shadow casting (`SkyIslandsWorld.ts`).
+- **Player & Kinematics**: Anime Boy 1 and Galaxia Anime Girl (`CoupleAvatars.ts`) featuring multi-joint articulation, walking, running, jumping physics, and emotional interaction poses.
+- **Collision & Platforming**: Authoritative `WorldPhysicsValidator` geometric collision solver with continuous sliding normals against static pillars, archways, and cherry trees, strict world envelope boundaries, and floor plane grounding (`getSurfaceElevation`) preventing character clipping beneath solid floors.
+- **Controls & Input Responsiveness**:
+  - Dedicated `useVirtualJoystick` hook for mobile multi-touch with pointer-capture, deadzone handling, non-linear power curve for precision steering, spring-return decay, and haptic feedback.
+  - Refined acceleration & deceleration curves for desktop keyboard input: 24 m/s² attack curve, 36 m/s² opposing-direction braking for crisp lateral cuts without ice-skating, and 18 m/s² natural exponential stopping.
+  - Normalized diagonal keyboard vectors preventing 41% diagonal speed boost.
+  - Zero-GC 60fps render loop with pre-allocated vector math objects, eliminating stutter-inducing garbage collection pauses.
+  - Camera anti-clipping clamp and smooth spherical lookAt damping.
+  - Sprint / Walk mode toggle with analog speed scaling (up to 7.0 m/s).
+  - Spacebar / Jump button with grounded physics checks.
+  - One-tap Camera Recenter button behind the active character.
+- **Real-Time Multiplayer Networking**: Firestore real-time snapshots (`onSnapshot`) at `coupleSpaces/{spaceId}/game3dSession/world1_sky_islands` syncing 3D position, heading, movement state, and authoritative puzzle state with interpolation.
+- **Smart AI Companion Mode**: When partner is away or offline, an intelligent partner AI follows, emotes, and automatically navigates to synchronized pressure plates to solve co-op gates.
+- **Acoustic Sound Synthesizer**: Pure Web Audio API engine (`GameAudio.ts`) generating responsive jumps, footsteps, crystal arpeggios, switch hums, bridge chords, and victory fanfares without external audio file dependencies.
 
-### 1. Collision & Physics System (`CollisionSystem.ts`)
-- **Solid Obstacle Boundaries**:
-  - Box colliders (`BoxCollider`) for walls, facades, crates, benches, desks.
-  - Cylinder colliders (`CylinderCollider`) for palm tree trunks, lampposts, columns, barrels.
-  - Circular / Polygon perimeters preventing walking off cliffs, into deep ocean water, or through balustrades.
-- **Sliding Collision Response**:
-  - Circle-vs-box swept collision with normal slide resolution.
-  - Avatars slide smoothly along walls and barriers without snagging or clipping through.
+---
 
-### 2. Partner Exploration Mode & Couple Avatars (`ExplorationEngine.ts`, `CoupleAvatars.ts`)
-- **Exploration with Partner**:
-  - Player and partner avatars rendered with customizable sweaters/colors, animated swinging limbs and bouncing walk cycles.
-  - Floating nameplate canvas badges above avatars ("You" and partner's real name/photo from `useCoupleSpace`).
-  - Partner AI companion walking alongside player, stopping gracefully, turning to face each other, and emitting romantic heart sparkles when standing or walking close.
-- **Responsive Controls**:
-  - Desktop: Keyboard WASD / Arrow keys, Shift to sprint, pointer drag to look around.
-  - Mobile: Virtual on-screen touch joystick on the bottom-left + touch look on right.
-  - Click-to-move / Tap-to-move on ground with raycasting.
-  - Mode Switcher: Smooth toggle between "🚶 Walk Partner" and "🎥 Orbit View".
+## 2. World 1: Sky Islands (Playable Vertical Slice)
+- **Arrival Plateau**: Cobblestone rim, lush fantasy turf, ancient runic gate, and glowing bonsai cherry trees.
+- **Stepping Stone Archipelago**: Dynamic floating rocks with vertical bobbing physics.
+- **Twin Pressure Plates**: West (Cyan Plate) and East (Magenta Plate).
+- **Materialized Energy Bridge**: Translucent crystalline bridge appears across the chasm when both plates are held simultaneously.
+- **Ancient Celestial Sanctuary**: Raised temple with 4 runic pillars, 3 collectible star crystals, and a swirling starlight portal that triggers victory fanfare and grants 100 Love Coins, 250 Couple XP, and the "Sky Pioneer 🌟" badge.
 
-### 3. High-Fidelity 3D Worlds & Procedural Props
-- **Ever Tide — Our Sunset Island**:
-  - Stylized Tropical Beach Diorama base with curved shoreline and sandy dunes.
-  - Multi-part palm trees with segmented curved trunks, coconuts, and fanning fronds (yadrogames reference).
-  - Suspended string fairy lights with glowing bulbs (TrixtheProtogen reference).
-  - Rustic wooden pier with wooden support posts, crates with metal corner bands, and aged wooden barrels with iron hoops (CGlads reference).
-  - Weathered wooden signboard reading "EVER TIDE - Our Sunset Island 🌴" (Pasindu.Anjana reference).
-  - Vintage brass & glass oil lamps with flickering amber flames (rudavin reference).
-  - Weathered wooden rowboat with oars pulled onto the sand (donnichols reference).
-  - Striped beach umbrella and wooden lounger chair (Edwin3D & SkinOmegaProductions references).
-  - Classic park bench overlooking the horizon (berkgedik reference).
-  - Toon airplane with rotating propeller trailing personalized recipient question banner (animanyarty reference).
-  - Interactive bobbing message in a bottle.
-  - Circular island barrier preventing falling into deep water.
-- **Paris Together — Romantic 3D Invitation**:
-  - Haussmann-style building blocks with zinc mansard roofs, French windows, and wrought-iron balconies (kingdome & maheylah references).
-  - Cafe OZ ground floor storefront with red-and-white striped canopy awning and chalkboard menu (alban reference).
-  - Six-sided Parisian dark cast-iron lampposts with warm amber lantern glow (edemaistre reference).
-  - Distant Arc de Triomphe classical arch (HoangHiepVu reference) and Eiffel Tower with multi-tier lattice framework and spinning beacon light (Lambo_SC04 reference).
-  - Bistro table with candle, champagne flutes, and wax-sealed 3D invitation letter.
-  - Solid wall and balustrade colliders preventing walking through buildings or falling off the Seine terrace.
-- **Our Museum — Interactive 3D Photo Gallery**:
-  - Grand classical gallery hall with reflective parquet wood floor, baseboards, and fluted marble columns (Richard's Art Gallery reference by shinymagic).
-  - Fancy molded gold picture frames with linen mat boards and brass exhibition plaques (jamiemcfarlane reference).
-  - Classical velvet museum viewing benches in the central aisle (berkgedik reference).
-  - Solid perimeter gallery walls (left, right, back, front entrance) and column colliders.
-- **Kitty Letter — Animated 3D Character and Letter**:
-  - Cute chibi kitten with chubby cheeks, pointed ears with pink liners, animated twitching tail, paws holding the letter, and collar with golden bell (_polybit_ reference).
-  - Cozy bedroom with fluffy pastel rug, velvet cushion, and writing desk.
-  - Interactive wax-sealed love letter with floating heart aura.
-  - Solid bedroom wall and desk colliders.
+---
 
-### 4. 3D Model Inspirations & Credits Modal (`ModelCreditsModal.tsx`)
-- In-scene dialog giving attribution to all 21 Sketchfab reference items, authors, CC Attribution 4.0 licenses, and links.
-- Accessible via a button in the viewer and bottom control dock.
+## 3. Integration Points
+- **Route**: Registered under `/adventure-3d` in `App.tsx` (wrapped in `ProtectedRoute` and `ActiveSpaceRoute`).
+- **Sidebar Navigation**: Added `3D Adventure` with compass icon to `SidebarNav.tsx`.
+- **Playhouse Hub**: Featured prominent interactive launch card in `LoveversePlayhouseScreen.tsx`.
+- **Firestore Security Rules**: Configured and deployed permissions for `coupleSpaces/{spaceId}/game3dSession/{sessionId}` allowing authorized couple members full read/write/update access.
 
-### 5. Silky Smooth Pacing & Zero Viewport Occlusion
-- Three.js r160+ ACESFilmicToneMapping and `RoomEnvironment` PMREM reflections.
-- Low-occlusion collapsible bottom dock with hide/show drawer toggle.
-- Zero per-frame memory allocation (GC-free animation loop).
+---
+
+## 4. Random Date Night Generator (Date Roulette)
+- **AI Core**: Powered by Gemini API (`gemini-3.8-flash` with JSON Schema constraint) via server-side endpoint `POST /api/gemini/random-date-generator`.
+- **Location Intelligence**: Automatic GPS geolocation detection via `navigator.geolocation` with reverse geocoding + quick-select chips for global cities (NYC, SF, Paris, Tokyo, London, etc.) and custom neighborhood input.
+- **Preference Controls**: Setting filters (City Gems, Hidden Speakeasies, Rooftops, Nature & Stargazing, Arts & Culture, Dessert Crawl), vibe selector, budget ($ / $$ / $$$), time of day, and wildcard spontaneity switch.
+- **Structured Date Blueprint**:
+  - Main anchor activity with insider tips.
+  - Secondary nightcap / transition venue.
+  - Spontaneity challenge / playful dare with XP rewards.
+  - Curated conversation starter card with copy-to-clipboard.
+  - Tailored romantic playlist recommendation with Spotify search link.
+  - Weather & outfit advisory.
+  - Direct 1-click Google Maps search navigation.
+- **Interactive UI**:
+  - 3D-styled animated roulette wheel and spinning dice roller.
+  - Web Audio tactile clicks, chimes, and celebration confetti.
+  - Calendar export (`.ics` direct download & Google Calendar link).
+- **Persistent Vault & Partner Sync**:
+  - Saved to `coupleSpaces/{spaceId}/dateNights/{id}`.
+  - Real-time partner in-app notification upon locking in a date.
+  - Couple Date Vault tab with 1-5 star completion ratings and status tracking.
+- **Routes & Navigation**:
+  - Accessible via `/random-date` and `/date-generator`.
+  - Sidebar link "Date Roulette 🎲".
+  - Quick launch buttons on `AIPlannerScreen` and `SurpriseSchedulerScreen`.

@@ -41,6 +41,16 @@
       "lastEarnDate": "2026-10-18",
       "maxDailyQuota": 250,
       "updatedAt": 1792323875875
+    },
+    "VDnKMu3FHyQ7QzSVFQG3iyCM1iu2": {
+      "userId": "VDnKMu3FHyQ7QzSVFQG3iyCM1iu2",
+      "balance": 50,
+      "totalEarned": 50,
+      "totalSpent": 0,
+      "dailyEarnedToday": 0,
+      "lastEarnDate": "2026-10-27",
+      "maxDailyQuota": 250,
+      "updatedAt": 1793076281142
     }
   },
   "inventories": {
@@ -96,6 +106,19 @@
       "ownedGamePacks": [],
       "streakFreezeTokens": 0,
       "updatedAt": 1792323875875
+    },
+    "VDnKMu3FHyQ7QzSVFQG3iyCM1iu2": {
+      "userId": "VDnKMu3FHyQ7QzSVFQG3iyCM1iu2",
+      "ownedThemes": [
+        "theme_cloud_romance",
+        "theme_blush_romance"
+      ],
+      "activeTheme": "theme_cloud_romance",
+      "ownedBadges": [],
+      "equippedBadge": "",
+      "ownedGamePacks": [],
+      "streakFreezeTokens": 0,
+      "updatedAt": 1793076281143
     }
   },
   "transactions": [

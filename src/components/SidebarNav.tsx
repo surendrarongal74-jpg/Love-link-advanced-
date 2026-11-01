@@ -2,7 +2,7 @@ import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { 
   Home, MessageCircle, ShoppingBag, Heart, Calendar, Sparkles, 
-  Gamepad2, Palette, Coins, User, ShieldCheck, MapPin, Smile, Gift
+  Gamepad2, Palette, Coins, User, ShieldCheck, MapPin, Smile, Gift, Compass, Dices
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useCoupleSpace } from '../contexts/CoupleSpaceContext';
@@ -26,7 +26,10 @@ export function SidebarNav() {
 
   const links = [
     { to: '/', icon: Home, label: 'Home Sanctuary' },
-    { to: '/loveverse/gifts', icon: Gift, label: 'Loveverse Gifts' },
+    { to: '/scheduler', icon: Gift, label: 'Surprises & Dates' },
+    { to: '/random-date', icon: Dices, label: 'Date Roulette' },
+    { to: '/adventure-3d', icon: Compass, label: '3D Adventure' },
+    { to: '/loveverse/gifts', icon: Sparkles, label: 'Loveverse Gifts' },
     { to: '/chat', icon: MessageCircle, label: 'Couple Chat', badge: unreadMessagesCount },
     { to: '/playhouse', icon: Gamepad2, label: 'Playhouse Games' },
     { to: '/market', icon: ShoppingBag, label: 'Gifts & Shop' },

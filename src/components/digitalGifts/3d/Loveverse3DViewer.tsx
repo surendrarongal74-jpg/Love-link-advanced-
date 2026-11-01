@@ -13,6 +13,12 @@ import {
   Compass,
   Footprints,
   Navigation,
+  Heart,
+  Smile,
+  Music,
+  Armchair,
+  HandHeart,
+  Zap,
 } from 'lucide-react';
 import { DigitalGift } from '../../../types/digitalGifts';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -24,7 +30,8 @@ import {
   setStoredQuality,
 } from './QualitySettings';
 import { CollisionSystem } from './CollisionSystem';
-import { ExplorationEngine } from './ExplorationEngine';
+import { ExplorationEngine, DriverTarget, MovementSpeed } from './ExplorationEngine';
+import { RomanticMoment } from './CoupleAvatars';
 import { ModelCreditsModal } from './ModelCreditsModal';
 import { createEverTideIslandScene } from './scenes/EverTideIslandScene';
 import { createOurMuseumScene } from './scenes/OurMuseumScene';
@@ -33,6 +40,7 @@ import { createKittyLetterScene } from './scenes/KittyLetterScene';
 import { createSakuraNightScene } from './scenes/SakuraNightScene';
 import { createInfiniteLoveScene } from './scenes/InfiniteLoveScene';
 import { createMemoryArchiveScene } from './scenes/MemoryArchiveScene';
+import { playSound } from '../../../lib/sound';
 
 interface Props {
   gift: DigitalGift;
@@ -48,8 +56,8 @@ export function Loveverse3DViewer({ gift, onInteract, onSwitchTo2D, className }:
   const { userData } = useAuth();
   const { partnerData } = useCoupleSpace();
 
-  const playerName = userData?.displayName || gift.creatorName || 'You';
-  const partnerName = partnerData?.displayName || gift.recipientName || 'Partner 💖';
+  const playerName = userData?.displayName || gift.creatorName || 'Alex (Boy)';
+  const partnerName = partnerData?.displayName || gift.recipientName || 'Taylor (Galaxia)';
 
   // Viewer state
   const [qualityLevel, setQualityLevel] = useState<QualityLevel>(getStoredQuality);
@@ -58,6 +66,12 @@ export function Loveverse3DViewer({ gift, onInteract, onSwitchTo2D, className }:
   const [controlsHint, setControlsHint] = useState(true);
   const [isDockCollapsed, setIsDockCollapsed] = useState(false);
   const [viewMode, setViewMode] = useState<'orbit' | 'explore'>('explore');
+
+  // Character control states
+  const [activeDriver, setActiveDriver] = useState<DriverTarget>('boy');
+  const [movementSpeed, setMovementSpeed] = useState<MovementSpeed>('jog');
+  const [activeMoment, setActiveMoment] = useState<RomanticMoment>('idle');
+  const [isMomentsMenuOpen, setIsMomentsMenuOpen] = useState(false);
 
   // References across re-renders
   const sceneInstanceRef = useRef<any>(null);
@@ -111,25 +125,73 @@ export function Loveverse3DViewer({ gift, onInteract, onSwitchTo2D, className }:
     }
   };
 
-  // Virtual joystick touch handlers for mobile
-  const handleJoystickTouchStart = (e: React.TouchEvent | React.MouseEvent) => {
+  // Driver switch handler (Boy vs Galaxia Girl)
+  const handleDriverSwitch = (driver: DriverTarget) => {
+    setActiveDriver(driver);
+    if (explorationEngineRef.current) {
+      explorationEngineRef.current.setDriver(driver);
+    }
+    playSound('pop');
+  };
+
+  // Speed switch handler
+  const handleSpeedSwitch = (speed: MovementSpeed) => {
+    setMovementSpeed(speed);
+    if (explorationEngineRef.current) {
+      explorationEngineRef.current.setSpeed(speed);
+    }
+    playSound('pop');
+  };
+
+  // Jump trigger
+  const handleJump = () => {
+    if (explorationEngineRef.current) {
+      explorationEngineRef.current.triggerJump();
+      playSound('pop');
+    }
+  };
+
+  // Trigger romantic moments
+  const handleTriggerMoment = (moment: RomanticMoment) => {
+    setActiveMoment(moment);
+    if (explorationEngineRef.current) {
+      explorationEngineRef.current.triggerMoment(moment);
+    }
+    playSound('chime');
+  };
+
+  // Clear romantic moment
+  const handleClearMoment = () => {
+    setActiveMoment('idle');
+    if (explorationEngineRef.current) {
+      explorationEngineRef.current.clearMoment();
+    }
+  };
+
+  // Virtual joystick pointer handlers for mobile & desktop
+  const handleJoystickTouchStart = (e: React.PointerEvent<HTMLDivElement> | React.TouchEvent | React.MouseEvent) => {
     e.stopPropagation();
+    if ('pointerId' in e) {
+      try {
+        (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+      } catch (_) {}
+    }
     setIsJoystickActive(true);
   };
 
-  const handleJoystickTouchMove = (e: React.TouchEvent | React.MouseEvent) => {
+  const handleJoystickTouchMove = (e: React.PointerEvent<HTMLDivElement> | React.TouchEvent | React.MouseEvent) => {
     if (!isJoystickActive || !joystickContainerRef.current) return;
     const rect = joystickContainerRef.current.getBoundingClientRect();
     const centerX = rect.left + rect.width / 2;
     const centerY = rect.top + rect.height / 2;
 
-    const clientX = 'touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
-    const clientY = 'touches' in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
+    const clientX = 'touches' in e ? e.touches[0].clientX : (e as React.PointerEvent | React.MouseEvent).clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : (e as React.PointerEvent | React.MouseEvent).clientY;
 
     const maxRadius = rect.width / 2;
     let dx = clientX - centerX;
     let dy = clientY - centerY;
-    const dist = Math.sqrt(dx * dx + dy * dy);
+    const dist = Math.hypot(dx, dy);
 
     if (dist > maxRadius) {
       dx = (dx / dist) * maxRadius;
@@ -146,7 +208,12 @@ export function Loveverse3DViewer({ gift, onInteract, onSwitchTo2D, className }:
     }
   };
 
-  const handleJoystickTouchEnd = () => {
+  const handleJoystickTouchEnd = (e?: React.PointerEvent<HTMLDivElement> | React.TouchEvent | React.MouseEvent) => {
+    if (e && 'pointerId' in e) {
+      try {
+        (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+      } catch (_) {}
+    }
     setIsJoystickActive(false);
     setJoystickPos({ x: 0, y: 0 });
     if (explorationEngineRef.current) {
@@ -297,7 +364,7 @@ export function Loveverse3DViewer({ gift, onInteract, onSwitchTo2D, className }:
     }
     sceneInstanceRef.current = instance;
 
-    // Create Exploration Engine with couple avatars & partner companion
+    // Create Exploration Engine with Boy and Galaxia Girl avatars
     const explorationEngine = new ExplorationEngine({
       scene,
       camera,
@@ -308,6 +375,8 @@ export function Loveverse3DViewer({ gift, onInteract, onSwitchTo2D, className }:
       initialPosition: instance.initialPlayerPos || new THREE.Vector3(0, 0, 3),
       getTerrainHeight: instance.getTerrainHeight || (() => 0),
     });
+    explorationEngine.setDriver(activeDriver);
+    explorationEngine.setSpeed(movementSpeed);
     explorationEngineRef.current = explorationEngine;
 
     // Default to active explore mode or orbit mode
@@ -404,15 +473,44 @@ export function Loveverse3DViewer({ gift, onInteract, onSwitchTo2D, className }:
           type="button"
           onClick={() => setIsCreditsOpen(true)}
           className="px-2.5 py-1.5 rounded-full bg-slate-900/90 hover:bg-slate-800 text-slate-200 text-xs font-medium border border-slate-700/60 shadow-lg flex items-center gap-1.5 transition active:scale-95"
-          title="3D World Inspirations & References"
+          title="3D World & Character Inspirations"
         >
           <Award className="w-3.5 h-3.5 text-amber-400" />
           <span className="hidden sm:inline">3D Credits</span>
         </button>
       </div>
 
-      {/* Top Right Mode Status Badge */}
+      {/* Top Right Mode Status Badge & Character Switcher */}
       <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
+        {viewMode === 'explore' && (
+          <div className="flex items-center bg-slate-900/90 border border-slate-700/70 p-0.5 rounded-full shadow-lg text-[11px]">
+            <button
+              type="button"
+              onClick={() => handleDriverSwitch('boy')}
+              className={`px-2.5 py-1 rounded-full font-semibold transition ${
+                activeDriver === 'boy'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+              title="Control Character Boy 1 (Alex)"
+            >
+              🧑 Boy
+            </button>
+            <button
+              type="button"
+              onClick={() => handleDriverSwitch('galaxia')}
+              className={`px-2.5 py-1 rounded-full font-semibold transition ${
+                activeDriver === 'galaxia'
+                  ? 'bg-pink-600 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+              title="Control Galaxia Anime Girl (Taylor)"
+            >
+              👧 Galaxia
+            </button>
+          </div>
+        )}
+
         <div className="px-3 py-1 rounded-full bg-slate-900/80 border border-slate-700/60 text-[11px] font-medium text-slate-300 flex items-center gap-1.5 shadow-md">
           {viewMode === 'explore' ? (
             <>
@@ -422,13 +520,13 @@ export function Loveverse3DViewer({ gift, onInteract, onSwitchTo2D, className }:
           ) : (
             <>
               <Compass className="w-3 h-3 text-cyan-400" />
-              <span>Orbit Camera Mode</span>
+              <span>Orbit View</span>
             </>
           )}
         </div>
       </div>
 
-      {/* On-Screen Virtual Touch Joystick (Visible in Explore mode on touch devices / left corner) */}
+      {/* On-Screen Virtual Touch Joystick (Bottom Left) */}
       {viewMode === 'explore' && (
         <div
           className="absolute bottom-24 left-6 z-20 pointer-events-auto touch-none select-none"
@@ -440,34 +538,160 @@ export function Loveverse3DViewer({ gift, onInteract, onSwitchTo2D, className }:
             onPointerMove={handleJoystickTouchMove}
             onPointerUp={handleJoystickTouchEnd}
             onPointerCancel={handleJoystickTouchEnd}
-            className="relative w-28 h-28 rounded-full bg-slate-950/60 border-2 border-slate-700/80 flex items-center justify-center shadow-2xl backdrop-blur-none"
+            className="relative w-28 h-28 rounded-full bg-slate-950/65 border-2 border-slate-700/80 flex items-center justify-center shadow-2xl"
           >
             <div
               style={{
                 transform: `translate(${joystickPos.x}px, ${joystickPos.y}px)`,
                 transition: isJoystickActive ? 'none' : 'transform 0.15s ease-out',
               }}
-              className="w-12 h-12 rounded-full bg-rose-500/80 border border-rose-300 shadow-md flex items-center justify-center text-white"
+              className="w-12 h-12 rounded-full bg-gradient-to-br from-rose-500 to-pink-600 border border-rose-300 shadow-md flex items-center justify-center text-white"
             >
               <Navigation className="w-5 h-5 -rotate-45" />
             </div>
-            <div className="absolute -top-5 text-[10px] text-slate-400 font-medium whitespace-nowrap">
+            <div className="absolute -top-5 text-[10px] text-slate-300 font-semibold whitespace-nowrap bg-slate-900/80 px-2 py-0.5 rounded-full border border-slate-800">
               Move & Walk
             </div>
           </div>
         </div>
       )}
 
-      {/* Touch & Keyboard Hint (Auto fades out) */}
+      {/* Mobile Jump Button (Bottom Right above dock) */}
+      {viewMode === 'explore' && (
+        <div className="absolute bottom-24 right-6 z-20">
+          <button
+            type="button"
+            onClick={handleJump}
+            className="w-14 h-14 rounded-full bg-gradient-to-br from-purple-600 to-pink-600 text-white font-bold shadow-xl border border-pink-300/60 flex flex-col items-center justify-center active:scale-90 transition"
+            title="Jump (or press Spacebar)"
+          >
+            <Zap className="w-5 h-5" />
+            <span className="text-[9px] uppercase tracking-wider font-extrabold">Jump</span>
+          </button>
+        </div>
+      )}
+
+      {/* Controls Guidance Hint Banner */}
       {controlsHint && (
         <div className="absolute top-16 left-1/2 -translate-x-1/2 pointer-events-none z-10 transition-opacity duration-1000">
-          <div className="bg-slate-950/85 border border-rose-500/20 text-slate-200 text-xs px-4 py-2 rounded-full shadow-lg flex items-center gap-2">
-            <span>✨ WASD / Touch Joystick to walk with partner • Drag to look • Solid wall boundaries active</span>
+          <div className="bg-slate-950/90 border border-rose-500/30 text-slate-200 text-xs px-4 py-2 rounded-full shadow-lg flex items-center gap-2">
+            <span>✨ WASD to walk • Space to jump • Click Romantic Moments below!</span>
           </div>
         </div>
       )}
 
-      {/* UNIFIED COLLAPSIBLE BOTTOM CONTROL DOCK (Three.js Skill Directive) */}
+      {/* Romantic Moments Menu Popover */}
+      {isMomentsMenuOpen && viewMode === 'explore' && (
+        <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-30 bg-slate-900/95 border border-pink-500/40 rounded-3xl p-3 shadow-2xl max-w-[94vw] text-slate-200 animate-fadeIn">
+          <div className="text-[11px] font-bold text-pink-400 mb-2 px-2 flex items-center justify-between">
+            <span className="flex items-center gap-1.5">
+              <Heart className="w-3.5 h-3.5 fill-pink-400 text-pink-400" />
+              <span>Romantic Moments for Boy & Galaxia Girl</span>
+            </span>
+            <button
+              type="button"
+              onClick={() => setIsMomentsMenuOpen(false)}
+              className="text-slate-400 hover:text-white text-xs px-1"
+            >
+              ✕
+            </button>
+          </div>
+
+          <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 text-xs">
+            <button
+              type="button"
+              onClick={() => handleTriggerMoment('hold_hands')}
+              className={`p-2.5 rounded-2xl border flex flex-col items-center gap-1 transition active:scale-95 ${
+                activeMoment === 'hold_hands'
+                  ? 'bg-rose-500/30 border-rose-400 text-white font-bold'
+                  : 'bg-slate-800/80 hover:bg-slate-700 border-slate-700 text-slate-300'
+              }`}
+            >
+              <HandHeart className="w-5 h-5 text-rose-400" />
+              <span>Hold Hands</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleTriggerMoment('hug')}
+              className={`p-2.5 rounded-2xl border flex flex-col items-center gap-1 transition active:scale-95 ${
+                activeMoment === 'hug'
+                  ? 'bg-pink-500/30 border-pink-400 text-white font-bold'
+                  : 'bg-slate-800/80 hover:bg-slate-700 border-slate-700 text-slate-300'
+              }`}
+            >
+              <Heart className="w-5 h-5 text-pink-400 fill-pink-400" />
+              <span>Warm Hug</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleTriggerMoment('kiss')}
+              className={`p-2.5 rounded-2xl border flex flex-col items-center gap-1 transition active:scale-95 ${
+                activeMoment === 'kiss'
+                  ? 'bg-rose-600/30 border-rose-400 text-white font-bold'
+                  : 'bg-slate-800/80 hover:bg-slate-700 border-slate-700 text-slate-300'
+              }`}
+            >
+              <Sparkles className="w-5 h-5 text-amber-400" />
+              <span>Sweet Kiss</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleTriggerMoment('dance')}
+              className={`p-2.5 rounded-2xl border flex flex-col items-center gap-1 transition active:scale-95 ${
+                activeMoment === 'dance'
+                  ? 'bg-purple-500/30 border-purple-400 text-white font-bold'
+                  : 'bg-slate-800/80 hover:bg-slate-700 border-slate-700 text-slate-300'
+              }`}
+            >
+              <Music className="w-5 h-5 text-purple-400" />
+              <span>Waltz Dance</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleTriggerMoment('sit')}
+              className={`p-2.5 rounded-2xl border flex flex-col items-center gap-1 transition active:scale-95 ${
+                activeMoment === 'sit'
+                  ? 'bg-amber-500/30 border-amber-400 text-white font-bold'
+                  : 'bg-slate-800/80 hover:bg-slate-700 border-slate-700 text-slate-300'
+              }`}
+            >
+              <Armchair className="w-5 h-5 text-amber-400" />
+              <span>Sit Together</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleTriggerMoment('wave')}
+              className={`p-2.5 rounded-2xl border flex flex-col items-center gap-1 transition active:scale-95 ${
+                activeMoment === 'wave'
+                  ? 'bg-sky-500/30 border-sky-400 text-white font-bold'
+                  : 'bg-slate-800/80 hover:bg-slate-700 border-slate-700 text-slate-300'
+              }`}
+            >
+              <Smile className="w-5 h-5 text-sky-400" />
+              <span>Wave & Kiss</span>
+            </button>
+          </div>
+
+          {activeMoment !== 'idle' && (
+            <div className="mt-2 text-center">
+              <button
+                type="button"
+                onClick={handleClearMoment}
+                className="text-[11px] text-slate-400 hover:text-white underline"
+              >
+                Return to Free Roam
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* UNIFIED COLLAPSIBLE BOTTOM CONTROL DOCK */}
       <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center">
         {/* Collapse / Expand Toggle Button */}
         <button
@@ -478,7 +702,7 @@ export function Loveverse3DViewer({ gift, onInteract, onSwitchTo2D, className }:
           {isDockCollapsed ? (
             <>
               <ChevronUp className="w-3.5 h-3.5 text-rose-400" />
-              <span>Show Controls</span>
+              <span>Show Controls & Moments</span>
             </>
           ) : (
             <>
@@ -490,7 +714,7 @@ export function Loveverse3DViewer({ gift, onInteract, onSwitchTo2D, className }:
 
         {/* Dock Bar */}
         {!isDockCollapsed && (
-          <div className="px-3 py-2 rounded-2xl bg-slate-900/95 border border-slate-800 shadow-2xl flex items-center gap-2.5 max-w-[94vw] overflow-x-auto text-xs text-slate-200">
+          <div className="px-3 py-2 rounded-2xl bg-slate-900/95 border border-slate-800 shadow-2xl flex items-center gap-2 max-w-[94vw] overflow-x-auto text-xs text-slate-200">
             {/* Walk Together vs Orbit Toggle */}
             <div className="flex items-center bg-slate-950/80 p-0.5 rounded-xl border border-slate-800">
               <button
@@ -518,6 +742,58 @@ export function Loveverse3DViewer({ gift, onInteract, onSwitchTo2D, className }:
                 <span>Orbit View</span>
               </button>
             </div>
+
+            {/* Romantic Moments Drawer Button */}
+            {viewMode === 'explore' && (
+              <button
+                type="button"
+                onClick={() => setIsMomentsMenuOpen(!isMomentsMenuOpen)}
+                className={`px-3 py-1.5 rounded-xl border flex items-center gap-1.5 font-semibold transition active:scale-95 ${
+                  isMomentsMenuOpen
+                    ? 'bg-pink-600 text-white border-pink-400 shadow-md'
+                    : 'bg-slate-800 hover:bg-slate-700 text-pink-300 border-pink-500/30'
+                }`}
+              >
+                <Heart className="w-3.5 h-3.5 fill-pink-400 text-pink-400" />
+                <span>Moments</span>
+              </button>
+            )}
+
+            {/* Speed Selector (Walk, Jog, Sprint) */}
+            {viewMode === 'explore' && (
+              <div className="flex items-center bg-slate-950/80 p-0.5 rounded-xl border border-slate-800 text-[11px]">
+                <button
+                  type="button"
+                  onClick={() => handleSpeedSwitch('walk')}
+                  className={`px-2 py-1 rounded-lg transition ${
+                    movementSpeed === 'walk' ? 'bg-slate-700 text-white font-bold' : 'text-slate-400'
+                  }`}
+                  title="Walk Speed"
+                >
+                  Walk
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSpeedSwitch('jog')}
+                  className={`px-2 py-1 rounded-lg transition ${
+                    movementSpeed === 'jog' ? 'bg-slate-700 text-white font-bold' : 'text-slate-400'
+                  }`}
+                  title="Jog Speed"
+                >
+                  Jog
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSpeedSwitch('sprint')}
+                  className={`px-2 py-1 rounded-lg transition ${
+                    movementSpeed === 'sprint' ? 'bg-amber-600 text-white font-bold' : 'text-slate-400'
+                  }`}
+                  title="Sprint Speed"
+                >
+                  Run
+                </button>
+              </div>
+            )}
 
             {/* Reset Camera View */}
             <button

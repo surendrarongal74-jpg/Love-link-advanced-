@@ -163,7 +163,7 @@ export const SHOP_CATALOG: ShopItem[] = [
     cost: 50,
     description: 'A hand-picked scarlet rose glistening with morning dewdrops to show your tender affection.',
     icon: '🌹',
-    image: '/src/assets/images/gift_single_rose_1791977103530.jpg',
+    image: '/images/gift_single_rose_1791977103530.jpg',
     isAnimated: true
   },
   {
@@ -174,7 +174,7 @@ export const SHOP_CATALOG: ShopItem[] = [
     cost: 75,
     description: 'A vintage wax-sealed parchment envelope delivering your heartfelt message.',
     icon: '💌',
-    image: '/src/assets/images/gift_love_letter_1791977158702.jpg',
+    image: '/images/gift_love_letter_1791977158702.jpg',
     isAnimated: true
   },
   {
@@ -185,7 +185,7 @@ export const SHOP_CATALOG: ShopItem[] = [
     cost: 100,
     description: 'A cloud-soft teddy bear holding a glowing heart that bounces into your partner\'s space.',
     icon: '🧸',
-    image: '/src/assets/images/gift_cuddle_teddy_1791976822448.jpg',
+    image: '/images/gift_cuddle_teddy_1791976822448.jpg',
     isAnimated: true
   },
   {
@@ -196,7 +196,7 @@ export const SHOP_CATALOG: ShopItem[] = [
     cost: 125,
     description: 'A luxurious pink velvet heart pillow adorned with golden lace embroidery for cozy cuddles.',
     icon: '💖',
-    image: '/src/assets/images/gift_heart_pillow_1792161124505.jpg',
+    image: '/images/gift_heart_pillow_1792161124505.jpg',
     isAnimated: true
   },
   {
@@ -207,7 +207,7 @@ export const SHOP_CATALOG: ShopItem[] = [
     cost: 150,
     description: 'A gourmet strawberry cream sponge cake topped with sparkler candles to sweeten their day.',
     icon: '🎂',
-    image: '/src/assets/images/gift_heart_cake_1791976879124.jpg',
+    image: '/images/gift_heart_cake_1791976879124.jpg',
     isAnimated: true
   },
   {
@@ -218,7 +218,7 @@ export const SHOP_CATALOG: ShopItem[] = [
     cost: 200,
     description: 'A grand arrangement of 24 fragrant roses that showers your partner\'s screen with petal confetti.',
     icon: '💐',
-    image: '/src/assets/images/gift_bouquet_roses_1791976799394.jpg',
+    image: '/images/gift_bouquet_roses_1791976799394.jpg',
     isAnimated: true,
     popularity: 'Most Popular'
   },
@@ -230,7 +230,7 @@ export const SHOP_CATALOG: ShopItem[] = [
     cost: 300,
     description: 'A hand-carved crystal heart that refracts luminous rainbow starlight across the room.',
     icon: '💎',
-    image: '/src/assets/images/gift_crystal_heart_1791976847630.jpg',
+    image: '/images/gift_crystal_heart_1791976847630.jpg',
     isAnimated: true
   },
   {
@@ -241,7 +241,7 @@ export const SHOP_CATALOG: ShopItem[] = [
     cost: 400,
     description: 'A fairy-tale glass globe resting on pastel clouds with swirling golden stardust.',
     icon: '🔮',
-    image: '/src/assets/images/gift_snow_globe_1792055201240.jpg',
+    image: '/images/gift_snow_globe_1792055201240.jpg',
     isAnimated: true,
     popularity: 'Featured'
   },
@@ -253,7 +253,7 @@ export const SHOP_CATALOG: ShopItem[] = [
     cost: 550,
     description: 'A shimmering chest tied with satin ribbon that bursts open with luminous celestial hearts.',
     icon: '🎁',
-    image: '/src/assets/images/gift_starlight_box_1792055203067.jpg',
+    image: '/images/gift_starlight_box_1792055203067.jpg',
     isAnimated: true
   },
   {
@@ -264,7 +264,7 @@ export const SHOP_CATALOG: ShopItem[] = [
     cost: 700,
     description: 'A glowing warm lantern carrying your shared dreams into the twilight heavens.',
     icon: '🏮',
-    image: '/src/assets/images/gift_floating_lantern_1792161141543.jpg',
+    image: '/images/gift_floating_lantern_1792161141543.jpg',
     isAnimated: true
   },
   {
@@ -275,7 +275,7 @@ export const SHOP_CATALOG: ShopItem[] = [
     cost: 1200,
     description: 'An iridescent cosmic comet tracing a sparkling stardust trail over your partner\'s device.',
     icon: '🌠',
-    image: '/src/assets/images/gift_shooting_star_1792055225008.jpg',
+    image: '/images/gift_shooting_star_1792055225008.jpg',
     isAnimated: true
   },
   {
@@ -286,7 +286,7 @@ export const SHOP_CATALOG: ShopItem[] = [
     cost: 2500,
     description: 'A breathtaking midnight fireworks show exploding into pulsing heart constellations and aurora lights.',
     icon: '🎆',
-    image: '/src/assets/images/gift_fireworks_1792161156207.jpg',
+    image: '/images/gift_fireworks_1792161156207.jpg',
     isAnimated: true
   },
 
@@ -300,7 +300,7 @@ export const SHOP_CATALOG: ShopItem[] = [
     cost: 0,
     description: 'Dreamy cotton-candy skies, floating pastel hearts and warm cream cards.',
     icon: '☁️',
-    image: '/src/assets/images/theme_cloud_romance_1791977048928.jpg',
+    image: '/images/theme_cloud_romance_1791977048928.jpg',
     previewColor: '#F2A7BE',
     popularity: 'Default'
   },
@@ -311,7 +311,7 @@ export const SHOP_CATALOG: ShopItem[] = [
     cost: 1000,
     description: 'A tranquil twilight violet atmosphere with crescent moon highlights and starry accents.',
     icon: '🌙',
-    image: '/src/assets/images/theme_moonlight_sky_1791976914876.jpg',
+    image: '/images/theme_moonlight_sky_1791976914876.jpg',
     previewColor: '#8B5CF6'
   },
   {
@@ -321,7 +321,7 @@ export const SHOP_CATALOG: ShopItem[] = [
     cost: 2500,
     description: 'Passionate crimson rose gradients, ornate filigree borders and warm golden chandeliers.',
     icon: '👑',
-    image: '/src/assets/images/theme_royal_hearts_1791977003556.jpg',
+    image: '/images/theme_royal_hearts_1791977003556.jpg',
     previewColor: '#E11D48'
   },
   {
@@ -331,7 +331,7 @@ export const SHOP_CATALOG: ShopItem[] = [
     cost: 5000,
     description: 'Deep cosmic violet space with shimmering nebulae and interstellar constellation glows.',
     icon: '🌌',
-    image: '/src/assets/images/theme_soulmate_galaxy_1791976959294.jpg',
+    image: '/images/theme_soulmate_galaxy_1791976959294.jpg',
     previewColor: '#9333EA'
   },
 
@@ -346,7 +346,7 @@ export const SHOP_CATALOG: ShopItem[] = [
     cost: 100,
     description: 'An ornate golden compass medallion commemorating the very day your hearts first crossed paths.',
     icon: '🧭',
-    image: '/src/assets/images/badge_first_spark_1792161236608.jpg',
+    image: '/images/badge_first_spark_1792161236608.jpg',
     badgeLabel: '✨ First Spark'
   },
   {
@@ -357,7 +357,7 @@ export const SHOP_CATALOG: ShopItem[] = [
     cost: 250,
     description: 'A radiant fiery gold star crest honoring consistent daily devotion to your relationship.',
     icon: '🔥',
-    image: '/src/assets/images/badge_streak_star_1792161172950.jpg',
+    image: '/images/badge_streak_star_1792161172950.jpg',
     badgeLabel: '🔥 Streak Star'
   },
   {
@@ -368,7 +368,7 @@ export const SHOP_CATALOG: ShopItem[] = [
     cost: 350,
     description: 'An opulent 24K baroque golden heart frame adorned with pearls for your profile picture.',
     icon: '🖼️',
-    image: '/src/assets/images/badge_golden_frame_1791977214324.jpg',
+    image: '/images/badge_golden_frame_1791977214324.jpg',
     badgeLabel: 'Golden Frame'
   },
   {
@@ -379,7 +379,7 @@ export const SHOP_CATALOG: ShopItem[] = [
     cost: 500,
     description: 'A shimmering white-gold halo of astral light with dancing diamond sparkles.',
     icon: '✨',
-    image: '/src/assets/images/frame_celestial_halo_1792055201200.jpg',
+    image: '/images/frame_celestial_halo_1792055201200.jpg',
     badgeLabel: 'Celestial Halo'
   },
   {
@@ -390,7 +390,7 @@ export const SHOP_CATALOG: ShopItem[] = [
     cost: 750,
     description: 'A glowing amethyst crystal circle traced with shimmering astrological zodiac constellations.',
     icon: '🪐',
-    image: '/src/assets/images/frame_lavender_constellation_1792161187419.jpg',
+    image: '/images/frame_lavender_constellation_1792161187419.jpg',
     badgeLabel: 'Constellation Frame'
   },
 
@@ -404,7 +404,7 @@ export const SHOP_CATALOG: ShopItem[] = [
     cost: 100,
     description: '40 deep vulnerability prompts and spicy romantic dares to spark late-night conversations.',
     icon: '🃏',
-    image: '/src/assets/images/pack_truth_or_dare_1792161203631.jpg'
+    image: '/images/pack_truth_or_dare_1792161203631.jpg'
   },
   {
     id: 'pack_romantic_date_roulette',
@@ -413,6 +413,6 @@ export const SHOP_CATALOG: ShopItem[] = [
     cost: 120,
     description: '30 spontaneous couples escapades, mystery itinerary cards, and surprise activity prompts.',
     icon: '🎲',
-    image: '/src/assets/images/pack_date_roulette_1792161220187.jpg'
+    image: '/images/pack_date_roulette_1792161220187.jpg'
   }
 ];

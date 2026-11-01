@@ -1,6 +1,9 @@
 import * as THREE from 'three';
 import { CollisionSystem } from './CollisionSystem';
-import { CoupleAvatar } from './CoupleAvatars';
+import { CoupleAvatar, RomanticMoment } from './CoupleAvatars';
+
+export type DriverTarget = 'boy' | 'galaxia' | 'both';
+export type MovementSpeed = 'walk' | 'jog' | 'sprint';
 
 export interface ExplorationEngineConfig {
   scene: THREE.Scene;
@@ -29,10 +32,14 @@ export class ExplorationEngine {
   public collisionSystem: CollisionSystem;
   public getTerrainHeight: (x: number, z: number) => number;
 
-  public playerAvatar: CoupleAvatar;
-  public partnerAvatar: CoupleAvatar;
+  public boyAvatar: CoupleAvatar;
+  public galaxiaAvatar: CoupleAvatar;
 
   public isActive = false;
+  public activeDriver: DriverTarget = 'boy';
+  public movementSpeed: MovementSpeed = 'jog';
+  public activeMoment: RomanticMoment = 'idle';
+  public momentTimer = 0;
 
   // Input states
   private keys: Record<string, boolean> = {};
@@ -40,17 +47,20 @@ export class ExplorationEngine {
   public clickTarget: THREE.Vector3 | null = null;
 
   // Camera settings
-  private cameraDistance = 6.5;
-  private cameraHeight = 3.2;
+  private baseCameraDistance = 6.0;
+  private cameraDistance = 6.0;
+  private targetCameraDistance = 6.0;
+  private cameraHeight = 3.0;
   private cameraYaw = 0;
   private cameraPitch = 0.28;
   private isDraggingCamera = false;
   private lastPointerPos = { x: 0, y: 0 };
 
-  // Romantic heart particle emitter
-  private heartParticles: THREE.Points;
-  private heartGeo: THREE.BufferGeometry;
-  private heartCount = 20;
+  // Romantic particle celebration system
+  private celebrationParticles: THREE.Points;
+  private celebrationGeo: THREE.BufferGeometry;
+  private particleCount = 40;
+  private particleVels: Float32Array;
 
   constructor(config: ExplorationEngineConfig) {
     this.scene = config.scene;
@@ -62,82 +72,95 @@ export class ExplorationEngine {
     const initPos = config.initialPosition || new THREE.Vector3(0, 0, 0);
     const groundY = this.getTerrainHeight(initPos.x, initPos.z);
 
-    // Initialize player avatar
-    this.playerAvatar = new CoupleAvatar({
-      name: config.playerName || 'You',
-      color: '#4A90E2',
-      accentColor: '#1E3A8A',
+    // Initialize Character Boy 1 (https://skfb.ly/oMnnr)
+    this.boyAvatar = new CoupleAvatar({
+      name: config.playerName || 'Alex (Boy)',
+      characterType: 'boy',
+      primaryColor: '#2962FF',
+      accentColor: '#263238',
       isPartner: false,
     });
-    this.playerAvatar.group.position.set(initPos.x, groundY, initPos.z);
-    this.scene.add(this.playerAvatar.group);
+    this.boyAvatar.group.position.set(initPos.x - 0.6, groundY, initPos.z);
+    this.scene.add(this.boyAvatar.group);
 
-    // Initialize partner avatar
-    this.partnerAvatar = new CoupleAvatar({
-      name: config.partnerName || 'Partner 💖',
-      color: '#E8547A',
-      accentColor: '#9C27B0',
+    // Initialize Galaxia - Anime Girl (https://skfb.ly/o7qwD)
+    this.galaxiaAvatar = new CoupleAvatar({
+      name: config.partnerName || 'Taylor (Galaxia)',
+      characterType: 'galaxia',
+      primaryColor: '#EC407A',
+      accentColor: '#7E57C2',
       isPartner: true,
     });
-    this.partnerAvatar.group.position.set(initPos.x + 1.2, groundY, initPos.z);
-    this.scene.add(this.partnerAvatar.group);
+    this.galaxiaAvatar.group.position.set(initPos.x + 0.6, groundY, initPos.z);
+    this.scene.add(this.galaxiaAvatar.group);
 
-    // Heart particles setup
-    this.heartGeo = new THREE.BufferGeometry();
-    const hPos = new Float32Array(this.heartCount * 3);
-    for (let i = 0; i < this.heartCount; i++) {
-      hPos[i * 3] = 0;
-      hPos[i * 3 + 1] = -100; // hidden until spawned
-      hPos[i * 3 + 2] = 0;
-    }
-    this.heartGeo.setAttribute('position', new THREE.BufferAttribute(hPos, 3));
+    // Celebration particles setup (Hearts & Starlight)
+    this.celebrationGeo = new THREE.BufferGeometry();
+    const pPos = new Float32Array(this.particleCount * 3);
+    this.particleVels = new Float32Array(this.particleCount * 3);
 
-    // Simple procedural heart shape texture
-    const hCanvas = document.createElement('canvas');
-    hCanvas.width = 32;
-    hCanvas.height = 32;
-    const hCtx = hCanvas.getContext('2d');
-    if (hCtx) {
-      hCtx.fillStyle = '#FF4081';
-      hCtx.font = '24px serif';
-      hCtx.textAlign = 'center';
-      hCtx.textBaseline = 'middle';
-      hCtx.fillText('♥', 16, 16);
+    for (let i = 0; i < this.particleCount; i++) {
+      pPos[i * 3] = 0;
+      pPos[i * 3 + 1] = -100;
+      pPos[i * 3 + 2] = 0;
     }
-    const hTex = new THREE.CanvasTexture(hCanvas);
-    const hMat = new THREE.PointsMaterial({
-      size: 0.6,
-      map: hTex,
+    this.celebrationGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
+
+    const pCanvas = document.createElement('canvas');
+    pCanvas.width = 32;
+    pCanvas.height = 32;
+    const pCtx = pCanvas.getContext('2d');
+    if (pCtx) {
+      pCtx.fillStyle = '#FF4081';
+      pCtx.font = '24px serif';
+      pCtx.textAlign = 'center';
+      pCtx.textBaseline = 'middle';
+      pCtx.fillText('♥', 16, 16);
+    }
+    const pTex = new THREE.CanvasTexture(pCanvas);
+    const pMat = new THREE.PointsMaterial({
+      size: 0.7,
+      map: pTex,
       transparent: true,
       depthWrite: false,
       blending: THREE.AdditiveBlending,
     });
-    this.heartParticles = new THREE.Points(this.heartGeo, hMat);
-    this.scene.add(this.heartParticles);
+    this.celebrationParticles = new THREE.Points(this.celebrationGeo, pMat);
+    this.scene.add(this.celebrationParticles);
 
-    // Bind event listeners
     this.bindEvents();
   }
 
   private onKeyDown = (e: KeyboardEvent) => {
     if (!this.isActive) return;
-    this.keys[e.key.toLowerCase()] = true;
+    const key = e.key.toLowerCase();
+    this.keys[key] = true;
     this.keys[e.code.toLowerCase()] = true;
-    if (['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(e.key.toLowerCase())) {
+
+    if (['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(key)) {
       this.clickTarget = null;
+      if (this.activeMoment !== 'idle' && this.activeMoment !== 'hold_hands') {
+        this.clearMoment();
+      }
+    }
+
+    // Spacebar Jump
+    if (e.code === 'Space' || key === ' ') {
+      e.preventDefault();
+      this.triggerJump();
     }
   };
 
   private onKeyUp = (e: KeyboardEvent) => {
-    this.keys[e.key.toLowerCase()] = false;
+    const key = e.key.toLowerCase();
+    this.keys[key] = false;
     this.keys[e.code.toLowerCase()] = false;
   };
 
   private onPointerDown = (e: PointerEvent) => {
     if (!this.isActive) return;
-    // Right button or touch drag on right side moves camera
     if (e.pointerType === 'touch' && e.clientX < window.innerWidth * 0.45) {
-      return; // Left side is for touch joystick
+      return; // Touch joystick zone
     }
     this.isDraggingCamera = true;
     this.lastPointerPos = { x: e.clientX, y: e.clientY };
@@ -149,8 +172,8 @@ export class ExplorationEngine {
     const dy = e.clientY - this.lastPointerPos.y;
     this.lastPointerPos = { x: e.clientX, y: e.clientY };
 
-    this.cameraYaw -= dx * 0.006;
-    this.cameraPitch = Math.max(0.05, Math.min(Math.PI / 2.2, this.cameraPitch + dy * 0.005));
+    this.cameraYaw -= dx * 0.0055;
+    this.cameraPitch = Math.max(0.05, Math.min(Math.PI / 2.2, this.cameraPitch + dy * 0.0045));
   };
 
   private onPointerUp = () => {
@@ -159,7 +182,7 @@ export class ExplorationEngine {
 
   private onWheel = (e: WheelEvent) => {
     if (!this.isActive) return;
-    this.cameraDistance = Math.max(2.5, Math.min(16, this.cameraDistance + e.deltaY * 0.005));
+    this.targetCameraDistance = Math.max(2.5, Math.min(16, this.targetCameraDistance + e.deltaY * 0.005));
   };
 
   private bindEvents(): void {
@@ -173,19 +196,16 @@ export class ExplorationEngine {
 
   public activate(): void {
     this.isActive = true;
-    this.playerAvatar.group.visible = true;
-    this.partnerAvatar.group.visible = true;
-
-    // Align camera behind player
-    const pPos = this.playerAvatar.group.position;
-    this.cameraYaw = this.playerAvatar.heading;
+    this.boyAvatar.group.visible = true;
+    this.galaxiaAvatar.group.visible = true;
+    this.targetCameraDistance = this.baseCameraDistance;
     this.updateCamera(0.1);
   }
 
   public deactivate(): void {
     this.isActive = false;
-    this.playerAvatar.group.visible = false;
-    this.partnerAvatar.group.visible = false;
+    this.boyAvatar.group.visible = false;
+    this.galaxiaAvatar.group.visible = false;
     this.isDraggingCamera = false;
     this.keys = {};
     this.joystickVector = { x: 0, y: 0 };
@@ -195,15 +215,90 @@ export class ExplorationEngine {
   public setClickTarget(point: THREE.Vector3): void {
     if (!this.isActive) return;
     this.clickTarget = point.clone();
+    if (this.activeMoment !== 'idle' && this.activeMoment !== 'hold_hands') {
+      this.clearMoment();
+    }
+  }
+
+  public triggerJump(): void {
+    this.boyAvatar.triggerJump();
+    this.galaxiaAvatar.triggerJump();
+    this.spawnCelebrationBurst(0.8);
+  }
+
+  public triggerMoment(moment: RomanticMoment): void {
+    this.activeMoment = moment;
+    this.momentTimer = 0;
+    this.boyAvatar.setMoment(moment);
+    this.galaxiaAvatar.setMoment(moment);
+
+    // Cinematic camera zoom in for romantic moments
+    if (['hug', 'kiss', 'dance'].includes(moment)) {
+      this.targetCameraDistance = 3.6;
+    } else {
+      this.targetCameraDistance = this.baseCameraDistance;
+    }
+
+    // Spawn celebratory particles
+    this.spawnCelebrationBurst(1.8);
+  }
+
+  public clearMoment(): void {
+    this.activeMoment = 'idle';
+    this.boyAvatar.setMoment('idle');
+    this.galaxiaAvatar.setMoment('idle');
+    this.targetCameraDistance = this.baseCameraDistance;
+  }
+
+  public setSpeed(speed: MovementSpeed): void {
+    this.movementSpeed = speed;
+  }
+
+  public setDriver(driver: DriverTarget): void {
+    this.activeDriver = driver;
+  }
+
+  private getSpeedMultiplier(): number {
+    switch (this.movementSpeed) {
+      case 'walk': return 0.8;
+      case 'jog': return 1.25;
+      case 'sprint': return 1.8;
+      default: return 1.25;
+    }
   }
 
   public update(delta: number, elapsed: number): void {
     if (!this.isActive) return;
 
     const clampedDelta = Math.min(delta, 0.1);
-    const pPos = this.playerAvatar.group.position;
 
-    // 1. Calculate movement direction from inputs
+    // Primary driver avatar (Boy, Galaxia, or Lead)
+    const leadAvatar = this.activeDriver === 'galaxia' ? this.galaxiaAvatar : this.boyAvatar;
+    const followAvatar = this.activeDriver === 'galaxia' ? this.boyAvatar : this.galaxiaAvatar;
+    const leadPos = leadAvatar.group.position;
+
+    // Camera zoom damping
+    this.cameraDistance = THREE.MathUtils.damp(this.cameraDistance, this.targetCameraDistance, 8, clampedDelta);
+
+    // Handle Moment specific kinematics
+    if (this.activeMoment !== 'idle') {
+      this.updateMomentKinematics(clampedDelta, leadAvatar, followAvatar);
+    } else {
+      // Standard Free Movement
+      this.updateMovement(clampedDelta, leadAvatar, followAvatar);
+    }
+
+    // Smooth Camera Follow
+    this.updateCamera(clampedDelta);
+
+    // Update particles
+    this.updateParticles(clampedDelta, elapsed);
+  }
+
+  private updateMovement(delta: number, leadAvatar: CoupleAvatar, followAvatar: CoupleAvatar): void {
+    const leadPos = leadAvatar.group.position;
+    const followPos = followAvatar.group.position;
+
     _moveDir.set(0, 0, 0);
 
     // Keyboard inputs
@@ -235,7 +330,7 @@ export class ExplorationEngine {
       _moveDir.addScaledVector(_camRight, right);
       _moveDir.normalize();
     } else if (this.clickTarget) {
-      _diff.subVectors(this.clickTarget, pPos);
+      _diff.subVectors(this.clickTarget, leadPos);
       _diff.y = 0;
       const dist = _diff.length();
       if (dist > 0.3) {
@@ -246,149 +341,206 @@ export class ExplorationEngine {
       }
     }
 
-    // Speed (sprint if shift is pressed)
-    const isSprint = this.keys['shift'] || this.keys['shiftleft'] || this.keys['shiftright'];
-    const speed = (isSprint ? 6.5 : 3.8);
+    const isSprintKey = this.keys['shift'] || this.keys['shiftleft'] || this.keys['shiftright'];
+    const speedMult = isSprintKey ? 1.8 : this.getSpeedMultiplier();
+    const speed = 4.2 * speedMult;
 
     if (hasInput && _moveDir.lengthSq() > 0.001) {
-      // Calculate target next position
-      _targetPos.copy(pPos).addScaledVector(_moveDir, speed * clampedDelta);
+      _targetPos.copy(leadPos).addScaledVector(_moveDir, speed * delta);
 
-      // Resolve collisions (walls, obstacles, perimeters) with sliding response
-      const resolved = this.collisionSystem.resolve(pPos, _targetPos, 0.45);
+      // Solid collision resolution (walls, obstacles, island perimeter)
+      const resolved = this.collisionSystem.resolve(leadPos, _targetPos, 0.45);
 
-      // Adjust height to match terrain
       const targetY = this.getTerrainHeight(resolved.x, resolved.z);
-      resolved.y = THREE.MathUtils.damp(pPos.y, targetY, 15, clampedDelta);
+      resolved.y = THREE.MathUtils.damp(leadPos.y, targetY, 15, delta);
 
-      pPos.copy(resolved);
+      leadPos.copy(resolved);
 
-      // Smooth heading rotation toward move direction
+      // Heading rotation
       const targetHeading = Math.atan2(_moveDir.x, _moveDir.z);
-      // Angular lerp
-      let diffHeading = targetHeading - this.playerAvatar.heading;
-      while (diffHeading < -Math.PI) diffHeading += Math.PI * 2;
-      while (diffHeading > Math.PI) diffHeading -= Math.PI * 2;
-      this.playerAvatar.heading += diffHeading * Math.min(1, clampedDelta * 12);
+      let diffH = targetHeading - leadAvatar.heading;
+      while (diffH < -Math.PI) diffH += Math.PI * 2;
+      while (diffH > Math.PI) diffH -= Math.PI * 2;
+      leadAvatar.heading += diffH * Math.min(1, delta * 12);
 
-      this.playerAvatar.updateAnimation(clampedDelta, true);
+      leadAvatar.updateAnimation(delta, true, speedMult);
     } else {
-      this.playerAvatar.updateAnimation(clampedDelta, false);
+      leadAvatar.updateAnimation(delta, false, 1.0);
     }
 
-    // 2. Partner AI Companion following behavior
-    this.updatePartnerCompanion(clampedDelta, hasInput);
-
-    // 3. Smooth Camera Follow
-    this.updateCamera(clampedDelta);
-
-    // 4. Romantic Heart Sparkles when standing or walking closely
-    this.updateHearts(clampedDelta, elapsed);
+    // Partner smooth companion follow
+    this.updatePartnerFollow(delta, leadAvatar, followAvatar);
   }
 
-  private updatePartnerCompanion(delta: number, playerIsMoving: boolean): void {
-    const pPos = this.playerAvatar.group.position;
-    const partnerPos = this.partnerAvatar.group.position;
+  private updatePartnerFollow(delta: number, leadAvatar: CoupleAvatar, followAvatar: CoupleAvatar): void {
+    const leadPos = leadAvatar.group.position;
+    const followPos = followAvatar.group.position;
 
-    // Partner wants to walk beside or slightly behind player
-    const side = Math.sin(this.playerAvatar.heading + Math.PI / 2);
-    const forward = Math.cos(this.playerAvatar.heading + Math.PI / 2);
+    // Follower walks alongside on the right or left
+    const sideAngle = leadAvatar.heading + Math.PI / 2;
+    const sideX = Math.sin(sideAngle) * 1.35;
+    const sideZ = Math.cos(sideAngle) * 1.35;
+    const backX = -Math.sin(leadAvatar.heading) * 0.4;
+    const backZ = -Math.cos(leadAvatar.heading) * 0.4;
 
-    _partnerOffset.set(side * 1.3 - Math.sin(this.playerAvatar.heading) * 0.4, 0, forward * 1.3 - Math.cos(this.playerAvatar.heading) * 0.4);
-    _partnerTarget.copy(pPos).add(_partnerOffset);
+    _partnerOffset.set(sideX + backX, 0, sideZ + backZ);
+    _partnerTarget.copy(leadPos).add(_partnerOffset);
 
-    // Check collision for partner target
-    const resolvedTarget = this.collisionSystem.resolve(partnerPos, _partnerTarget, 0.4);
+    // Collision check for follower
+    const resolvedTarget = this.collisionSystem.resolve(followPos, _partnerTarget, 0.45);
 
-    _diff.subVectors(resolvedTarget, partnerPos);
+    _diff.subVectors(resolvedTarget, followPos);
     _diff.y = 0;
     const distToTarget = _diff.length();
 
-    if (distToTarget > 0.25) {
-      // Partner moves toward target
+    if (distToTarget > 0.22) {
       _diff.normalize();
-      const partnerSpeed = Math.min(distToTarget * 3.5, 6.0);
-      partnerPos.addScaledVector(_diff, partnerSpeed * delta);
+      const followSpeed = Math.min(distToTarget * 4.2, 8.5);
+      followPos.addScaledVector(_diff, followSpeed * delta);
 
-      // Update height
-      const targetY = this.getTerrainHeight(partnerPos.x, partnerPos.z);
-      partnerPos.y = THREE.MathUtils.damp(partnerPos.y, targetY, 15, delta);
+      const targetY = this.getTerrainHeight(followPos.x, followPos.z);
+      followPos.y = THREE.MathUtils.damp(followPos.y, targetY, 15, delta);
 
-      // Partner faces move direction or player
-      const partnerHeading = Math.atan2(_diff.x, _diff.z);
-      let diffH = partnerHeading - this.partnerAvatar.heading;
+      const followHeading = Math.atan2(_diff.x, _diff.z);
+      let diffH = followHeading - followAvatar.heading;
       while (diffH < -Math.PI) diffH += Math.PI * 2;
       while (diffH > Math.PI) diffH -= Math.PI * 2;
-      this.partnerAvatar.heading += diffH * Math.min(1, delta * 10);
+      followAvatar.heading += diffH * Math.min(1, delta * 10);
 
-      this.partnerAvatar.updateAnimation(delta, true);
+      followAvatar.updateAnimation(delta, true, 1.2);
     } else {
-      // When stopped, turn gently to face player
-      const toPlayerX = pPos.x - partnerPos.x;
-      const toPlayerZ = pPos.z - partnerPos.z;
-      const facePlayerHeading = Math.atan2(toPlayerX, toPlayerZ);
-      let diffH = facePlayerHeading - this.partnerAvatar.heading;
+      // Turn gently to face lead partner when stopped
+      const toLeadX = leadPos.x - followPos.x;
+      const toLeadZ = leadPos.z - followPos.z;
+      const faceLeadHeading = Math.atan2(toLeadX, toLeadZ);
+      let diffH = faceLeadHeading - followAvatar.heading;
       while (diffH < -Math.PI) diffH += Math.PI * 2;
       while (diffH > Math.PI) diffH -= Math.PI * 2;
-      this.partnerAvatar.heading += diffH * Math.min(1, delta * 6);
+      followAvatar.heading += diffH * Math.min(1, delta * 6);
 
-      this.partnerAvatar.updateAnimation(delta, false);
+      followAvatar.updateAnimation(delta, false, 1.0);
+    }
+  }
+
+  private updateMomentKinematics(delta: number, boy: CoupleAvatar, girl: CoupleAvatar): void {
+    const boyPos = boy.group.position;
+    const girlPos = girl.group.position;
+
+    if (this.activeMoment === 'hug' || this.activeMoment === 'kiss') {
+      // Step closely together facing each other
+      const midX = (boyPos.x + girlPos.x) * 0.5;
+      const midZ = (boyPos.z + girlPos.z) * 0.5;
+
+      const targetDist = this.activeMoment === 'hug' ? 0.65 : 0.72;
+      const angle = boy.heading;
+
+      const targetBoyX = midX - Math.sin(angle) * (targetDist * 0.5);
+      const targetBoyZ = midZ - Math.cos(angle) * (targetDist * 0.5);
+      const targetGirlX = midX + Math.sin(angle) * (targetDist * 0.5);
+      const targetGirlZ = midZ + Math.cos(angle) * (targetDist * 0.5);
+
+      boyPos.x = THREE.MathUtils.damp(boyPos.x, targetBoyX, 10, delta);
+      boyPos.z = THREE.MathUtils.damp(boyPos.z, targetBoyZ, 10, delta);
+      girlPos.x = THREE.MathUtils.damp(girlPos.x, targetGirlX, 10, delta);
+      girlPos.z = THREE.MathUtils.damp(girlPos.z, targetGirlZ, 10, delta);
+
+      // Face each other exactly
+      boy.heading = angle;
+      girl.heading = angle + Math.PI;
+
+      boy.updateAnimation(delta, false);
+      girl.updateAnimation(delta, false);
+    } else if (this.activeMoment === 'dance') {
+      // Gracefully spin in a circle together
+      this.momentTimer += delta * 2.5;
+      const spinRadius = 0.55;
+      const centerPos = (boyPos.clone().add(girlPos)).multiplyScalar(0.5);
+
+      boyPos.x = centerPos.x + Math.sin(this.momentTimer) * spinRadius;
+      boyPos.z = centerPos.z + Math.cos(this.momentTimer) * spinRadius;
+      girlPos.x = centerPos.x - Math.sin(this.momentTimer) * spinRadius;
+      girlPos.z = centerPos.z - Math.cos(this.momentTimer) * spinRadius;
+
+      boy.heading = this.momentTimer + Math.PI / 2;
+      girl.heading = this.momentTimer - Math.PI / 2;
+
+      boy.updateAnimation(delta, true, 1.0);
+      girl.updateAnimation(delta, true, 1.0);
+    } else if (this.activeMoment === 'hold_hands') {
+      // Walk together side by side holding hands
+      this.updateMovement(delta, boy, girl);
+    } else {
+      boy.updateAnimation(delta, false);
+      girl.updateAnimation(delta, false);
     }
   }
 
   private updateCamera(delta: number): void {
-    const pPos = this.playerAvatar.group.position;
+    const boyPos = this.boyAvatar.group.position;
+    const girlPos = this.galaxiaAvatar.group.position;
+    const midX = (boyPos.x + girlPos.x) * 0.5;
+    const midY = (boyPos.y + girlPos.y) * 0.5 + 1.25;
+    const midZ = (boyPos.z + girlPos.z) * 0.5;
 
-    // Spherical coordinates around player
-    const camX = pPos.x + Math.sin(this.cameraYaw) * Math.cos(this.cameraPitch) * this.cameraDistance;
-    const camZ = pPos.z + Math.cos(this.cameraYaw) * Math.cos(this.cameraPitch) * this.cameraDistance;
-    const camY = pPos.y + this.cameraHeight + Math.sin(this.cameraPitch) * (this.cameraDistance * 0.5);
+    const camX = midX + Math.sin(this.cameraYaw) * Math.cos(this.cameraPitch) * this.cameraDistance;
+    const camZ = midZ + Math.cos(this.cameraYaw) * Math.cos(this.cameraPitch) * this.cameraDistance;
+    const camY = midY + this.cameraHeight + Math.sin(this.cameraPitch) * (this.cameraDistance * 0.45);
 
-    // Smooth exponential damping
-    const dampFactor = Math.min(1, delta * 8);
-    this.camera.position.x += (camX - this.camera.position.x) * dampFactor;
-    this.camera.position.y += (camY - this.camera.position.y) * dampFactor;
-    this.camera.position.z += (camZ - this.camera.position.z) * dampFactor;
-
-    // Look target is mid-point between player and partner, chest height
-    const midX = (pPos.x + this.partnerAvatar.group.position.x) * 0.5;
-    const midY = (pPos.y + 1.2);
-    const midZ = (pPos.z + this.partnerAvatar.group.position.z) * 0.5;
+    const damp = Math.min(1, delta * 9);
+    this.camera.position.x += (camX - this.camera.position.x) * damp;
+    this.camera.position.y += (camY - this.camera.position.y) * damp;
+    this.camera.position.z += (camZ - this.camera.position.z) * damp;
 
     this.camera.lookAt(midX, midY, midZ);
   }
 
-  private updateHearts(delta: number, elapsed: number): void {
-    const pPos = this.playerAvatar.group.position;
-    const partPos = this.partnerAvatar.group.position;
-    const dist = pPos.distanceTo(partPos);
+  public spawnCelebrationBurst(intensity = 1.0): void {
+    const boyPos = this.boyAvatar.group.position;
+    const girlPos = this.galaxiaAvatar.group.position;
+    const midX = (boyPos.x + girlPos.x) * 0.5;
+    const midY = (boyPos.y + girlPos.y) * 0.5 + 1.4;
+    const midZ = (boyPos.z + girlPos.z) * 0.5;
 
-    const pos = this.heartGeo.attributes.position.array as Float32Array;
+    const pos = this.celebrationGeo.attributes.position.array as Float32Array;
+    const count = Math.min(this.particleCount, Math.floor(25 * intensity));
 
-    // Spawn a heart between them if they are close
-    if (dist < 2.0 && Math.random() < 0.08) {
-      // Find inactive particle
-      for (let i = 0; i < this.heartCount; i++) {
-        if (pos[i * 3 + 1] < -10) {
-          pos[i * 3] = (pPos.x + partPos.x) * 0.5 + (Math.random() - 0.5) * 0.4;
-          pos[i * 3 + 1] = pPos.y + 1.4;
-          pos[i * 3 + 2] = (pPos.z + partPos.z) * 0.5 + (Math.random() - 0.5) * 0.4;
-          break;
-        }
-      }
+    for (let i = 0; i < count; i++) {
+      pos[i * 3] = midX + (Math.random() - 0.5) * 0.4;
+      pos[i * 3 + 1] = midY;
+      pos[i * 3 + 2] = midZ + (Math.random() - 0.5) * 0.4;
+
+      const angle = Math.random() * Math.PI * 2;
+      const speed = (0.8 + Math.random() * 1.5) * intensity;
+      this.particleVels[i * 3] = Math.cos(angle) * speed;
+      this.particleVels[i * 3 + 1] = 1.2 + Math.random() * 2.0;
+      this.particleVels[i * 3 + 2] = Math.sin(angle) * speed;
     }
+    this.celebrationGeo.attributes.position.needsUpdate = true;
+  }
 
-    // Float active particles up
-    for (let i = 0; i < this.heartCount; i++) {
+  private updateParticles(delta: number, elapsed: number): void {
+    const pos = this.celebrationGeo.attributes.position.array as Float32Array;
+    let anyActive = false;
+
+    for (let i = 0; i < this.particleCount; i++) {
       if (pos[i * 3 + 1] > -10) {
-        pos[i * 3 + 1] += delta * 0.8;
-        pos[i * 3] += Math.sin(elapsed * 4 + i) * delta * 0.15;
-        if (pos[i * 3 + 1] > pPos.y + 3.2) {
+        anyActive = true;
+        pos[i * 3] += this.particleVels[i * 3] * delta;
+        pos[i * 3 + 1] += this.particleVels[i * 3 + 1] * delta;
+        pos[i * 3 + 2] += this.particleVels[i * 3 + 2] * delta;
+
+        this.particleVels[i * 3 + 1] -= 2.5 * delta; // Gravity
+
+        // Dissolve when below ground or too high
+        if (pos[i * 3 + 1] < 0.2 || pos[i * 3 + 1] > 6.0) {
           pos[i * 3 + 1] = -100;
         }
       }
     }
-    this.heartGeo.attributes.position.needsUpdate = true;
+
+    if (anyActive) {
+      this.celebrationGeo.attributes.position.needsUpdate = true;
+    }
   }
 
   public dispose(): void {
@@ -399,9 +551,9 @@ export class ExplorationEngine {
     window.removeEventListener('pointerup', this.onPointerUp);
     this.domElement.removeEventListener('wheel', this.onWheel);
 
-    this.scene.remove(this.playerAvatar.group);
-    this.scene.remove(this.partnerAvatar.group);
-    this.scene.remove(this.heartParticles);
-    this.heartGeo.dispose();
+    this.scene.remove(this.boyAvatar.group);
+    this.scene.remove(this.galaxiaAvatar.group);
+    this.scene.remove(this.celebrationParticles);
+    this.celebrationGeo.dispose();
   }
 }

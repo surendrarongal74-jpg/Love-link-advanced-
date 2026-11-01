@@ -307,6 +307,605 @@ Output JSON format with an array of strings in a 'suggestions' field.`;
   }
 });
 
+// API: Generate Comprehensive AI Date Night Surprise Plan
+app.post('/api/gemini/generate-date-plan', async (req, res) => {
+  try {
+    const { preferences = {}, coupleHistory = {}, pastSuccessfulSurprises = [] } = req.body;
+
+    const dateStyle = preferences.dateStyle || 'cozy_home';
+    const mood = preferences.mood || 'Romantic & Intimate';
+    const dietary = preferences.dietary || 'Artisanal Italian & Fine Wine';
+    const musicGenre = preferences.musicGenre || 'Acoustic Indie & Warm Lo-Fi';
+    const budget = preferences.budget || 'Moderate ($$)';
+    const duration = preferences.duration || '2-3 Hours Evening Date';
+    const specialOccasion = preferences.specialOccasion || 'Spontaneous Romance';
+    const customNotes = preferences.customNotes || '';
+
+    const partnerName = coupleHistory.partnerName || 'your partner';
+    const userName = coupleHistory.userName || 'you';
+    const anniversaryInfo = coupleHistory.anniversaryDate ? `Their anniversary is ${coupleHistory.anniversaryDate}.` : '';
+
+    // Summarize past successful surprises
+    let pastSurprisesPrompt = '';
+    if (Array.isArray(pastSuccessfulSurprises) && pastSuccessfulSurprises.length > 0) {
+      const pastList = pastSuccessfulSurprises
+        .filter((s: any) => s && (s.rating >= 4 || s.review || s.title))
+        .slice(0, 5)
+        .map((s: any, idx: number) => {
+          return `${idx + 1}. "${s.title}" (${s.rating ? s.rating + '/5 stars' : 'Loved'}) - ${s.review || s.overview || 'Great experience'}`;
+        })
+        .join('\n');
+      pastSurprisesPrompt = `\nPAST HIGHLY RATED SURPRISES & DATE NIGHTS FOR THIS COUPLE:\n${pastList}\n*Crucial*: Analyze what made these previous dates special. Build upon themes, moods, or sensory elements they loved, while offering a fresh, exciting twist!`;
+    }
+
+    const systemInstruction = `You are the world's most romantic and creative master date architect for couples.
+Your task is to design a complete, deeply engaging, and beautifully personalized Date Night Surprise Plan.
+Every detail must feel bespoke, thoughtful, and memorable. Avoid generic advice; give vivid, step-by-step activities, deep conversation prompts, and real song recommendations.`;
+
+    const userPrompt = `Generate a comprehensive Date Night Surprise Plan for ${userName} and ${partnerName}.
+
+PARAMETERS & PREFERENCES:
+- Date Style: ${dateStyle} (e.g. Virtual/Long-Distance, Cozy At-Home, Outdoor Stargazing/Adventure, In-Person Romance)
+- Mood & Vibe: ${mood}
+- Food & Drink Preference: ${dietary}
+- Preferred Music Vibe: ${musicGenre}
+- Budget: ${budget}
+- Target Duration: ${duration}
+- Occasion: ${specialOccasion}
+${customNotes ? `- Special Notes & Wishes: ${customNotes}` : ''}
+${anniversaryInfo}
+${pastSurprisesPrompt}
+
+REQUIREMENTS:
+1. "title": Catchy, poetic, evocative date night title.
+2. "tagline": A romantic 1-sentence subtitle.
+3. "overview": An enchanting 2-3 sentence overview describing the atmosphere.
+4. "style": One of ['in_person', 'virtual', 'cozy_home', 'outdoor'].
+5. "suggestedPreparation": Array of 3-4 specific secret preparation steps (e.g. chilling a bottle, printing coordinates, cueing candles, arranging secret letter).
+6. "activities": Array of 3 to 4 sequential, detailed activities.
+   - For each activity, include:
+     - "id": string (e.g. "act_1")
+     - "name": evocative name (e.g., "Virtual Neapolitan Pizza-Making Masterclass", "Starlight Constellation Reading")
+     - "timeEstimate": string (e.g., "40 mins")
+     - "description": clear step-by-step instructions
+     - "sparkleTip": a secret romantic gesture or playful flourish to do during this activity
+7. "conversationPrompts": Array of 8 curated questions categorized into 4 tiers:
+   - 2 in "warmUp" (playful, lighthearted, spark smiles)
+   - 2 in "deepConnection" (emotional intimacy, vulnerability, gratitude)
+   - 2 in "nostalgia" (their shared journey, first impressions, favorite milestones)
+   - 2 in "futureDreams" (shared bucket lists, future adventures, growing old together)
+   Include for each:
+     - "id": string (e.g. "prompt_1")
+     - "category": 'warmUp' | 'deepConnection' | 'nostalgia' | 'futureDreams'
+     - "categoryLabel": string (e.g. "Warm-Up Spark", "Soul Connection", "Memory Lane", "Future Horizons")
+     - "question": the actual engaging question
+8. "playlist": A curated collaborative music playlist:
+   - "playlistName": creative title for the soundtrack
+   - "vibeDescription": why these acoustic rhythms suit this date
+   - "tracks": Array of 6 to 8 REAL, well-known songs that match the requested music genre (${musicGenre}).
+     For each track:
+       - "id": string (e.g. "track_1")
+       - "title": song title
+       - "artist": artist name
+       - "genre": genre
+       - "reasonForInclusion": why this song enhances the moment
+       - "idealMoment": e.g. "Play during the dinner toast" or "Best while stargazing"
+9. "surpriseTwist": A secret micro-surprise the planner can reveal at the climax of the date.
+10. "reasoningFromPastSurprises": 1-2 sentences explaining how this plan honors their past favorite surprises and preferences.`;
+
+    const planSchema = {
+      type: Type.OBJECT,
+      properties: {
+        title: { type: Type.STRING },
+        tagline: { type: Type.STRING },
+        overview: { type: Type.STRING },
+        style: { type: Type.STRING },
+        suggestedPreparation: {
+          type: Type.ARRAY,
+          items: { type: Type.STRING }
+        },
+        activities: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              id: { type: Type.STRING },
+              name: { type: Type.STRING },
+              timeEstimate: { type: Type.STRING },
+              description: { type: Type.STRING },
+              sparkleTip: { type: Type.STRING }
+            },
+            required: ['id', 'name', 'timeEstimate', 'description', 'sparkleTip']
+          }
+        },
+        conversationPrompts: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              id: { type: Type.STRING },
+              category: { type: Type.STRING },
+              categoryLabel: { type: Type.STRING },
+              question: { type: Type.STRING }
+            },
+            required: ['id', 'category', 'categoryLabel', 'question']
+          }
+        },
+        playlist: {
+          type: Type.OBJECT,
+          properties: {
+            playlistName: { type: Type.STRING },
+            vibeDescription: { type: Type.STRING },
+            tracks: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  id: { type: Type.STRING },
+                  title: { type: Type.STRING },
+                  artist: { type: Type.STRING },
+                  genre: { type: Type.STRING },
+                  reasonForInclusion: { type: Type.STRING },
+                  idealMoment: { type: Type.STRING }
+                },
+                required: ['id', 'title', 'artist', 'genre', 'reasonForInclusion', 'idealMoment']
+              }
+            }
+          },
+          required: ['playlistName', 'vibeDescription', 'tracks']
+        },
+        surpriseTwist: { type: Type.STRING },
+        reasoningFromPastSurprises: { type: Type.STRING }
+      },
+      required: [
+        'title',
+        'tagline',
+        'overview',
+        'style',
+        'suggestedPreparation',
+        'activities',
+        'conversationPrompts',
+        'playlist',
+        'surpriseTwist',
+        'reasoningFromPastSurprises'
+      ]
+    };
+
+    let response: any;
+    try {
+      response = await ai.models.generateContent({
+        model: 'gemini-3.8-flash',
+        contents: userPrompt,
+        config: {
+          systemInstruction,
+          temperature: 0.85,
+          responseMimeType: 'application/json',
+          responseSchema: planSchema,
+        }
+      });
+    } catch (err: any) {
+      console.warn('Attempt with gemini-3.8-flash failed, attempting gemini-3.1-flash-lite:', err?.message || err);
+      response = await ai.models.generateContent({
+        model: 'gemini-3.1-flash-lite',
+        contents: userPrompt,
+        config: {
+          systemInstruction,
+          temperature: 0.85,
+          responseMimeType: 'application/json',
+          responseSchema: planSchema,
+        }
+      });
+    }
+
+    const rawText = response.text || '';
+    let parsedPlan: any;
+    try {
+      parsedPlan = JSON.parse(rawText);
+    } catch {
+      const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+      parsedPlan = JSON.parse(cleanJson);
+    }
+
+    return res.json({
+      success: true,
+      plan: parsedPlan
+    });
+  } catch (error: any) {
+    console.error('Error in /api/gemini/generate-date-plan:', error);
+
+    // Fallback high-fidelity curated romantic plan
+    const fallbackPlan = {
+      title: "Celestial Starlight & Velvet Vinyl Serenade",
+      tagline: "An enchanting evening of cozy stargazing, artisanal delicacies, and heart-to-heart discovery",
+      overview: "Step into an immersive, candlelit sanctuary designed for intimate connection. From culinary creations to deciphering constellations and trading heartfelt memories, tonight is solely dedicated to you two.",
+      style: "cozy_home",
+      suggestedPreparation: [
+        "Dim the overhead lights and arrange warm fairy lights or candles around the room",
+        "Queue the custom romantic playlist and chill your favorite wine or mocktail",
+        "Prepare a cozy blanket fort or outdoor floor seating with plush pillows",
+        "Keep the secret surprise letter hidden nearby until the stargazing segment"
+      ],
+      activities: [
+        {
+          id: "act_1",
+          name: "Artisanal Tasting & Synchronized Toast",
+          timeEstimate: "35 mins",
+          description: "Unveil a curated spread of savory bites, fresh fruit, and favorite treats. Clink glasses to a special moment you shared this year.",
+          sparkleTip: "Feed each other a secret bite with eyes closed and guess the flavor!"
+        },
+        {
+          id: "act_2",
+          name: "Stargazing & Constellation Map Reading",
+          timeEstimate: "45 mins",
+          description: "Look up at the night sky (or project a starry constellation dome onto the ceiling). Identify your zodiac signs and craft a custom couple constellation.",
+          sparkleTip: "Whisper one secret wish you have for your partner's upcoming year."
+        },
+        {
+          id: "act_3",
+          name: "Midnight Vinyl Slow Dance & Memory Vault",
+          timeEstimate: "30 mins",
+          description: "Turn down the lights completely, play your signature song, and hold each other close for an uninterrupted slow dance.",
+          sparkleTip: "Slip the handwritten secret love note into their hand as the song fades out."
+        }
+      ],
+      conversationPrompts: [
+        {
+          id: "prompt_1",
+          category: "warmUp",
+          categoryLabel: "Warm-Up Spark",
+          question: "If we had an entire 48 hours with zero phone notifications and unlimited budget, what's the first crazy thing we'd do together?"
+        },
+        {
+          id: "prompt_2",
+          category: "warmUp",
+          categoryLabel: "Warm-Up Spark",
+          question: "What is one funny habit of mine that you secretly find completely adorable?"
+        },
+        {
+          id: "prompt_3",
+          category: "deepConnection",
+          categoryLabel: "Soul Connection",
+          question: "When in the past month did you feel most deeply loved and supported by me?"
+        },
+        {
+          id: "prompt_4",
+          category: "deepConnection",
+          categoryLabel: "Soul Connection",
+          question: "What is a quiet vulnerability you've been carrying lately that I can help hold with you?"
+        },
+        {
+          id: "prompt_5",
+          category: "nostalgia",
+          categoryLabel: "Memory Lane",
+          question: "Do you remember the exact moment or conversation where you realized I was truly special to you?"
+        },
+        {
+          id: "prompt_6",
+          category: "nostalgia",
+          categoryLabel: "Memory Lane",
+          question: "What is your single favorite spontaneous memory we've ever created together?"
+        },
+        {
+          id: "prompt_7",
+          category: "futureDreams",
+          categoryLabel: "Future Horizons",
+          question: "Where in the world do you most dream of waking up next to each other five years from now?"
+        },
+        {
+          id: "prompt_8",
+          category: "futureDreams",
+          categoryLabel: "Future Horizons",
+          question: "What is a new ritual or tradition you want our couple space to keep forever?"
+        }
+      ],
+      playlist: {
+        playlistName: "Midnight Celestial & Lo-Fi Reverie",
+        vibeDescription: "Warm analog guitars, silky soul harmonies, and soothing lo-fi beats curated for candlelit romance.",
+        tracks: [
+          {
+            id: "track_1",
+            title: "Texas Sun",
+            artist: "Leon Bridges & Khruangbin",
+            genre: "Soul / Psychedelic",
+            reasonForInclusion: "Smooth, warm guitars that immediately set a relaxed, romantic tone",
+            idealMoment: "Play during welcome drinks and setting up"
+          },
+          {
+            id: "track_2",
+            title: "From the Start",
+            artist: "Laufey",
+            genre: "Modern Jazz Pop",
+            reasonForInclusion: "Playful bossa nova swing that sparks smiles and gentle head-nodding",
+            idealMoment: "Play while preparing the appetizers together"
+          },
+          {
+            id: "track_3",
+            title: "Best Part",
+            artist: "Daniel Caesar ft. H.E.R.",
+            genre: "R&B / Soul",
+            reasonForInclusion: "Tender acoustic duet celebrating unconditional affection",
+            idealMoment: "Play during the dinner tasting"
+          },
+          {
+            id: "track_4",
+            title: "Apocalypse",
+            artist: "Cigarettes After Sex",
+            genre: "Dream Pop / Ambient",
+            reasonForInclusion: "Hypnotic, reverb-drenched atmosphere perfect for stargazing",
+            idealMoment: "Play while looking up at the night sky"
+          },
+          {
+            id: "track_5",
+            title: "Beyond",
+            artist: "Leon Bridges",
+            genre: "Vintage Soul",
+            reasonForInclusion: "Soulful declaration of falling deeper and deeper in love",
+            idealMoment: "Play during deep conversation prompts"
+          },
+          {
+            id: "track_6",
+            title: "Lover",
+            artist: "Taylor Swift",
+            genre: "Romantic Pop Ballad",
+            reasonForInclusion: "Waltz rhythm ideal for a spontaneous living room slow dance",
+            idealMoment: "Play during the midnight slow dance finale"
+          }
+        ]
+      },
+      surpriseTwist: "Hand them a sealed envelope with a custom ticket for an upcoming surprise breakfast in bed tomorrow morning!",
+      reasoningFromPastSurprises: "Incorporated your preference for relaxed, high-intimacy sensory moments with acoustic warmth and playful shared discovery."
+    };
+
+    return res.json({
+      success: true,
+      plan: fallbackPlan,
+      isFallback: true
+    });
+  }
+});
+
+// API: Random Date Night Generator (Location-Based AI Activity Concierge)
+app.post('/api/gemini/random-date-generator', async (req, res) => {
+  try {
+    const { location = {}, preferences = {}, coupleContext = {} } = req.body;
+
+    const city = location.city || 'Your City';
+    const neighborhood = location.neighborhood || '';
+    const settingType = location.settingType || 'in_the_city'; // 'in_the_city' | 'hidden_gems' | 'nature_scenic' | 'rooftop_nightlife' | 'arts_culture' | 'cozy_home' | 'sweet_tooth' | 'wildcard'
+
+    const vibe = preferences.vibe || 'Romantic & Dimly Lit';
+    const budget = preferences.budget || 'Casual Fun ($$)';
+    const energyLevel = preferences.energyLevel || 'Balanced & Fun';
+    const timeOfDay = preferences.timeOfDay || 'Tonight / Evening';
+    const dietary = preferences.dietary || 'Artisan Cocktails & Savory Bites';
+    const indoorOutdoor = preferences.indoorOutdoor || 'any';
+    const isWildcard = Boolean(preferences.wildcard);
+
+    const userName = coupleContext.userName || 'You';
+    const partnerName = coupleContext.partnerName || 'Your Partner';
+
+    const systemInstruction = `You are a world-class romantic date concierge and master spontaneous experience designer.
+You know the hidden treasures, romantic nooks, legendary dessert spots, scenic viewpoints, and intimate atmospheres in every city and town.
+Your mission is to cure decision fatigue for couples by generating an authentic, location-grounded, unforgettable Random Date Night activity.
+Give specific neighborhood or district details appropriate for "${city}". Avoid generic cliches; give vivid sensory storytelling, a fun couple spontaneity dare, a deep conversation card, and the exact soundtrack song to play.`;
+
+    const userPrompt = `Generate a unique, location-based Random Date Night for ${userName} and ${partnerName}.
+
+LOCATION & SETTING:
+- Target City / Region: "${city}" ${neighborhood ? `(Preferred neighborhood: ${neighborhood})` : ''}
+- Setting Style: ${settingType} (e.g., Hidden Gems, In The City, Rooftop/Nightlife, Nature & Scenic Views, Arts & Culture, Cozy At-Home, or Sweet Tooth)
+- Environment: ${indoorOutdoor}
+
+PREFERENCES:
+- Mood & Vibe: ${vibe}
+- Budget Category: ${budget}
+- Energy Level: ${energyLevel}
+- Ideal Time: ${timeOfDay}
+- Food / Drinks: ${dietary}
+${isWildcard ? '- WILDCARD MODE: Inject an unexpected, delightfully unconventional romantic twist!' : ''}
+
+REQUIREMENTS:
+1. Provide a realistic neighborhood or area in ${city} for this date.
+2. Structure the evening as two seamless parts:
+   - "mainActivity": An immersive, memorable experience with vivid sensory details (lighting, aroma, music, pro insider tip).
+   - "secondaryActivity": The sweet transition or nightcap (e.g. a walk to a scenic overlook, late-night bakery, speakeasy dessert bar, or illuminated bridge).
+3. "spontaneityChallenge": A playful, flirty micro-dare for the couple to do during the date.
+4. "conversationCard": One thought-provoking, romantic question to ask each other during the date.
+5. "soundtrack": A real, recognizable song and artist that perfectly sets the mood.
+6. Provide a Google Maps search query string for easy 1-tap navigation in ${city}.`;
+
+    const dateNightSchema = {
+      type: Type.OBJECT,
+      properties: {
+        id: { type: Type.STRING },
+        title: { type: Type.STRING },
+        tagline: { type: Type.STRING },
+        locationAnchor: { type: Type.STRING },
+        mapQuery: { type: Type.STRING },
+        vibe: { type: Type.STRING },
+        budgetCategory: { type: Type.STRING },
+        estimatedCost: { type: Type.STRING },
+        duration: { type: Type.STRING },
+        bestTime: { type: Type.STRING },
+        weatherOutfitTip: { type: Type.STRING },
+        diceRollEmoji: { type: Type.STRING },
+        mainActivity: {
+          type: Type.OBJECT,
+          properties: {
+            name: { type: Type.STRING },
+            spotType: { type: Type.STRING },
+            localNeighborhood: { type: Type.STRING },
+            vividDescription: { type: Type.STRING },
+            proTip: { type: Type.STRING },
+            duration: { type: Type.STRING }
+          },
+          required: ['name', 'spotType', 'localNeighborhood', 'vividDescription', 'proTip', 'duration']
+        },
+        secondaryActivity: {
+          type: Type.OBJECT,
+          properties: {
+            name: { type: Type.STRING },
+            spotType: { type: Type.STRING },
+            vividDescription: { type: Type.STRING },
+            proTip: { type: Type.STRING },
+            duration: { type: Type.STRING }
+          },
+          required: ['name', 'spotType', 'vividDescription', 'proTip', 'duration']
+        },
+        spontaneityChallenge: {
+          type: Type.OBJECT,
+          properties: {
+            title: { type: Type.STRING },
+            instructions: { type: Type.STRING },
+            pointsReward: { type: Type.NUMBER }
+          },
+          required: ['title', 'instructions', 'pointsReward']
+        },
+        conversationCard: {
+          type: Type.OBJECT,
+          properties: {
+            theme: { type: Type.STRING },
+            question: { type: Type.STRING },
+            followUp: { type: Type.STRING }
+          },
+          required: ['theme', 'question', 'followUp']
+        },
+        soundtrack: {
+          type: Type.OBJECT,
+          properties: {
+            playlistTitle: { type: Type.STRING },
+            featuredTrack: { type: Type.STRING },
+            spotifySearchQuery: { type: Type.STRING },
+            vibeNote: { type: Type.STRING }
+          },
+          required: ['playlistTitle', 'featuredTrack', 'spotifySearchQuery', 'vibeNote']
+        },
+        whyThisMatches: { type: Type.STRING }
+      },
+      required: [
+        'id',
+        'title',
+        'tagline',
+        'locationAnchor',
+        'mapQuery',
+        'vibe',
+        'budgetCategory',
+        'estimatedCost',
+        'duration',
+        'bestTime',
+        'weatherOutfitTip',
+        'diceRollEmoji',
+        'mainActivity',
+        'secondaryActivity',
+        'spontaneityChallenge',
+        'conversationCard',
+        'soundtrack',
+        'whyThisMatches'
+      ]
+    };
+
+    let response: any;
+    try {
+      response = await ai.models.generateContent({
+        model: 'gemini-3.8-flash',
+        contents: userPrompt,
+        config: {
+          systemInstruction,
+          temperature: 0.9,
+          responseMimeType: 'application/json',
+          responseSchema: dateNightSchema,
+        }
+      });
+    } catch (err: any) {
+      console.warn('Gemini 3.8 flash call failed, trying gemini-3.1-flash-lite:', err?.message || err);
+      response = await ai.models.generateContent({
+        model: 'gemini-3.1-flash-lite',
+        contents: userPrompt,
+        config: {
+          systemInstruction,
+          temperature: 0.9,
+          responseMimeType: 'application/json',
+          responseSchema: dateNightSchema,
+        }
+      });
+    }
+
+    const rawText = response.text || '';
+    let parsed: any;
+    try {
+      parsed = JSON.parse(rawText);
+    } catch {
+      const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+      parsed = JSON.parse(cleanJson);
+    }
+
+    if (!parsed.id) {
+      parsed.id = `rdn_${Date.now()}`;
+    }
+
+    return res.json({
+      success: true,
+      dateNight: parsed
+    });
+  } catch (error: any) {
+    console.error('Error in /api/gemini/random-date-generator:', error);
+
+    const city = req.body?.location?.city || 'the City';
+    const fallbackDateNight = {
+      id: `rdn_${Date.now()}`,
+      title: `Candlelit Speakeasy & Starlight Vista in ${city}`,
+      tagline: "An evocative night of artisan cocktails, jazz vinyl, and quiet city lights",
+      locationAnchor: `Historic Arts & Dining District, ${city}`,
+      mapQuery: `intimate cocktail bar and dessert ${city}`,
+      vibe: req.body?.preferences?.vibe || 'Romantic & Dimly Lit',
+      budgetCategory: "$$",
+      estimatedCost: "$45 - $70 total",
+      duration: "2.5 hours",
+      bestTime: "7:30 PM - 10:00 PM",
+      weatherOutfitTip: "Smart casual chic with comfortable walking layers",
+      diceRollEmoji: "🎲 🍸 🎷 ✨",
+      mainActivity: {
+        name: "Velvet Corner & Handcrafted Cocktail Tasting",
+        spotType: "Intimate Japanese Listening Bar / Underground Speakeasy",
+        localNeighborhood: `Downtown Arts Corridor, ${city}`,
+        vividDescription: "Soft amber filament bulbs, smooth vinyl records spinning in the background, and leather booths made for whispering secrets.",
+        proTip: "Tell the bartender two flavors you each adore and ask them to invent a secret signature mocktail or cocktail just for your couple.",
+        duration: "1.5 hours"
+      },
+      secondaryActivity: {
+        name: "Midnight Gelato & Moonlit Promenade",
+        spotType: "Artisanal Dessert Parlor & Panoramic Viewpoint",
+        vividDescription: "Step outside into the cool evening breeze with two cups of warm pistachio gelato, strolling toward an illuminated overlook or waterfront bench.",
+        proTip: "Feed each other a spoonful with your eyes closed and guess the flavor notes.",
+        duration: "45 mins"
+      },
+      spontaneityChallenge: {
+        title: "The Mystery Menu Order",
+        instructions: "Each partner secretly orders one dish or drink for the other without revealing what it is until it arrives at the table!",
+        pointsReward: 50
+      },
+      conversationCard: {
+        theme: "Midnight Spark",
+        question: "If tonight were a movie scene of our love story, what song would be playing over the credits right now?",
+        followUp: "What's one thing you appreciate about our connection today that you didn't see coming when we first met?"
+      },
+      soundtrack: {
+        playlistTitle: "City Lights & Velvet Reverie",
+        featuredTrack: "Leon Bridges - Texas Sun",
+        spotifySearchQuery: "Leon Bridges Texas Sun",
+        vibeNote: "Mellow soul guitars that ground you both in the romantic warmth of the moment."
+      },
+      whyThisMatches: `Tailored for a memorable, sensory-rich evening in ${city} balancing intimate conversation and spontaneous discovery.`
+    };
+
+    return res.json({
+      success: true,
+      dateNight: fallbackDateNight,
+      isFallback: true
+    });
+  }
+});
+
 // API: Love Language Suggestions
 app.post('/api/gemini/love-language', async (req, res) => {
   try {
@@ -1102,7 +1701,7 @@ const SHOP_CATALOG = [
     cost: 50,
     description: 'A velvet red rose with dewdrops and a gilded stem to show your tender affection.',
     icon: '🌹',
-    image: '/src/assets/images/gift_single_rose_1791977103530.jpg'
+    image: '/images/gift_single_rose_1791977103530.jpg'
   },
   {
     id: 'gift_love_letter',
@@ -1111,7 +1710,7 @@ const SHOP_CATALOG = [
     cost: 75,
     description: 'A sealed wax-stamp vintage envelope that delivers your custom heartfelt message.',
     icon: '💌',
-    image: '/src/assets/images/gift_love_letter_1791977158702.jpg'
+    image: '/images/gift_love_letter_1791977158702.jpg'
   },
   {
     id: 'gift_cuddle_teddy',
@@ -1120,7 +1719,7 @@ const SHOP_CATALOG = [
     cost: 100,
     description: 'A fluffy plush teddy bear holding a glowing heart that bounces into your partner\'s chat.',
     icon: '🧸',
-    image: '/src/assets/images/gift_cuddle_teddy_1791976822448.jpg'
+    image: '/images/gift_cuddle_teddy_1791976822448.jpg'
   },
   {
     id: 'gift_heart_cake',
@@ -1129,7 +1728,7 @@ const SHOP_CATALOG = [
     cost: 150,
     description: 'A gourmet strawberry cream cake with sparkler candles to sweeten their day.',
     icon: '🎂',
-    image: '/src/assets/images/gift_heart_cake_1791976879124.jpg'
+    image: '/images/gift_heart_cake_1791976879124.jpg'
   },
   {
     id: 'gift_bouquet_roses',
@@ -1138,7 +1737,7 @@ const SHOP_CATALOG = [
     cost: 200,
     description: 'A beautiful bouquet of roses with a magical petal animation in your partner\'s chat.',
     icon: '💐',
-    image: '/src/assets/images/gift_bouquet_roses_1791976799394.jpg'
+    image: '/images/gift_bouquet_roses_1791976799394.jpg'
   },
   {
     id: 'gift_crystal_heart',
@@ -1147,7 +1746,7 @@ const SHOP_CATALOG = [
     cost: 300,
     description: 'A radiant winged crystal gemstone that sparkles with glowing starlight refractions.',
     icon: '💎',
-    image: '/src/assets/images/gift_crystal_heart_1791976847630.jpg'
+    image: '/images/gift_crystal_heart_1791976847630.jpg'
   },
   {
     id: 'gift_dream_castle',
@@ -1156,7 +1755,7 @@ const SHOP_CATALOG = [
     cost: 2000,
     description: 'A floating fairy-tale cloud castle keepsake reserved for extraordinary milestones.',
     icon: '🏰',
-    image: '/src/assets/images/theme_cloud_romance_1791977048928.jpg'
+    image: '/images/theme_cloud_romance_1791977048928.jpg'
   },
   {
     id: 'gift_heart_fireworks',
@@ -1165,7 +1764,7 @@ const SHOP_CATALOG = [
     cost: 3500,
     description: 'A screen-wide romantic fireworks show that illuminates your couple space.',
     icon: '🎆',
-    image: '/src/assets/images/theme_royal_hearts_1791977003556.jpg'
+    image: '/images/theme_royal_hearts_1791977003556.jpg'
   },
   {
     id: 'gift_soulmate_galaxy',
@@ -1174,7 +1773,7 @@ const SHOP_CATALOG = [
     cost: 7500,
     description: 'A legendary cosmic stardust spectacle celebrating unbreakable eternal love.',
     icon: '🌌',
-    image: '/src/assets/images/theme_soulmate_galaxy_1791976959294.jpg'
+    image: '/images/theme_soulmate_galaxy_1791976959294.jpg'
   },
   {
     id: 'gift_rose_shower',
