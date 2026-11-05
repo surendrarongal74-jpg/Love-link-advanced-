@@ -18,7 +18,7 @@ export function BottomNav() {
     { to: '/', icon: Home, label: 'Home' },
     { to: '/chat', icon: MessageCircle, label: 'Chat', badge: unreadMessagesCount },
     { to: '/market', icon: ShoppingBag, label: 'Market' },
-    { to: '/game', icon: Heart, label: 'Sync' },
+    { to: '/game', icon: Heart, label: 'Daily' },
     { to: '/memories', icon: Calendar, label: 'Memories' },
     { to: '/aira', icon: Sparkles, label: 'AIRA' },
   ];

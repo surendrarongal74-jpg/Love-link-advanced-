@@ -176,7 +176,7 @@ export function ConversationDeckModal({ prompts, onClose, partnerName }: Convers
           <button
             onClick={handleShuffle}
             className="p-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-purple-300 hover:text-purple-200 text-xs flex items-center gap-1.5 transition active:scale-95 border border-purple-500/30"
-            title="Random Card"
+            title="Random Card" aria-label="Random Card"
           >
             <Shuffle className="w-4 h-4" />
             <span className="hidden sm:inline">Shuffle</span>

@@ -462,7 +462,7 @@ export function Loveverse3DViewer({ gift, onInteract, onSwitchTo2D, className }:
             type="button"
             onClick={onSwitchTo2D}
             className="px-3 py-1.5 rounded-full bg-slate-900/90 hover:bg-slate-800 text-slate-200 text-xs font-medium border border-rose-500/30 shadow-lg flex items-center gap-1.5 transition active:scale-95"
-            title="Switch to lightweight 2D mode"
+            title="Switch to lightweight 2D mode" aria-label="Switch to lightweight 2D mode"
           >
             <Layers className="w-3.5 h-3.5 text-rose-400" />
             <span>2D View</span>
@@ -563,7 +563,7 @@ export function Loveverse3DViewer({ gift, onInteract, onSwitchTo2D, className }:
             type="button"
             onClick={handleJump}
             className="w-14 h-14 rounded-full bg-gradient-to-br from-purple-600 to-pink-600 text-white font-bold shadow-xl border border-pink-300/60 flex flex-col items-center justify-center active:scale-90 transition"
-            title="Jump (or press Spacebar)"
+            title="Jump (or press Spacebar)" aria-label="Jump (or press Spacebar)"
           >
             <Zap className="w-5 h-5" />
             <span className="text-[9px] uppercase tracking-wider font-extrabold">Jump</span>
@@ -800,7 +800,7 @@ export function Loveverse3DViewer({ gift, onInteract, onSwitchTo2D, className }:
               type="button"
               onClick={handleResetCamera}
               className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700/60 transition active:scale-95"
-              title="Reset Camera View"
+              title="Reset Camera View" aria-label="Reset Camera View"
             >
               <RotateCcw className="w-3.5 h-3.5" />
             </button>

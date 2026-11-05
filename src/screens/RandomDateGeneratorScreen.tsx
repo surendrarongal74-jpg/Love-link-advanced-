@@ -404,7 +404,7 @@ export function RandomDateGeneratorScreen() {
                     onClick={handleDetectLocation}
                     disabled={isDetectingLocation}
                     className="px-3 py-2 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold shrink-0 border border-slate-700/60 transition active:scale-95"
-                    title="Detect Current City"
+                    title="Detect Current City" aria-label="Detect Current City"
                   >
                     {isDetectingLocation ? '📍 Locating...' : '📍 Auto Detect'}
                   </button>

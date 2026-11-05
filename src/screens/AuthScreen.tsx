@@ -95,8 +95,8 @@ export function AuthScreen() {
         <h1 className="text-3xl font-serif font-bold mb-1 bg-gradient-to-r from-rose-600 to-purple-600 text-transparent bg-clip-text pb-1">
           Love Link
         </h1>
-        <p className="text-xs font-serif text-rose-500/80 italic mb-4 font-medium">
-          A private 3D couples universe just for the two of you.
+        <p className="text-sm text-rose-900/80 mb-4 font-medium">
+          One quick step: agree to how your data is used, then sign in.
         </p>
 
         {/* Validation / Error Banner */}
@@ -105,8 +105,8 @@ export function AuthScreen() {
             <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 mt-0.5" />
             <div className="space-y-1">
               <p>{validationError}</p>
-              <p className="text-[11px] text-rose-700">
-                Tip: You can use the instant 1-Click Quick Demo Sign-in below to log in immediately!
+              <p className="text-xs text-rose-800">
+                Just looking around? Use a demo space below.
               </p>
             </div>
           </div>
@@ -119,9 +119,9 @@ export function AuthScreen() {
             : 'bg-white/85 border-rose-150 shadow-sm'
         }`}>
           <div className="flex items-center justify-between pb-1 border-b border-rose-100">
-            <span className="text-[11px] font-bold text-gray-900 flex items-center gap-1.5">
-              <ShieldCheck className="w-3.5 h-3.5 text-rose-500" />
-              <span>DPDP Consent (India Act, 2023)</span>
+            <span className="text-xs font-bold text-gray-900 flex items-center gap-1.5">
+              <ShieldCheck className="w-3.5 h-3.5 text-rose-600" aria-hidden="true" />
+              <span>Your consent (India DPDP Act, 2023)</span>
             </span>
             {isRequiredConsentMet && (
               <span className="text-[11px] text-emerald-700 font-semibold flex items-center gap-1">
@@ -132,7 +132,7 @@ export function AuthScreen() {
 
           <div className="space-y-2 text-xs text-gray-700">
             {/* Purpose 1: Core Account */}
-            <label className="flex items-start gap-2.5 cursor-pointer">
+            <label className="flex items-start gap-3 cursor-pointer py-1.5">
               <input
                 type="checkbox"
                 checked={coreSyncConsent}
@@ -141,20 +141,20 @@ export function AuthScreen() {
                   setValidationError(null);
                   if (e.target.checked) playSound('pop');
                 }}
-                className="mt-0.5 rounded text-rose-500 focus:ring-rose-400 w-4 h-4 shrink-0"
+                className="mt-0.5 rounded accent-rose-600 w-5 h-5 shrink-0"
               />
               <div className="leading-tight">
-                <span className="font-bold text-gray-900 text-[11px] block">
-                  1. Core Account & Couple Pairing <span className="text-rose-500 text-[10px]">*Required</span>
+                <span className="font-bold text-gray-900 text-xs block">
+                  1. Core Account & Couple Pairing <span className="text-rose-700 text-[11px]">(required)</span>
                 </span>
-                <span className="text-[10px] text-gray-500">
+                <span className="text-[11px] text-gray-600 leading-snug block mt-0.5">
                   Process Google identity to establish your private, isolated couple space.
                 </span>
               </div>
             </label>
 
             {/* Purpose 2: Intimate Communications */}
-            <label className="flex items-start gap-2.5 cursor-pointer">
+            <label className="flex items-start gap-3 cursor-pointer py-1.5">
               <input
                 type="checkbox"
                 checked={mediaConsent}
@@ -163,28 +163,31 @@ export function AuthScreen() {
                   setValidationError(null);
                   if (e.target.checked) playSound('pop');
                 }}
-                className="mt-0.5 rounded text-rose-500 focus:ring-rose-400 w-4 h-4 shrink-0"
+                className="mt-0.5 rounded accent-rose-600 w-5 h-5 shrink-0"
               />
               <div className="leading-tight">
-                <span className="font-bold text-gray-900 text-[11px] block">
-                  2. Messages, Photos & Gifts <span className="text-rose-500 text-[10px]">*Required</span>
+                <span className="font-bold text-gray-900 text-xs block">
+                  2. Messages, Photos & Gifts <span className="text-rose-700 text-[11px]">(required)</span>
                 </span>
-                <span className="text-[10px] text-gray-500">
+                <span className="text-[11px] text-gray-600 leading-snug block mt-0.5">
                   Store your chats, photos, voice notes and memories in our cloud database (Google Firebase) so they sync with your partner.
                 </span>
               </div>
             </label>
           </div>
 
-          <div className="pt-1 border-t border-rose-100 flex items-center justify-between text-[10px]">
+          <p className="text-[11px] text-gray-600 leading-snug">
+            Optional: AI features (AIRA) and location sharing stay off. We&apos;ll ask you if and when you use them.
+          </p>
+          <div className="pt-1 border-t border-rose-100 flex items-center justify-between text-xs">
             <button
               type="button"
               onClick={() => setShowTermsModal(true)}
-              className="text-rose-600 underline font-semibold hover:text-rose-700"
+              className="min-h-11 text-rose-700 underline font-semibold hover:text-rose-800"
             >
               Read Full Terms & DPDP Notice
             </button>
-            <span className="text-gray-400">Notice: v1.0</span>
+            <span className="text-gray-500">Notice v1.0</span>
           </div>
         </div>
 
@@ -206,53 +209,55 @@ export function AuthScreen() {
 
         {/* 1-Click Quick Demo Sign-in for Preview Testing (Fixes Login Problem on any domain / webview) */}
         <div className="mt-4 pt-3 border-t border-rose-200/60">
-          <p className="text-[11px] font-bold text-slate-700 mb-2 flex items-center justify-center gap-1.5">
-            <UserCheck className="w-3.5 h-3.5 text-rose-500" />
-            <span>Instant Test / Demo Login (No Google Auth required)</span>
+          <p className="text-xs font-bold text-slate-700 mb-2 flex items-center justify-center gap-1.5">
+            <UserCheck className="w-3.5 h-3.5 text-rose-600" aria-hidden="true" />
+            <span>Just looking? Try a demo space</span>
           </p>
 
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
               onClick={() => handleDemoSignIn('alex')}
-              className="px-3 py-2.5 rounded-2xl bg-white hover:bg-slate-50 border border-rose-200 text-rose-700 text-xs font-bold shadow-sm transition active:scale-95 flex flex-col items-center gap-0.5"
+              className="min-h-12 px-3 py-2.5 rounded-2xl bg-white hover:bg-slate-50 border border-rose-200 text-rose-800 text-xs font-bold shadow-sm transition active:scale-95 flex flex-col items-center gap-0.5"
             >
-              <span>🧑 Alex</span>
-              <span className="text-[10px] text-slate-400 font-normal">Boy Character 1</span>
+              <span>🧑 Demo as Alex</span>
             </button>
 
             <button
               type="button"
               onClick={() => handleDemoSignIn('taylor')}
-              className="px-3 py-2.5 rounded-2xl bg-white hover:bg-slate-50 border border-purple-200 text-purple-700 text-xs font-bold shadow-sm transition active:scale-95 flex flex-col items-center gap-0.5"
+              className="min-h-12 px-3 py-2.5 rounded-2xl bg-white hover:bg-slate-50 border border-purple-200 text-purple-800 text-xs font-bold shadow-sm transition active:scale-95 flex flex-col items-center gap-0.5"
             >
-              <span>👧 Taylor</span>
-              <span className="text-[10px] text-slate-400 font-normal">Galaxia Anime Girl</span>
+              <span>👧 Demo as Taylor</span>
             </button>
           </div>
-          <p className="mt-1.5 text-[10px] text-slate-400">
-            Pre-links both partners into a ready-to-explore couple space.
+          <p className="mt-1.5 text-[11px] text-slate-600">
+            Sample data on this device only. AI features need a Google sign-in.
           </p>
         </div>
 
-        <div className="mt-4 flex flex-wrap gap-2 items-center justify-center text-[10px] text-gray-500">
+        <div className="mt-3 flex flex-wrap gap-x-1 items-center justify-center text-xs text-gray-600">
+          <a href="/" className="min-h-11 px-2 inline-flex items-center text-rose-700 hover:underline font-semibold">
+            ← About Love Link
+          </a>
+          <span aria-hidden="true">•</span>
           <button
             onClick={() => setShowTermsModal(true)}
-            className="text-rose-600 hover:underline font-semibold"
+            className="min-h-11 px-2 inline-flex items-center text-rose-700 hover:underline font-semibold"
           >
             Terms of Service
           </button>
-          <span>•</span>
+          <span aria-hidden="true">•</span>
           <a
             href="/privacy"
-            className="text-rose-600 hover:underline font-semibold"
+            className="min-h-11 px-2 inline-flex items-center text-rose-700 hover:underline font-semibold"
           >
             Privacy Notice
           </a>
-          <span>•</span>
+          <span aria-hidden="true">•</span>
           <a
             href="/data-rights"
-            className="text-indigo-600 hover:underline font-semibold"
+            className="min-h-11 px-2 inline-flex items-center text-indigo-700 hover:underline font-semibold"
           >
             Data Rights Form
           </a>

@@ -7,7 +7,7 @@ import { handleFirestoreError, OperationType } from '../lib/errorHandler';
 import { BottomNav } from '../components/BottomNav';
 import { Play, CheckCircle2, ChevronLeft, Star, Sparkles, Image as ImageIcon, Video as VideoIcon, Camera, Heart, Smile, Sparkle, Film } from 'lucide-react';
 import { motion } from 'motion/react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import confetti from 'canvas-confetti';
 import { generateDailyQuestion, generateAiraGameContent } from '../lib/ai';
 import { DailyQuestionAttachmentPreview, QuestionAttachmentItem, processFileToAttachment } from '../components/DailyQuestionAttachmentPreview';
@@ -29,10 +29,13 @@ const QUESTIONS = [
 export function GameScreen() {
   const { space, partnerData } = useCoupleSpace();
   const { userData } = useAuth();
+  const navigate = useNavigate();
   
   const [activeGame, setActiveGame] = useState<any>(null);
   const [pastGames, setPastGames] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
   const [isGenerating, setIsGenerating] = useState(false);
   const [answer, setAnswer] = useState('');
   const [attachments, setAttachments] = useState<QuestionAttachmentItem[]>([]);
@@ -88,7 +91,17 @@ export function GameScreen() {
       limit(10)
     );
     
+    setLoading(true);
+    setLoadError(null);
+    // Never spin forever: if nothing arrives (offline, demo session, blocked network), show an error state.
+    const timeout = window.setTimeout(() => {
+      setLoading(false);
+      setLoadError("We couldn't load your daily questions. Check your connection and try again.");
+    }, 10000);
+
     const unsubscribe = onSnapshot(q, (snapshot) => {
+      window.clearTimeout(timeout);
+      setLoadError(null);
       if (!snapshot.empty) {
         const all = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
         setActiveGame(all[0]);
@@ -98,10 +111,26 @@ export function GameScreen() {
         setPastGames([]);
       }
       setLoading(false);
-    }, (err) => handleFirestoreError(err, OperationType.LIST, `coupleSpaces/${space.id}/games`));
+    }, (err) => {
+      window.clearTimeout(timeout);
+      setLoading(false);
+      setLoadError(
+        (err as any)?.code === 'permission-denied'
+          ? 'Daily questions need a signed-in, linked couple space (they are not available in demo mode).'
+          : "We couldn't load your daily questions. Check your connection and try again."
+      );
+      try {
+        handleFirestoreError(err, OperationType.LIST, `coupleSpaces/${space.id}/games`);
+      } catch {
+        // already surfaced to the user above
+      }
+    });
 
-    return unsubscribe;
-  }, [space?.id]);
+    return () => {
+      window.clearTimeout(timeout);
+      unsubscribe();
+    };
+  }, [space?.id, reloadKey]);
 
   const handleFilesSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -253,9 +282,34 @@ export function GameScreen() {
 
   if (loading) {
     return (
-      <div className="h-screen bg-rose-50 flex flex-col items-center justify-center gap-3">
-        <div className="w-12 h-12 rounded-full border-3 border-rose-300 border-t-rose-500 animate-spin" />
-        <p className="text-sm font-semibold text-rose-900/60">Loading Love Sync...</p>
+      <div className="h-screen bg-rose-50 flex flex-col items-center justify-center gap-3" role="status" aria-live="polite">
+        <div className="w-12 h-12 rounded-full border-3 border-rose-300 border-t-rose-500 animate-spin" aria-hidden="true" />
+        <p className="text-sm font-semibold text-rose-900/80">Loading today&apos;s question…</p>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="min-h-screen bg-rose-50 flex flex-col items-center justify-center gap-4 px-6 text-center" role="alert">
+        <p className="text-base font-semibold text-rose-950 max-w-sm">{loadError}</p>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setReloadKey((k) => k + 1)}
+            className="min-h-11 px-5 rounded-full bg-rose-600 hover:bg-rose-700 text-white text-sm font-bold"
+          >
+            Try again
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/')}
+            className="min-h-11 px-5 rounded-full bg-white border border-rose-200 text-rose-800 text-sm font-semibold"
+          >
+            Back home
+          </button>
+        </div>
+        <BottomNav />
       </div>
     );
   }

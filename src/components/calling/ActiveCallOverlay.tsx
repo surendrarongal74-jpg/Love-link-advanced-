@@ -246,7 +246,7 @@ export const ActiveCallOverlay: React.FC = () => {
               <button
                 onClick={endCall}
                 className="p-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white"
-                title="End Call"
+                title="End Call" aria-label="End Call"
               >
                 <PhoneOff className="w-3.5 h-3.5" />
               </button>
@@ -378,7 +378,7 @@ export const ActiveCallOverlay: React.FC = () => {
                     <button
                       onClick={flipCamera}
                       className="w-12 h-12 rounded-full bg-white/20 hover:bg-white/30 text-white flex items-center justify-center transition active:scale-95"
-                      title="Switch Front/Rear Camera"
+                      title="Switch Front/Rear Camera" aria-label="Switch Front/Rear Camera"
                     >
                       <SwitchCamera className="w-5 h-5" />
                     </button>
@@ -400,7 +400,7 @@ export const ActiveCallOverlay: React.FC = () => {
                 <button
                   onClick={endCall}
                   className="w-13 h-13 rounded-full bg-rose-600 hover:bg-rose-700 text-white flex items-center justify-center shadow-xl shadow-rose-600/40 active:scale-95 transition ml-2"
-                  title="End Call"
+                  title="End Call" aria-label="End Call"
                 >
                   <PhoneOff className="w-6 h-6" />
                 </button>

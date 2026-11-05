@@ -25,19 +25,19 @@ export function SidebarNav() {
   ).length;
 
   const links = [
-    { to: '/', icon: Home, label: 'Home Sanctuary' },
+    { to: '/', icon: Home, label: 'Home' },
     { to: '/scheduler', icon: Gift, label: 'Surprises & Dates' },
     { to: '/random-date', icon: Dices, label: 'Date Roulette' },
     { to: '/adventure-3d', icon: Compass, label: '3D Adventure' },
-    { to: '/loveverse/gifts', icon: Sparkles, label: 'Loveverse Gifts' },
-    { to: '/chat', icon: MessageCircle, label: 'Couple Chat', badge: unreadMessagesCount },
-    { to: '/playhouse', icon: Gamepad2, label: 'Playhouse Games' },
-    { to: '/market', icon: ShoppingBag, label: 'Gifts & Shop' },
-    { to: '/themes', icon: Palette, label: 'Loveverse Themes' },
-    { to: '/memories', icon: Calendar, label: 'Shared Memories' },
-    { to: '/game', icon: Heart, label: 'Daily Love Sync' },
-    { to: '/map', icon: MapPin, label: 'Love Map Pins' },
-    { to: '/aira', icon: Sparkles, label: 'AIRA Romantic AI' },
+    { to: '/loveverse/gifts', icon: Sparkles, label: 'Digital gifts' },
+    { to: '/chat', icon: MessageCircle, label: 'Chat', badge: unreadMessagesCount },
+    { to: '/playhouse', icon: Gamepad2, label: 'Games' },
+    { to: '/market', icon: ShoppingBag, label: 'Shop' },
+    { to: '/themes', icon: Palette, label: 'Themes' },
+    { to: '/memories', icon: Calendar, label: 'Memories' },
+    { to: '/game', icon: Heart, label: 'Daily question' },
+    { to: '/map', icon: MapPin, label: 'Love Map' },
+    { to: '/aira', icon: Sparkles, label: 'AIRA (AI helper)' },
   ];
 
   return (
@@ -57,7 +57,8 @@ export function SidebarNav() {
               sound.playHeartbeat();
               navigate('/');
             }}
-            title="Love Link Sanctuary"
+            title="Love Link home"
+            aria-label="Love Link home"
             className="w-10 h-10 rounded-2xl flex items-center justify-center shadow-sm apple-press shrink-0"
             style={{ 
               backgroundColor: theme.colors.primary, 
@@ -162,19 +163,24 @@ export function SidebarNav() {
             sound.playPop();
             navigate('/earn-coins');
           }}
-          title={`Love Coins: ${balance}`}
-          className="w-full flex items-center justify-center lg:justify-between p-2 lg:p-2.5 rounded-2xl border transition-all apple-press"
+          title="Love Coins are optional rewards for sweet things you do together. You never need them to chat."
+          aria-label={balance > 0 ? `Love Coins: ${balance}. Optional rewards, learn how they work` : 'Love Coins: optional rewards, learn how they work'}
+          className="w-full min-h-11 flex items-center justify-center lg:justify-between p-2 lg:p-2.5 rounded-2xl border transition-all apple-press"
           style={{
             backgroundColor: theme.colors.cardBg,
             borderColor: theme.colors.cardBorder
           }}
         >
-          <div className="flex items-center gap-2">
-            <Coins className="w-4 h-4 text-amber-500 fill-amber-400 shrink-0" />
-            <span className="hidden lg:inline text-xs font-bold">Love Coins</span>
+          <div className="flex items-center gap-2 min-w-0 text-left">
+            <Coins className="w-4 h-4 text-amber-500 fill-amber-400 shrink-0" aria-hidden="true" />
+            <span className="hidden lg:block min-w-0">
+              <span className="block text-xs font-bold">Love Coins</span>
+              <span className="block text-[11px] font-medium opacity-75 truncate">Optional rewards</span>
+            </span>
           </div>
+          {/* Hide the counter at 0 so new couples don't see an empty economy */}
           <span className="hidden lg:inline text-xs font-black" style={{ color: theme.colors.primary }}>
-            {balance}
+            {balance > 0 ? balance : 'How it works'}
           </span>
         </button>
 
@@ -183,12 +189,13 @@ export function SidebarNav() {
             sound.playPop();
             navigate('/themes');
           }}
-          title="Themes Gallery"
-          className="w-full flex items-center justify-center gap-2 py-2 px-2 lg:px-3 rounded-2xl text-xs font-bold text-white transition-all shadow-xs apple-press"
+          title="Change how Love Link looks"
+          aria-label="Change theme"
+          className="w-full min-h-11 flex items-center justify-center gap-2 py-2 px-2 lg:px-3 rounded-2xl text-xs font-bold text-white transition-all shadow-xs apple-press"
           style={{ backgroundColor: theme.colors.primary }}
         >
           <Palette className="w-4 h-4 shrink-0" />
-          <span className="hidden lg:inline">Themes Gallery</span>
+          <span className="hidden lg:inline">Change theme</span>
         </button>
       </div>
     </aside>

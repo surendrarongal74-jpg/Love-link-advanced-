@@ -392,20 +392,8 @@ export function LoveMapScreen() {
     };
   }, [isSharingLocation, space?.id, userData?.id]);
 
-  // Initial user location center
-  useEffect(() => {
-    if (navigator.geolocation && markers.length === 0) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setCenter({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude
-          });
-        },
-        () => null
-      );
-    }
-  }, [markers.length]);
+  // Location is off by default: we never ask for the device position on page load.
+  // It is only requested when the user taps "center on me", "pin my spot", or turns on sharing.
 
   // Partner's location helper
   const partnerLocation = useMemo(() => {
@@ -671,7 +659,8 @@ export function LoveMapScreen() {
             <Link
               to="/"
               onClick={() => sound.tap()}
-              className="w-9 h-9 rounded-2xl flex items-center justify-center shadow-md backdrop-blur-xl border transition-all active:scale-95"
+              aria-label="Back to home"
+              className="w-11 h-11 rounded-2xl flex items-center justify-center shadow-md backdrop-blur-xl border transition-all active:scale-95"
               style={{
                 backgroundColor: theme.colors.cardBg,
                 borderColor: theme.colors.cardBorder,
@@ -741,7 +730,10 @@ export function LoveMapScreen() {
             {/* Live Location Broadcast */}
             <button
               onClick={toggleLocationSharing}
-              className={`px-2.5 py-1.5 rounded-2xl shadow-md backdrop-blur-xl border text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95 ${
+              aria-pressed={isSharingLocation}
+              aria-label={isSharingLocation ? 'Stop sharing my live location with my partner' : 'Share my live location with my partner'}
+              title={isSharingLocation ? 'Sharing your live location' : 'Location sharing is off'}
+              className={`min-h-11 px-3 py-1.5 rounded-2xl shadow-md backdrop-blur-xl border text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95 ${
                 isSharingLocation ? 'text-white' : 'text-gray-500'
               }`}
               style={{
@@ -750,7 +742,7 @@ export function LoveMapScreen() {
               }}
             >
               <Radio className={`w-3.5 h-3.5 ${isSharingLocation ? 'animate-pulse text-white' : ''}`} />
-              <span>{isSharingLocation ? 'Live' : 'Radar'}</span>
+              <span>{isSharingLocation ? 'Sharing on' : 'Sharing off'}</span>
             </button>
           </div>
         </div>
@@ -948,7 +940,7 @@ export function LoveMapScreen() {
               <div className="flex items-center gap-1 shrink-0">
                 <button
                   onClick={handleSendLoveWave}
-                  title="Send Love Wave"
+                  title="Send Love Wave" aria-label="Send Love Wave"
                   className="p-1 px-2 rounded-xl text-white font-bold text-[10px] flex items-center gap-1 shadow-xs transition-transform active:scale-95"
                   style={{ backgroundColor: theme.colors.primary }}
                 >
@@ -958,7 +950,7 @@ export function LoveMapScreen() {
 
                 <button
                   onClick={handleCenterPartner}
-                  title="Fly to partner"
+                  title="Fly to partner" aria-label="Fly to partner"
                   className="p-1 rounded-xl border text-xs flex items-center justify-center transition-transform active:scale-95"
                   style={{
                     borderColor: theme.colors.cardBorder,
@@ -994,7 +986,7 @@ export function LoveMapScreen() {
         {/* Recenter My GPS */}
         <button
           onClick={handleCenterUser}
-          title="My Location"
+          title="My Location" aria-label="My Location"
           className="w-10 h-10 rounded-2xl shadow-lg backdrop-blur-xl border flex items-center justify-center transition-all active:scale-90 hover:scale-105"
           style={{
             backgroundColor: theme.colors.cardBg,
@@ -1009,7 +1001,7 @@ export function LoveMapScreen() {
         {partnerLocation && (
           <button
             onClick={handleCenterPartner}
-            title="Partner's Location"
+            title="Partner's Location" aria-label="Partner's Location"
             className="w-10 h-10 rounded-2xl shadow-lg backdrop-blur-xl border flex items-center justify-center transition-all active:scale-90 hover:scale-105"
             style={{
               backgroundColor: theme.colors.cardBg,
@@ -1025,7 +1017,7 @@ export function LoveMapScreen() {
         {markers.length > 0 && (
           <button
             onClick={handleFitAllMarkers}
-            title="Fit All Pinned Places"
+            title="Fit All Pinned Places" aria-label="Fit All Pinned Places"
             className="w-10 h-10 rounded-2xl shadow-lg backdrop-blur-xl border flex items-center justify-center transition-all active:scale-90 hover:scale-105"
             style={{
               backgroundColor: theme.colors.cardBg,

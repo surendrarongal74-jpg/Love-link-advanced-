@@ -358,7 +358,7 @@ export function EverTideIslandExperience({ gift, isPreview, onRespond, onClose }
           <button
             onClick={toggleAmbientAudio}
             className="p-2.5 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-md transition-all active:scale-95 text-xs flex items-center gap-1.5"
-            title="Toggle soothing ocean soundscape"
+            title="Toggle soothing ocean soundscape" aria-label="Toggle soothing ocean soundscape"
           >
             {isPlayingAudio ? (
               <Volume2 className="w-4 h-4 text-emerald-300" />
@@ -374,7 +374,7 @@ export function EverTideIslandExperience({ gift, isPreview, onRespond, onClose }
             <button
               onClick={onClose}
               className="p-2.5 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-md transition-all active:scale-95"
-              title="Close Experience"
+              title="Close Experience" aria-label="Close Experience"
             >
               <X className="w-4 h-4" />
             </button>

@@ -342,7 +342,7 @@ export function ConstellationConnectGame() {
               onClick={handleResetEdges}
               disabled={gameState?.solved}
               className="p-1.5 rounded-xl bg-slate-800 text-slate-300 hover:text-white border border-slate-700 text-xs transition-all disabled:opacity-40"
-              title="Reset lines"
+              title="Reset lines" aria-label="Reset lines"
             >
               <RefreshCw className="w-4 h-4" />
             </button>

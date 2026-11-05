@@ -719,7 +719,7 @@ export const LoveLink3DGameView: React.FC<LoveLink3DGameViewProps> = ({
           <button
             onClick={resetPuzzle}
             className="w-10 h-10 rounded-2xl bg-slate-900/80 border border-slate-700/60 text-white flex items-center justify-center hover:bg-slate-800 transition active:scale-95 shadow-lg"
-            title="Reset Puzzle"
+            title="Reset Puzzle" aria-label="Reset Puzzle"
           >
             <RotateCcw className="w-4 h-4 text-slate-300" />
           </button>
@@ -728,7 +728,7 @@ export const LoveLink3DGameView: React.FC<LoveLink3DGameViewProps> = ({
           <button
             onClick={onExit}
             className="w-10 h-10 rounded-2xl bg-rose-950/80 border border-rose-700/60 text-rose-200 flex items-center justify-center hover:bg-rose-900 transition active:scale-95 shadow-lg"
-            title="Exit Adventure"
+            title="Exit Adventure" aria-label="Exit Adventure"
           >
             <X className="w-4 h-4" />
           </button>
@@ -799,7 +799,7 @@ export const LoveLink3DGameView: React.FC<LoveLink3DGameViewProps> = ({
           <button
             onClick={handleRecenterCamera}
             className="p-1 rounded-xl text-slate-400 hover:text-indigo-300 transition"
-            title="Recenter Camera behind Character"
+            title="Recenter Camera behind Character" aria-label="Recenter Camera behind Character"
           >
             <Compass className="w-3.5 h-3.5" />
           </button>
@@ -925,7 +925,7 @@ export const LoveLink3DGameView: React.FC<LoveLink3DGameViewProps> = ({
           <button
             onClick={handleJumpPress}
             className="w-16 h-16 rounded-3xl bg-gradient-to-tr from-indigo-600 to-purple-600 border border-indigo-300/40 text-white flex flex-col items-center justify-center shadow-2xl active:scale-90 transition"
-            title="Jump"
+            title="Jump" aria-label="Jump"
           >
             <ArrowUp className="w-7 h-7" />
             <span className="text-[10px] font-extrabold tracking-wider">JUMP</span>

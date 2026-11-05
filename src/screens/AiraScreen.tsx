@@ -709,7 +709,7 @@ export function AiraScreen() {
               type="button"
               onClick={handleSend}
               disabled={!aiConsent || (!inputText.trim() && !uploadedImage)}
-              title="Send to AIRA"
+              title="Send to AIRA" aria-label="Send to AIRA"
               className="p-2.5 rounded-full shrink-0 bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white disabled:opacity-35 disabled:cursor-not-allowed shadow-xs transition-all active:scale-95"
             >
               <Send className="w-4 h-4 ml-0.5" />

@@ -243,7 +243,7 @@ export function ActiveDateCompanionModal({
             <button
               onClick={handleCopyPlaylist}
               className="px-3 py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-300 text-xs font-semibold flex items-center gap-1.5 border border-zinc-800 transition active:scale-95 shrink-0"
-              title="Copy songs list to clipboard"
+              title="Copy songs list to clipboard" aria-label="Copy songs list to clipboard"
             >
               {copiedTracklist ? (
                 <>

@@ -112,7 +112,9 @@ export function AIPlannerScreen() {
           </div>
           <button 
             onClick={() => setShowForm(true)}
-            className="p-3 bg-rose-500 text-white rounded-full shadow-lg hover:bg-rose-600 transition-colors"
+            aria-label="Plan a new date"
+            title="Plan a new date"
+            className="w-12 h-12 flex items-center justify-center bg-rose-600 text-white rounded-full shadow-lg hover:bg-rose-700 transition-colors"
           >
             <Plus className="w-5 h-5" />
           </button>

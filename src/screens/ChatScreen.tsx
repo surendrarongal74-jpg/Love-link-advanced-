@@ -1240,7 +1240,7 @@ export function ChatScreen() {
             type="button"
             onClick={toggleMusic} 
             className="p-2.5 bg-white/70 backdrop-blur-md rounded-full shadow-sm text-rose-500 hover:text-rose-600 hover:bg-white border border-white transition-all active:scale-95"
-            title="Ambient Music"
+            title="Ambient Music" aria-label="Ambient Music"
           >
             {isMusicPlaying ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4 text-rose-300" />}
           </button>
@@ -1601,7 +1601,9 @@ export function ChatScreen() {
                   <button 
                     type="button" 
                     onClick={() => sendReaction('💌')}
-                    className="p-2 text-rose-400 hover:text-rose-500 transition-transform active:scale-95 flex-shrink-0"
+                    aria-label="Send a love letter reaction"
+                    title="Send a love letter reaction"
+                    className="w-11 h-11 flex items-center justify-center text-rose-500 hover:text-rose-600 transition-transform active:scale-95 flex-shrink-0"
                   >
                     <Smile className="w-4 h-4" />
                   </button>
@@ -1617,7 +1619,7 @@ export function ChatScreen() {
                       type="button" 
                       onClick={startRecording}
                       className="p-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full transition-transform active:scale-95 shadow-md flex-shrink-0"
-                      title="Hold or tap to record voice note"
+                      title="Hold or tap to record voice note" aria-label="Hold or tap to record voice note"
                     >
                       <Mic className="w-3.5 h-3.5 fill-white" />
                     </button>
@@ -1627,7 +1629,7 @@ export function ChatScreen() {
                   type="button"
                   onClick={triggerQuickLoveReaction}
                   className="p-3 rounded-full transition-all active:scale-90 hover:scale-105 flex-shrink-0 bg-gradient-to-tr from-rose-500 via-pink-500 to-rose-400 text-white shadow-lg shadow-rose-300/40 hover:shadow-rose-400/50 cursor-pointer group"
-                  title="Send floating live hearts"
+                  title="Send floating live hearts" aria-label="Send floating live hearts"
                 >
                   <Heart className="w-4 h-4 fill-white group-hover:scale-125 transition-transform animate-pulse" />
                 </button>
