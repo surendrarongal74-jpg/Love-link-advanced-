@@ -184,7 +184,7 @@ export const PartnerPermissionsChecklist: React.FC<PartnerPermissionsChecklistPr
     try {
       updatePermission('localVault', true);
       playSound('success');
-      setFeedbackMsg('Local encrypted storage vault initialized on your phone!');
+      setFeedbackMsg('Offline cache enabled on this device.');
     } finally {
       setRequesting(null);
     }
@@ -238,7 +238,7 @@ export const PartnerPermissionsChecklist: React.FC<PartnerPermissionsChecklistPr
       key: 'microphone' as const,
       icon: <Mic className="w-5 h-5 text-rose-500" />,
       title: 'Microphone (Voice Notes)',
-      desc: 'Record voice whispers & audio notes stored securely on your device',
+      desc: 'Record voice whispers & audio notes shared with your partner',
       isGranted: status.microphone,
       action: requestMic,
       required: true,
@@ -264,8 +264,8 @@ export const PartnerPermissionsChecklist: React.FC<PartnerPermissionsChecklistPr
     {
       key: 'localVault' as const,
       icon: <HardDrive className="w-5 h-5 text-emerald-500" />,
-      title: 'Encrypted Local Device Vault',
-      desc: 'Ensures zero unencrypted cloud storage; all data stays on your devices',
+      title: 'Offline Cache',
+      desc: 'Keeps a copy of recent chats on this device so they load offline',
       isGranted: status.localVault,
       action: requestLocalVault,
       required: true,

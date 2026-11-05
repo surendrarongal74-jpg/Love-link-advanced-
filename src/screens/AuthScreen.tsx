@@ -24,7 +24,7 @@ export function AuthScreen() {
   const handleSignIn = async () => {
     if (!coreSyncConsent || !mediaConsent) {
       playSound('pop');
-      setValidationError('Please accept the required Core Account and Encrypted Storage consents below to continue.');
+      setValidationError('Please accept the required Core Account and Messages & Media consents below to continue.');
       return;
     }
 
@@ -164,10 +164,10 @@ export function AuthScreen() {
               />
               <div className="leading-tight">
                 <span className="font-bold text-gray-900 text-[11px] block">
-                  2. Encrypted Messages & 3D Gifts <span className="text-rose-500 text-[10px]">*Required</span>
+                  2. Messages, Photos & Gifts <span className="text-rose-500 text-[10px]">*Required</span>
                 </span>
                 <span className="text-[10px] text-gray-500">
-                  Store and synchronize encrypted chats, 3D worlds, and memories exclusively with your partner.
+                  Store your chats, photos, voice notes and memories in our cloud database (Google Firebase) so they sync with your partner.
                 </span>
               </div>
             </label>

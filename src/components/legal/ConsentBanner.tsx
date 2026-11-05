@@ -93,7 +93,7 @@ export function ConsentBanner({ onOpenPrivacyNotice }: Props) {
 
           {/* Description */}
           <p className="text-[11px] text-gray-600 leading-relaxed">
-            Love Link uses strictly necessary device storage to power your couple space encryption. We gate non-essential third parties (such as <strong>Google Maps location pins</strong> and <strong>Gemini AI assistance</strong>) behind your explicit consent under Indian DPDP law.
+            Love Link uses strictly necessary device storage to keep you signed in and power your couple space. We gate non-essential third parties (such as <strong>Google Maps location pins</strong> and <strong>Gemini AI assistance</strong>) behind your explicit consent under Indian DPDP law.
           </p>
 
           {/* Customization Accordion */}
@@ -103,7 +103,7 @@ export function ConsentBanner({ onOpenPrivacyNotice }: Props) {
               <div className="flex items-center justify-between p-2 rounded-xl bg-white/80 border border-rose-100">
                 <div className="space-y-0.5">
                   <span className="font-bold text-gray-900 block text-xs">Strictly Essential Storage</span>
-                  <p className="text-[10px] text-gray-500">End-to-end encryption keys, partner pairing token, session persistence.</p>
+                  <p className="text-[10px] text-gray-500">Encryption settings, partner pairing token, session persistence.</p>
                 </div>
                 <span className="text-[10px] font-bold text-gray-400 uppercase bg-gray-100 px-2 py-0.5 rounded">Required</span>
               </div>

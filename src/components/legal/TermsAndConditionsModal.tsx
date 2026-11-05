@@ -104,7 +104,7 @@ export const TermsAndConditionsModal: React.FC<TermsAndConditionsModalProps> = (
                     <li><strong className="text-gray-800">Microphone:</strong> For voice notes, audio whispers, and playful voice messages.</li>
                     <li><strong className="text-gray-800">Camera & Photos:</strong> For couple drawings, photo memories, and avatars.</li>
                     <li><strong className="text-gray-800">Notifications:</strong> For real-time love alerts, pings, and questions.</li>
-                    <li><strong className="text-gray-800">Local Device Vault:</strong> For storing all encrypted chats and media securely on your device.</li>
+                    <li><strong className="text-gray-800">Device Storage:</strong> For caching your chats and media on this device so they load offline.</li>
                   </ul>
                 </div>
 
@@ -157,17 +157,17 @@ export const TermsAndConditionsModal: React.FC<TermsAndConditionsModalProps> = (
                 <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 text-xs text-emerald-900 flex items-start gap-3">
                   <Lock className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                   <div>
-                    <strong className="font-semibold">Local-Only Device Storage Guarantee:</strong> All your voice notes, pictures, and chats are encrypted and stored inside your devices (Phone, Tablet & PC). No central servers read or keep your intimate media.
+                    <strong className="font-semibold">How your data is stored:</strong> Chats, voice notes and photos are encrypted in your browser and then stored in our cloud database (Google Firebase) so they sync between you and your partner. A copy is also cached on your device. The encryption key is derived from your couple space, so this is not end-to-end encryption; we are working on it.
                   </div>
                 </div>
 
                 <div className="space-y-3">
                   <h3 className="font-bold text-gray-900 flex items-center gap-2">
                     <HardDrive className="w-4 h-4 text-rose-500" />
-                    How Local Device Storage Works
+                    How Sync & Device Storage Work
                   </h3>
                   <p className="text-xs text-gray-600">
-                    When you record a voice note or share an image, the file is securely encoded and written to your device&apos;s local IndexedDB encrypted storage. When your partner is connected, the encrypted packet synchronizes directly to their device and is stored locally on their device as well.
+                    When you record a voice note or share an image, it is encrypted in your browser and uploaded to Google Firebase, where your partner&apos;s app downloads it. Both of your devices also keep a local cache (IndexedDB) for faster loading.
                   </p>
                 </div>
 
@@ -177,7 +177,7 @@ export const TermsAndConditionsModal: React.FC<TermsAndConditionsModalProps> = (
                     Offline Access
                   </h3>
                   <p className="text-xs text-gray-600">
-                    Because your chat history, voice recordings, and memories reside directly in your device&apos;s storage, you can browse, listen to past voice notes, and review memories even when in airplane mode or with no internet connectivity!
+                    Because recent chats and memories are cached on your device, you can browse, listen to past voice notes, and review memories even when in airplane mode or with no internet connectivity!
                   </p>
                 </div>
 
@@ -187,7 +187,7 @@ export const TermsAndConditionsModal: React.FC<TermsAndConditionsModalProps> = (
                     Microphone & Audio Privacy
                   </h3>
                   <p className="text-xs text-gray-600">
-                    The microphone is only active while you are holding down or tapping the voice recording button. Background listening is strictly disabled. Audio blobs are encrypted before leaving your browser.
+                    The microphone is only active while you are holding down or tapping the voice recording button. Background listening is strictly disabled. Audio is encrypted in your browser before it is uploaded.
                   </p>
                 </div>
 
@@ -197,7 +197,7 @@ export const TermsAndConditionsModal: React.FC<TermsAndConditionsModalProps> = (
                     Right to Delete & Export
                   </h3>
                   <p className="text-xs text-gray-600">
-                    You can clear local chat history or wipe your device&apos;s local vault at any time in App Settings. Deleting the app removes all locally cached chats and voice notes.
+                    You can clear this device&apos;s cache at any time. To export or erase the data stored in the cloud, use the Data Rights form (Privacy Notice → Data Rights).
                   </p>
                 </div>
 

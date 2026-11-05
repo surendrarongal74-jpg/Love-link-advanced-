@@ -761,7 +761,7 @@ export function ChatScreen() {
   };
 
   /**
-   * Send Message (Zero-Knowledge AES-GCM Encrypted packet, stored directly in phones)
+   * Send Message (AES-GCM encrypted in the browser, then synced via Firestore). NOTE: key is derived from the couple space ID, so this is NOT end-to-end encryption.
    */
   const sendMessage = async (e?: React.FormEvent, content?: string) => {
     e?.preventDefault();
@@ -803,7 +803,7 @@ export function ChatScreen() {
         });
         const encrypted = await encryptData(space.id, payloadToEncrypt);
 
-        // 3. Post end-to-end encrypted packet
+        // 3. Post encrypted packet to Firestore
         await addDoc(collection(db, `coupleSpaces/${space.id}/messages`), {
           id: msgId,
           coupleSpaceId: space.id,
@@ -859,7 +859,7 @@ export function ChatScreen() {
         });
         const encrypted = await encryptData(space.id, payloadToEncrypt);
 
-        // 3. Post end-to-end encrypted packet
+        // 3. Post encrypted packet to Firestore
         await addDoc(collection(db, `coupleSpaces/${space.id}/messages`), {
           id: msgId,
           coupleSpaceId: space.id,
@@ -911,7 +911,7 @@ export function ChatScreen() {
       });
       const encrypted = await encryptData(space.id, payloadToEncrypt);
 
-      // 3. Post end-to-end encrypted packet
+      // 3. Post encrypted packet to Firestore
       await addDoc(collection(db, `coupleSpaces/${space.id}/messages`), {
         id: msgId,
         coupleSpaceId: space.id,
@@ -1111,7 +1111,7 @@ export function ChatScreen() {
               <h2 className="text-2xl font-serif font-bold text-rose-950 mb-1">Our Secret Vault</h2>
               <div className="flex items-center justify-center gap-1.5 text-xs text-emerald-600 font-semibold mb-3">
                 <ShieldCheck className="w-4 h-4" />
-                <span>Zero-Knowledge AES Encrypted</span>
+                <span>Passcode lock on this device</span>
               </div>
               <p className="text-rose-600/80 mb-6 text-sm">
                 {!localStorage.getItem(`chatLocked_${space?.id}_pin`) 
@@ -1162,7 +1162,7 @@ export function ChatScreen() {
               <Play className="w-8 h-8 text-rose-500 ml-1" />
             </div>
             <h3 className="font-bold text-rose-950 text-lg mb-1">A voice note from your love 💌</h3>
-            <p className="text-rose-600 text-sm mb-6">Stored privately on your device</p>
+            <p className="text-rose-600 text-sm mb-6">Shared only inside your couple space</p>
             <div className="flex gap-3">
               <button 
                 type="button"
@@ -1203,7 +1203,7 @@ export function ChatScreen() {
             <div className="flex items-center gap-1.5 mt-0.5">
               <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full flex items-center gap-1 border border-emerald-200/50">
                 <ShieldCheck className="w-3 h-3 text-emerald-600" />
-                Phone-Only & Encrypted
+                Encrypted before upload
               </span>
               {isOffline && (
                 <span className="text-[10px] font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full flex items-center gap-1 border border-amber-200">
@@ -1268,9 +1268,9 @@ export function ChatScreen() {
             <div className="w-16 h-16 rounded-full bg-white/60 backdrop-blur-md flex items-center justify-center shadow-inner">
               <ShieldCheck className="w-8 h-8 text-rose-400" />
             </div>
-            <h3 className="font-serif font-bold text-base text-rose-950">Zero-Knowledge Private Space</h3>
+            <h3 className="font-serif font-bold text-base text-rose-950">Your private couple space</h3>
             <p className="text-xs leading-relaxed max-w-xs text-rose-800/80">
-              Your chats, photos, and voice notes are encrypted with AES-256 and stored directly in both your phones. Accessible online & offline!
+              Chats, photos and voice notes are encrypted in your browser before they sync through our cloud database (Google Firebase), and a copy is cached on this device for offline reading. This is not end-to-end encryption yet.
             </p>
           </div>
         )}
@@ -1426,7 +1426,7 @@ export function ChatScreen() {
                   />
                   <div className="flex items-center gap-2 mt-1 text-[11px] text-emerald-600 font-medium">
                     <ShieldCheck className="w-3.5 h-3.5" />
-                    Encrypted on-device photo
+                    Encrypted before upload
                   </div>
                 </div>
                 <button 
@@ -1554,7 +1554,7 @@ export function ChatScreen() {
                   {isEncryptingAndSending ? (
                      <div className="flex-1 flex items-center justify-center gap-2 text-rose-500 font-medium text-xs py-2">
                         <Loader2 className="w-4 h-4 animate-spin" />
-                        Encrypting & Storing in Phone 🔐...
+                        Encrypting & sending…
                      </div>
                   ) : audioBlob ? (
                      <div className="flex-1 flex items-center justify-between px-2">
@@ -1587,7 +1587,7 @@ export function ChatScreen() {
                     type="text" 
                     value={newMessage}
                     onChange={e => handleInputChange(e.target.value)}
-                    placeholder="Type your encrypted message..."
+                    placeholder="Type a message…"
                     className="flex-1 bg-transparent border-none outline-none text-rose-950 placeholder:text-rose-300 px-3 text-[14.5px] font-medium min-w-0"
                   />
                   <button 

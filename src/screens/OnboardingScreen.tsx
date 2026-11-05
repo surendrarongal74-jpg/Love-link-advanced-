@@ -384,7 +384,7 @@ export function OnboardingScreen() {
                     Instant Link
                   </span>
                 </div>
-                <p className="text-rose-400 text-xs mb-5">Create a private encrypted space and generate an invite code for your partner.</p>
+                <p className="text-rose-400 text-xs mb-5">Create a private couple space and generate an invite code for your partner.</p>
                 
                 {createErrorMsg && (
                   <p className="text-red-500 text-xs font-medium mb-3 bg-red-50 p-2.5 rounded-xl border border-red-200">{createErrorMsg}</p>

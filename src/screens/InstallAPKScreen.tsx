@@ -144,8 +144,8 @@ export const InstallAPKScreen: React.FC = () => {
               <ShieldCheck className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-xs font-bold text-gray-800">Private Vault</h3>
-              <p className="text-[11px] text-gray-500 mt-0.5">Encrypted locally on all your devices</p>
+              <h3 className="text-xs font-bold text-gray-800">Private Space</h3>
+              <p className="text-[11px] text-gray-500 mt-0.5">Just the two of you, synced across devices</p>
             </div>
           </div>
 

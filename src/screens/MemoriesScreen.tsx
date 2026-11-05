@@ -414,7 +414,7 @@ export function MemoriesScreen() {
               </span>
             </div>
             <p className="text-xs opacity-70 font-medium">
-              Encrypted timeline of all your cherished milestones
+              A timeline of your cherished milestones
             </p>
           </div>
 

@@ -108,7 +108,7 @@ export const PWAInstallModal: React.FC<PWAInstallModalProps> = ({ isOpen, onClos
 
           <h2 className="text-xl font-bold tracking-tight">Love Link on Every Device</h2>
           <p className="text-xs text-rose-100 mt-1 max-w-xs mx-auto">
-            Install Love Link on your Phone, Tablet, or Desktop PC as a native standalone app with offline encrypted storage & zero lag!
+            Install Love Link on your Phone, Tablet, or Desktop PC as a native standalone app with offline access.
           </p>
 
           {isInstalled && (
@@ -211,7 +211,7 @@ export const PWAInstallModal: React.FC<PWAInstallModalProps> = ({ isOpen, onClos
               <div className="grid grid-cols-2 gap-2.5 pt-1">
                 <div className="bg-emerald-50 rounded-xl p-3 border border-emerald-100 flex items-center gap-2">
                   <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span className="text-[11px] font-medium text-emerald-800">Encrypted On-Device Vault</span>
+                  <span className="text-[11px] font-medium text-emerald-800">Works offline</span>
                 </div>
                 <div className="bg-sky-50 rounded-xl p-3 border border-sky-100 flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-sky-600 shrink-0" />
