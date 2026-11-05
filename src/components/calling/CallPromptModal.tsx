@@ -109,7 +109,7 @@ export const CallPromptModal: React.FC<CallPromptModalProps> = ({ isOpen, onClos
           {/* Privacy badge */}
           <div className="flex items-center gap-1.5 text-[11px] text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200/60 font-semibold">
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-            <span>End-to-End Encrypted Peer-to-Peer</span>
+            <span>Direct peer-to-peer call (WebRTC)</span>
           </div>
         </motion.div>
       </motion.div>

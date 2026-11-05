@@ -192,7 +192,8 @@ export function EarnCoinsScreen() {
                 sound.tap();
                 navigate(-1);
               }}
-              className="w-9 h-9 rounded-xl bg-rose-50 hover:bg-rose-100 flex items-center justify-center text-rose-600 transition-colors"
+              aria-label="Go back"
+              className="w-11 h-11 rounded-xl bg-rose-50 hover:bg-rose-100 flex items-center justify-center text-rose-600 transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
             </button>

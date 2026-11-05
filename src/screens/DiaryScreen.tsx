@@ -124,7 +124,9 @@ export function DiaryScreen() {
           </h1>
           <button 
             onClick={() => openEditor()}
-            className="p-3 bg-[#A67C52] text-white rounded-full shadow-lg hover:bg-[#8A6642] transition-colors"
+            aria-label="New diary entry"
+            title="New diary entry"
+            className="w-12 h-12 flex items-center justify-center bg-[#8A6642] text-white rounded-full shadow-lg hover:bg-[#6F5135] transition-colors"
           >
             <Plus className="w-5 h-5" />
           </button>

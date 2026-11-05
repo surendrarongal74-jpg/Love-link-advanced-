@@ -1,23 +1,13 @@
-export async function generateText(prompt: string, systemInstruction?: string): Promise<string> {
-  try {
-    const res = await fetch('/api/gemini/generate-text', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ prompt, systemInstruction }),
-    });
+import { apiFetch, apiPostJson, ApiError, friendlyApiMessage } from './api';
+export type TextTask = 'date-idea' | 'reply-suggestions' | 'vibe-check';
 
-    if (!res.ok) {
-      throw new Error(`Server returned ${res.status}`);
-    }
-
-    const data = await res.json();
-    return data.text || '';
-  } catch (error) {
-    console.error('Error generating AI text:', error);
-    throw error;
-  }
+/**
+ * Ask the server to run one of a fixed set of AI text tasks. The server builds the prompt;
+ * the client only sends typed parameters. Throws ApiError (with a friendly message) on failure.
+ */
+export async function generateTextTask(task: TextTask, params: Record<string, unknown>): Promise<string> {
+  const data = await apiPostJson<{ text?: string }>('/api/gemini/generate-text', { task, params });
+  return data.text || '';
 }
 
 export async function generateDatePlan(
@@ -26,7 +16,7 @@ export async function generateDatePlan(
   pastSuccessfulSurprises: any[] = []
 ): Promise<any> {
   try {
-    const res = await fetch('/api/gemini/generate-date-plan', {
+    const res = await apiFetch('/api/gemini/generate-date-plan', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -39,7 +29,8 @@ export async function generateDatePlan(
     });
 
     if (!res.ok) {
-      throw new Error(`Server returned ${res.status}`);
+      const body = await res.json().catch(() => null);
+      throw new ApiError(res.status, body?.error || `http_${res.status}`, friendlyApiMessage(res.status, body?.error, body?.message));
     }
 
     const data = await res.json();
@@ -68,7 +59,7 @@ export async function generateRandomDateNight(
   }
 ): Promise<any> {
   try {
-    const res = await fetch('/api/gemini/random-date-generator', {
+    const res = await apiFetch('/api/gemini/random-date-generator', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -81,7 +72,8 @@ export async function generateRandomDateNight(
     });
 
     if (!res.ok) {
-      throw new Error(`Server returned ${res.status}`);
+      const body = await res.json().catch(() => null);
+      throw new ApiError(res.status, body?.error || `http_${res.status}`, friendlyApiMessage(res.status, body?.error, body?.message));
     }
 
     const data = await res.json();

@@ -456,7 +456,7 @@ export function DrawItGuessItGame() {
               />
               <button
                 onClick={undoLastStroke}
-                title="Undo last stroke"
+                title="Undo last stroke" aria-label="Undo last stroke"
                 className="text-[11px] font-semibold px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors flex items-center gap-0.5"
               >
                 <Undo className="w-3 h-3" />

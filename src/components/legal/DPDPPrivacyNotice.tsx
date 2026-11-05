@@ -54,7 +54,7 @@ export function DPDPPrivacyNotice({ onOpenDataRightsModal }: Props) {
           <span>Our Digital Sanctuary Promise</span>
         </div>
         <p className="text-[11px] text-rose-950 leading-relaxed">
-          Love Link is an encrypted two-person digital sanctuary. We act as a <strong>Data Fiduciary</strong> strictly to facilitate intimate connection between two consenting partners. We do not sell your personal data, conduct behavioral advertising, monetise your chat logs, or build advertising profiles.
+          Love Link is a private two-person couple space. We act as a <strong>Data Fiduciary</strong> strictly to facilitate intimate connection between two consenting partners. We do not sell your personal data, conduct behavioral advertising, monetise your chat logs, or build advertising profiles.
         </p>
       </div>
 
@@ -107,7 +107,7 @@ export function DPDPPrivacyNotice({ onOpenDataRightsModal }: Props) {
                   <strong className="text-gray-800">Account Profile:</strong> Display name, Google email address, profile avatar URL, unique Google user ID.
                 </li>
                 <li>
-                  <strong className="text-gray-800">Intimate Communications & Media:</strong> Text messages, voice recordings (audio blobs), photo drawings/canvas, and love notes transmitted with end-to-end client encryption.
+                  <strong className="text-gray-800">Intimate Communications & Media:</strong> Text messages, voice recordings (audio blobs), photo drawings/canvas, and love notes encrypted in the browser before upload and stored in Google Firebase (not end-to-end encrypted).
                 </li>
                 <li>
                   <strong className="text-gray-800">Relationship Milestones & Quizzes:</strong> Anniversary dates, milestone photographs in memories, love streak counters, secret diary entries, and love language quiz answers.

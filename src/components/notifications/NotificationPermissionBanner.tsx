@@ -60,7 +60,7 @@ export const NotificationPermissionBanner: React.FC = () => {
         <button
           onClick={handleDismiss}
           className="p-1 text-gray-400 hover:text-gray-600 rounded-full transition"
-          title="Dismiss"
+          title="Dismiss" aria-label="Dismiss"
         >
           <X className="w-3.5 h-3.5" />
         </button>

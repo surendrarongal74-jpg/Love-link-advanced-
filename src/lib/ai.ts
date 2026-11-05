@@ -1,6 +1,7 @@
+import { apiFetch } from './api';
 export async function generateDailyQuestion(chatHistory: string[]): Promise<string> {
   try {
-    const res = await fetch('/api/gemini/daily-question', {
+    const res = await apiFetch('/api/gemini/daily-question', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ chatHistory }),
@@ -16,7 +17,7 @@ export async function generateDailyQuestion(chatHistory: string[]): Promise<stri
 
 export async function suggestMessages(context: string): Promise<string[]> {
   try {
-    const res = await fetch('/api/gemini/suggest-messages', {
+    const res = await apiFetch('/api/gemini/suggest-messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ context }),
@@ -32,7 +33,7 @@ export async function suggestMessages(context: string): Promise<string[]> {
 
 export async function generateLoveLanguageSuggestions(partnerLanguage: string): Promise<string[]> {
   try {
-    const res = await fetch('/api/gemini/love-language', {
+    const res = await apiFetch('/api/gemini/love-language', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ partnerLanguage }),
@@ -48,7 +49,7 @@ export async function generateLoveLanguageSuggestions(partnerLanguage: string): 
 
 export async function analyzeMoodAndSuggestAction(myMood: string, partnerMood: string): Promise<{ title: string, description: string, messageSuggestion?: string }> {
   try {
-    const res = await fetch('/api/gemini/analyze-mood', {
+    const res = await apiFetch('/api/gemini/analyze-mood', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ myMood, partnerMood }),
@@ -76,7 +77,7 @@ export async function generateAiraGameContent<T = any>(
   options?: { partnerName?: string; userName?: string; currentTopic?: string }
 ): Promise<T | null> {
   try {
-    const res = await fetch('/api/aira/game-content', {
+    const res = await apiFetch('/api/aira/game-content', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -112,7 +113,7 @@ export async function generateVisionBoardIdeas(
   partner2Name?: string
 ): Promise<VisionBoardIdea[]> {
   try {
-    const res = await fetch('/api/gemini/vision-board-ideas', {
+    const res = await apiFetch('/api/gemini/vision-board-ideas', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ category, existingThemes, partner1Name, partner2Name }),
@@ -141,7 +142,7 @@ export async function generateAiraLoveCoupons(
   loveLanguage: string = 'Quality Time'
 ): Promise<LoveCouponIdea[]> {
   try {
-    const res = await fetch('/api/gemini/love-coupons-ideas', {
+    const res = await apiFetch('/api/gemini/love-coupons-ideas', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ partnerName, category, loveLanguage }),

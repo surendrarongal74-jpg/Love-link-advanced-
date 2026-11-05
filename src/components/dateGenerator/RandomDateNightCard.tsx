@@ -289,7 +289,7 @@ export const RandomDateNightCard: React.FC<RandomDateNightCardProps> = ({
               <button
                 onClick={handleCopyPrompt}
                 className="text-xs flex items-center gap-1 text-slate-300 hover:text-white bg-slate-800/80 px-2 py-1 rounded-lg border border-slate-700 transition"
-                title="Copy Question"
+                title="Copy Question" aria-label="Copy Question"
               >
                 {copiedPrompt ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                 <span>{copiedPrompt ? 'Copied' : 'Copy'}</span>
@@ -359,7 +359,7 @@ export const RandomDateNightCard: React.FC<RandomDateNightCardProps> = ({
           <button
             onClick={handleCalendarDownload}
             className="p-2.5 rounded-2xl bg-slate-800/90 hover:bg-slate-700 text-slate-300 hover:text-white transition active:scale-95 border border-slate-700/60 shadow"
-            title="Download Calendar .ics"
+            title="Download Calendar .ics" aria-label="Download Calendar .ics"
           >
             <Calendar className="w-4 h-4" />
           </button>

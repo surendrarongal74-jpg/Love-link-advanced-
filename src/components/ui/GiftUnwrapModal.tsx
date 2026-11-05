@@ -176,7 +176,7 @@ export function GiftUnwrapModal({ gift, onClose }: GiftUnwrapModalProps) {
                 <button
                   onClick={handleReplay}
                   className="p-2.5 rounded-2xl border border-rose-200 bg-white/80 hover:bg-white text-rose-600 transition-colors"
-                  title="Replay opening"
+                  title="Replay opening" aria-label="Replay opening"
                 >
                   <RefreshCw className="w-4 h-4" />
                 </button>

@@ -10,7 +10,6 @@ export interface CoupleSpaceData {
   partner2Id: string;
   inviteCode: string;
   streak: number;
-  streakDays?: number;
   lastInteractionAt: number;
   createdAt: number;
   xp: number;

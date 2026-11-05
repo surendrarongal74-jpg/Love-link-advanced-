@@ -84,7 +84,8 @@ export const InstallAPKScreen: React.FC = () => {
             playSound('pop');
             navigate(-1);
           }}
-          className="w-10 h-10 rounded-full bg-rose-50 flex items-center justify-center text-rose-600 hover:bg-rose-100 transition active:scale-95"
+          aria-label="Go back"
+          className="w-11 h-11 rounded-full bg-rose-50 flex items-center justify-center text-rose-600 hover:bg-rose-100 transition active:scale-95"
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
@@ -144,8 +145,8 @@ export const InstallAPKScreen: React.FC = () => {
               <ShieldCheck className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-xs font-bold text-gray-800">Private Vault</h3>
-              <p className="text-[11px] text-gray-500 mt-0.5">Encrypted locally on all your devices</p>
+              <h3 className="text-xs font-bold text-gray-800">Private Space</h3>
+              <p className="text-[11px] text-gray-500 mt-0.5">Just the two of you, synced across devices</p>
             </div>
           </div>
 

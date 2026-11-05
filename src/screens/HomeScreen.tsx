@@ -271,7 +271,10 @@ export function HomeScreen() {
     try {
       const msgsQuery = query(collection(db, `coupleSpaces/${space.id}/messages`), orderBy('createdAt', 'desc'), limit(15));
       const smap = await getDocs(msgsQuery);
-      const chatHistory = smap.docs.reverse().map(d => `${d.data().senderId === userData.id ? 'Me' : 'Partner'}: ${d.data().content}`);
+      // Only the user's own (plaintext) messages are ever sent to the AI; the partner has not consented.
+      const chatHistory = smap.docs.reverse()
+        .filter(d => d.data().senderId === userData.id && typeof d.data().content === 'string')
+        .map(d => `Me: ${d.data().content}`);
       qText = await generateDailyQuestion(chatHistory);
     } catch (e) {
       console.error(e);
@@ -384,7 +387,7 @@ export function HomeScreen() {
              <button
                onClick={handleCopyWaitingCode}
                className="p-2.5 bg-white text-rose-500 rounded-xl hover:bg-rose-50 shadow-xs transition-all hover:-translate-y-0.5 active:scale-95 flex items-center gap-1.5"
-               title="Copy invite code"
+               title="Copy invite code" aria-label="Copy invite code"
              >
                {copiedWaitingCode ? (
                  <>
@@ -409,7 +412,9 @@ export function HomeScreen() {
   }
 
   // Days together calculation
-  const spaceCreatedDate = space?.createdAt ? new Date(space.createdAt).getTime() : Date.now() - (86400000 * 159);
+  // Same source of truth as the sidebar: anniversary if set, else when the space was created (no made-up default).
+  const startSource = space?.anniversaryDate || space?.createdAt;
+  const spaceCreatedDate = startSource ? new Date(startSource).getTime() : Date.now();
   const daysTogether = Math.max(1, Math.floor((Date.now() - spaceCreatedDate) / (1000 * 60 * 60 * 24)));
   const nextMilestone = daysTogether <= 100 ? 100 : daysTogether <= 200 ? 200 : daysTogether <= 365 ? 365 : Math.ceil(daysTogether / 100) * 100;
   const daysToMilestone = Math.max(1, nextMilestone - daysTogether);
@@ -516,8 +521,9 @@ export function HomeScreen() {
                 sound.playPop();
                 setIsDrawerOpen(true);
               }}
-              className="relative p-2.5 text-rose-500 hover:text-rose-700 bg-rose-50 hover:bg-rose-100/80 rounded-full transition-colors border border-rose-100 active:scale-95 shadow-2xs"
-              title="Live Notifications"
+              className="relative w-11 h-11 flex items-center justify-center text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100/80 rounded-full transition-colors border border-rose-100 active:scale-95 shadow-2xs"
+              title="Notifications"
+              aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : 'Notifications'}
             >
               <Bell className="w-5 h-5" />
               {unreadCount > 0 && (
@@ -526,32 +532,24 @@ export function HomeScreen() {
                 </span>
               )}
             </button>
+            {/* Love Coins: optional rewards. Tapping opens the explainer page. */}
             <button
               onClick={() => {
                 sound.tap();
-                navigate('/market');
+                navigate('/earn-coins');
               }}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200/90 shadow-2xs active:scale-95 transition-all text-xs font-bold"
-              title="Love Link Market"
+              className="min-h-11 flex items-center gap-1 px-3 rounded-full bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200/90 shadow-2xs active:scale-95 transition-all text-xs font-bold"
+              title="Love Coins: optional rewards for sweet things you do together. Never needed to chat."
+              aria-label={`Love Coins: ${wallet?.balance ?? 0}. Optional rewards, tap to learn how they work`}
             >
-              <Coins className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
-              <span>{wallet?.balance ?? 50}</span>
-            </button>
-            <button
-              onClick={() => {
-                sound.playPop();
-                setShowCallPrompt(true);
-              }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-rose-500 to-pink-500 text-white text-xs font-semibold shadow-md shadow-rose-300/40 hover:opacity-95 active:scale-95 transition"
-              title="Voice or Video Call"
-            >
-              <Phone className="w-3.5 h-3.5" />
-              <span>Call</span>
+              <Coins className="w-3.5 h-3.5 fill-amber-500 text-amber-500" aria-hidden="true" />
+              <span>{wallet?.balance ?? 0}</span>
             </button>
             <button 
               onClick={() => setShowSettings(true)} 
-              className="p-2.5 text-gray-400 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 rounded-full transition-colors border border-gray-100 active:scale-95 shadow-2xs"
+              className="w-11 h-11 flex items-center justify-center text-gray-600 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 rounded-full transition-colors border border-gray-100 active:scale-95 shadow-2xs"
               title="Settings"
+              aria-label="Settings"
             >
               <Settings className="w-5 h-5" />
             </button>
@@ -560,8 +558,8 @@ export function HomeScreen() {
 
         {/* Living Relationship Connection & Presence Card */}
         <div className="bg-gradient-to-br from-rose-500/10 via-pink-500/5 to-rose-100/40 border border-rose-200/80 rounded-3xl p-4.5 mb-5 shadow-2xs">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
               {/* Partner Avatar with Frame and Breathing Halo */}
               <div className="relative">
                 {isEquippedFrame && equippedBadgeItem?.image && (
@@ -596,10 +594,10 @@ export function HomeScreen() {
                     {partnerData?.mood === 'Loved' ? '🥰' : partnerData?.mood === 'Happy' ? '😊' : '💖'}
                   </span>
                 </div>
-                <p className="text-[11px] text-rose-800/70 font-medium mt-0.5 flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                  <span>Active in your space</span>
-                  <span className="text-rose-300">•</span>
+                <p className="text-xs text-rose-900/80 font-medium mt-0.5 flex flex-wrap items-center gap-x-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" aria-hidden="true" />
+                  <span>In your space</span>
+                  <span className="text-rose-300" aria-hidden="true">•</span>
                   <span>Feeling {partnerMood}</span>
                 </p>
               </div>
@@ -612,8 +610,9 @@ export function HomeScreen() {
                   sound.playPop();
                   setShowCallPrompt(true);
                 }}
-                className="flex items-center gap-1 px-2.5 py-2 rounded-2xl bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 shadow-2xs hover:shadow-sm active:scale-90 transition-all font-semibold text-xs"
-                title="Call partner"
+                className="min-h-11 flex items-center gap-1 px-3 rounded-2xl bg-white hover:bg-rose-50 text-rose-700 border border-rose-200 shadow-2xs hover:shadow-sm active:scale-90 transition-all font-semibold text-xs"
+                title="Voice or video call"
+                aria-label="Call your partner"
               >
                 <Phone className="w-3.5 h-3.5 text-rose-500" />
                 <span>Call</span>
@@ -621,8 +620,9 @@ export function HomeScreen() {
 
               <button
                 onClick={handleSendHeartbeat}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 shadow-2xs hover:shadow-sm active:scale-90 transition-all font-semibold text-xs group"
-                title="Send a real heartbeat pulse to your partner"
+                className="min-h-11 flex items-center gap-1.5 px-3 rounded-2xl bg-white hover:bg-rose-50 text-rose-700 border border-rose-200 shadow-2xs hover:shadow-sm active:scale-90 transition-all font-semibold text-xs group"
+                title="Send a heartbeat to your partner"
+                aria-label="Send a heartbeat to your partner"
               >
                 <Heart className="w-4 h-4 fill-rose-500 text-rose-500 group-hover:scale-125 transition-transform" />
                 <span>Touch</span>
@@ -631,12 +631,12 @@ export function HomeScreen() {
           </div>
 
           {/* Living Days Milestone Bar */}
-          <div className="mt-3.5 pt-3 border-t border-rose-200/50 flex items-center justify-between text-xs">
+          <div className="mt-3.5 pt-3 border-t border-rose-200/50 flex flex-wrap items-center justify-between gap-2 text-xs">
             <div className="flex items-center gap-1.5 text-rose-900 font-medium">
               <Flame className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
               <span className="font-bold">{daysTogether} days</span> together
             </div>
-            <div className="text-[11px] text-rose-600/80 font-medium bg-white/80 px-2.5 py-0.5 rounded-full border border-rose-100">
+            <div className="text-[11px] text-rose-700 font-medium bg-white/80 px-2.5 py-0.5 rounded-full border border-rose-100">
               {daysToMilestone} days to Day {nextMilestone} milestone
             </div>
           </div>

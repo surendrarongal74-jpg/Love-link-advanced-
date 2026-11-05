@@ -20,9 +20,11 @@ export function ContextualInspector() {
 
   // Calculate days together
   const daysTogether = React.useMemo(() => {
-    if (!space?.anniversaryDate) return 1;
+    // Prefer the couple's anniversary; otherwise count from when the space was created (same as Home).
+    const startSource = space?.anniversaryDate || space?.createdAt;
+    if (!startSource) return 1;
     try {
-      const start = new Date(space.anniversaryDate).getTime();
+      const start = new Date(startSource).getTime();
       const now = Date.now();
       const diff = Math.max(1, Math.floor((now - start) / (1000 * 60 * 60 * 24)));
       return diff;
@@ -146,7 +148,7 @@ export function ContextualInspector() {
         <div className="grid grid-cols-2 gap-2 text-center">
           <div className="p-2.5 rounded-2xl bg-white/50 dark:bg-black/20 border border-black/5 dark:border-white/5">
             <span className="block text-[10px] opacity-60 uppercase font-semibold">Streak</span>
-            <span className="text-base font-black text-rose-500">{space?.streakDays || 1} Days</span>
+            <span className="text-base font-black text-rose-500">{space?.streak ?? 0} {(space?.streak ?? 0) === 1 ? 'day' : 'days'}</span>
           </div>
           <div className="p-2.5 rounded-2xl bg-white/50 dark:bg-black/20 border border-black/5 dark:border-white/5">
             <span className="block text-[10px] opacity-60 uppercase font-semibold">Love Coins</span>

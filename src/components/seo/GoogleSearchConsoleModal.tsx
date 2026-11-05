@@ -1,3 +1,4 @@
+import { apiFetch } from '../../lib/api';
 import React, { useState, useEffect } from 'react';
 import { X, Search, CheckCircle, ExternalLink, Copy, Check, Globe, Shield, RefreshCw } from 'lucide-react';
 import { sound } from '../../lib/sound';
@@ -25,7 +26,7 @@ export function GoogleSearchConsoleModal({ isOpen, onClose }: Props) {
   const fetchStatus = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/seo/status');
+      const res = await apiFetch('/api/seo/status');
       if (res.ok) {
         const data = await res.json();
         setStatus(data);
@@ -50,7 +51,7 @@ export function GoogleSearchConsoleModal({ isOpen, onClose }: Props) {
 
     // Persist to server in-memory store
     try {
-      await fetch('/api/seo/token', {
+      await apiFetch('/api/seo/token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token: cleanToken }),

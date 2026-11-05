@@ -112,7 +112,8 @@ export function LoveversePlayhouseScreen() {
             <Link
               to="/"
               onClick={() => sound.playPop()}
-              className="w-10 h-10 rounded-2xl flex items-center justify-center transition-all shadow-xs hover:scale-105 active:scale-95"
+              aria-label="Back to home"
+              className="w-11 h-11 rounded-2xl flex items-center justify-center transition-all shadow-xs hover:scale-105 active:scale-95"
               style={{
                 backgroundColor: theme.colors.cardBg,
                 color: theme.colors.primary,

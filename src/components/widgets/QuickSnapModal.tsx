@@ -437,7 +437,7 @@ export const QuickSnapModal: React.FC<QuickSnapModalProps> = ({
                 <button
                   onClick={flipCamera}
                   className="absolute top-4 right-4 p-2.5 rounded-full bg-black/50 backdrop-blur-md text-white border border-white/20 active:scale-90 transition shadow-md"
-                  title="Flip Camera"
+                  title="Flip Camera" aria-label="Flip Camera"
                 >
                   <FlipHorizontal className="w-5 h-5" />
                 </button>
@@ -507,7 +507,7 @@ export const QuickSnapModal: React.FC<QuickSnapModalProps> = ({
                 <button
                   onClick={handleSnap}
                   className="w-20 h-20 rounded-full border-4 border-white flex items-center justify-center p-1 shadow-2xl active:scale-95 transition"
-                  title="Snap photo"
+                  title="Snap photo" aria-label="Snap photo"
                 >
                   <div className="w-full h-full rounded-full bg-gradient-to-tr from-rose-500 to-pink-500 shadow-inner flex items-center justify-center">
                     <Camera className="w-7 h-7 text-white" />
@@ -530,7 +530,7 @@ export const QuickSnapModal: React.FC<QuickSnapModalProps> = ({
                 <button
                   onClick={flipCamera}
                   className="p-3.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition active:scale-90 flex flex-col items-center gap-1"
-                  title="Flip camera"
+                  title="Flip camera" aria-label="Flip camera"
                 >
                   <FlipHorizontal className="w-6 h-6" />
                   <span className="text-[9px] font-semibold opacity-75">Flip</span>

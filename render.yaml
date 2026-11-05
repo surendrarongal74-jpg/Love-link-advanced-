@@ -13,3 +13,11 @@ services:
         value: 10000
       - key: VITE_GOOGLE_SITE_VERIFICATION
         value: f9e701bd5d974c1f
+      # Secrets: set the values in the Render dashboard (never commit them)
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: SEO_ADMIN_TOKEN
+        sync: false
+      # Optional: extra comma-separated origins allowed to call /api (e.g. a custom domain)
+      - key: ALLOWED_ORIGINS
+        sync: false

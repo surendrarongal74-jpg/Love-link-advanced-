@@ -11,6 +11,12 @@ service cloud.firestore {
     function incoming() { return request.resource.data; }
     function existing() { return resource.data; }
     function isValidString(val, max) { return val is string && val.size() <= max; }
+    // A field present on the stored doc may not be changed or removed by an update.
+    function keepsField(field) { return !(field in existing()) || (field in incoming() && incoming()[field] == existing()[field]); }
+    // If the doc carries a coupleSpaceId/spaceId it must point at this space.
+    function pointsAtSpace(data, spaceId) {
+      return (!('coupleSpaceId' in data) || data.coupleSpaceId == spaceId) && (!('spaceId' in data) || data.spaceId == spaceId);
+    }
 
     // User Blueprints
     function isValidUser(data) {
@@ -31,7 +37,8 @@ service cloud.firestore {
     // CoupleSpace Blueprints
     function isValidCoupleSpace(data) {
       return data.keys().hasAll(['id', 'partner1Id', 'partner2Id', 'inviteCode', 'streak', 'lastInteractionAt', 'createdAt', 'xp', 'level']) &&
-             data.keys().size() == 9 &&
+             data.keys().hasOnly(['id', 'partner1Id', 'partner2Id', 'inviteCode', 'streak', 'lastInteractionAt', 'createdAt', 'xp', 'level', 'inviteExpiresAt']) &&
+             (!('inviteExpiresAt' in data) || data.inviteExpiresAt is int) &&
              isValidString(data.id, 128) &&
              isValidString(data.partner1Id, 128) &&
              (isValidString(data.partner2Id, 128) || data.partner2Id == "") &&
@@ -49,7 +56,11 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow get: if isSignedIn();
+      // Only the user themself, or their linked partner (a member of the space named on the doc).
+      allow get: if isSignedIn() && (
+        request.auth.uid == userId ||
+        (resource.data.coupleSpaceId is string && resource.data.coupleSpaceId != "" && isCoupleMember(resource.data.coupleSpaceId))
+      );
       allow list: if isSignedIn() && resource.data.id == request.auth.uid;
       allow create: if isSignedIn() && isValidUser(incoming()) && request.auth.uid == userId;
       allow update: if isSignedIn() && request.auth.uid == userId && (
@@ -58,13 +69,31 @@ service cloud.firestore {
     }
 
     match /coupleSpaces/{spaceId} {
-      allow get: if isSignedIn(); // Let anyone get if they know the ID for invite purposes, but not list.
-      allow create: if isSignedIn() && isValidCoupleSpace(incoming()) && incoming().partner1Id == request.auth.uid;
+      function isMemberOf(data) { return data.partner1Id == request.auth.uid || data.partner2Id == request.auth.uid; }
+      // An invite is open while the space has no second partner and its invite has not expired.
+      function hasOpenInvite(data) {
+        return (!('partner2Id' in data) || data.partner2Id == "") &&
+               ('inviteExpiresAt' in data) && data.inviteExpiresAt is int &&
+               request.time.toMillis() < data.inviteExpiresAt;
+      }
+      // Members, or someone holding an open (unexpired, unused) invite code. Never list.
+      allow get: if isSignedIn() && (isMemberOf(resource.data) || hasOpenInvite(resource.data));
+      allow create: if isSignedIn() && isValidCoupleSpace(incoming()) && incoming().partner1Id == request.auth.uid &&
+        incoming().partner2Id == "" && incoming().streak == 0 && incoming().xp == 0 && incoming().level == 1 &&
+        ('inviteExpiresAt' in incoming()) && incoming().inviteExpiresAt <= request.time.toMillis() + 7 * 24 * 60 * 60 * 1000;
       allow update: if isSignedIn() && (
-        // Joining action
-        ((!('partner2Id' in existing()) || existing().partner2Id == "") && incoming().partner2Id == request.auth.uid && incoming().diff(existing()).affectedKeys().hasOnly(['partner2Id'])) ||
-        // Members updating stats
-        ((existing().partner1Id == request.auth.uid || existing().partner2Id == request.auth.uid) && incoming().diff(existing()).affectedKeys().hasOnly(['streak', 'lastInteractionAt', 'xp', 'level']))
+        // Joining: only with a valid, unexpired invite; becomes partner2 and nothing else changes
+        (hasOpenInvite(existing()) &&
+         existing().partner1Id != request.auth.uid &&
+         incoming().partner2Id == request.auth.uid &&
+         incoming().diff(existing()).affectedKeys().hasOnly(['partner2Id'])) ||
+        // Members updating stats, within sane bounds (no setting streak/xp/level to arbitrary values)
+        (isMemberOf(existing()) &&
+         incoming().diff(existing()).affectedKeys().hasOnly(['streak', 'lastInteractionAt', 'xp', 'level']) &&
+         incoming().streak is int && incoming().streak >= 0 && incoming().streak <= existing().streak + 1 &&
+         incoming().xp is int && incoming().xp >= existing().xp && incoming().xp <= existing().xp + 500 &&
+         incoming().level is int && incoming().level >= existing().level && incoming().level <= existing().level + 1 &&
+         incoming().lastInteractionAt is int && incoming().lastInteractionAt <= request.time.toMillis() + 60000)
       );
     }
 
@@ -142,14 +171,18 @@ service cloud.firestore {
       allow list, get: if isSignedIn() && isCoupleMember(spaceId);
       // Removed exact keys size check to allow flexible memory types (surprises, notes, markers, etc.)
       allow create: if isSignedIn() && isCoupleMember(spaceId) && isValidMemory(incoming());
-      allow update: if isSignedIn() && isCoupleMember(spaceId);
+      allow update: if isSignedIn() && isCoupleMember(spaceId) &&
+        keepsField('id') && keepsField('coupleSpaceId') && keepsField('creatorId') && keepsField('type') &&
+        incoming().keys().size() <= 40;
       allow delete: if isSignedIn() && isCoupleMember(spaceId) && existing().creatorId == request.auth.uid;
     }
 
     // Surprises & AI Date Night Plans collection
     match /coupleSpaces/{spaceId}/surprises/{surpriseId} {
       allow list, get: if isSignedIn() && isCoupleMember(spaceId);
-      allow create, update: if isSignedIn() && isCoupleMember(spaceId);
+      allow create: if isSignedIn() && isCoupleMember(spaceId) && pointsAtSpace(incoming(), spaceId) && incoming().keys().size() <= 60;
+      allow update: if isSignedIn() && isCoupleMember(spaceId) && pointsAtSpace(incoming(), spaceId) &&
+        keepsField('id') && keepsField('creatorId') && keepsField('createdBy') && incoming().keys().size() <= 60;
       allow delete: if isSignedIn() && isCoupleMember(spaceId);
     }
 
@@ -250,7 +283,7 @@ service cloud.firestore {
       }
       allow list, get: if isSignedIn() && isCoupleMember(spaceId);
       allow create: if isSignedIn() && isCoupleMember(spaceId) && isValidDatePlan(incoming());
-      allow update: if isSignedIn() && isCoupleMember(spaceId);
+      allow update: if isSignedIn() && isCoupleMember(spaceId) && keepsField('id') && keepsField('coupleSpaceId') && keepsField('creatorId') && incoming().keys().size() <= 30;
       allow delete: if isSignedIn() && isCoupleMember(spaceId);
     }
 
@@ -477,7 +510,7 @@ service cloud.firestore {
       }
       allow list, get: if isSignedIn() && isCoupleMember(spaceId);
       allow create: if isSignedIn() && isCoupleMember(spaceId) && isValidDigitalGift(incoming()) && incoming().creatorId == request.auth.uid;
-      allow update: if isSignedIn() && isCoupleMember(spaceId);
+      allow update: if isSignedIn() && isCoupleMember(spaceId) && keepsField('id') && keepsField('creatorId') && keepsField('coupleSpaceId') && incoming().keys().size() <= 40;
       allow delete: if isSignedIn() && isCoupleMember(spaceId) && existing().creatorId == request.auth.uid;
     }
 
@@ -498,21 +531,36 @@ service cloud.firestore {
       allow get: if true;
       allow list: if false;
       allow create: if isSignedIn() && isValidPublicDigitalGift(incoming()) && incoming().creatorId == request.auth.uid;
-      allow update: if (isSignedIn() && incoming().creatorId == request.auth.uid) || incoming().diff(existing()).affectedKeys().hasOnly(['recipientResponse', 'updatedAt']);
+      // Creator may edit (and may not hand the gift to someone else). Anyone with the link may answer
+      // once, with a small, well-formed response and nothing else changed.
+      allow update: if (isSignedIn() && existing().creatorId == request.auth.uid && incoming().creatorId == request.auth.uid) || (
+        incoming().diff(existing()).affectedKeys().hasOnly(['recipientResponse', 'updatedAt']) &&
+        (!('recipientResponse' in existing()) || existing().recipientResponse == null) &&
+        incoming().recipientResponse is map &&
+        incoming().recipientResponse.keys().hasAll(['answer', 'respondedAt']) &&
+        incoming().recipientResponse.keys().hasOnly(['answer', 'note', 'respondedAt', 'reactionEmoji']) &&
+        isValidString(incoming().recipientResponse.answer, 300) &&
+        (!('note' in incoming().recipientResponse) || isValidString(incoming().recipientResponse.note, 1000)) &&
+        (!('reactionEmoji' in incoming().recipientResponse) || isValidString(incoming().recipientResponse.reactionEmoji, 16)) &&
+        incoming().recipientResponse.respondedAt is number &&
+        incoming().updatedAt is number
+      );
       allow delete: if isSignedIn() && existing().creatorId == request.auth.uid;
     }
 
     // Shared Canvas Drawings for couples
     match /coupleSpaces/{spaceId}/sharedCanvas/{canvasId} {
       allow list, get: if isSignedIn() && isCoupleMember(spaceId);
-      allow create, update: if isSignedIn() && isCoupleMember(spaceId);
+      allow create, update: if isSignedIn() && isCoupleMember(spaceId) && pointsAtSpace(incoming(), spaceId) && incoming().keys().size() <= 30;
       allow delete: if isSignedIn() && isCoupleMember(spaceId);
     }
 
     // Love Link 3D: Real-time 3D multiplayer adventure session
     match /coupleSpaces/{spaceId}/game3dSession/{sessionId} {
       allow list, get: if isSignedIn() && isCoupleMember(spaceId);
-      allow create, update: if isSignedIn() && isCoupleMember(spaceId);
+      allow create: if isSignedIn() && isCoupleMember(spaceId) && pointsAtSpace(incoming(), spaceId) && incoming().keys().size() <= 30;
+      allow update: if isSignedIn() && isCoupleMember(spaceId) && pointsAtSpace(incoming(), spaceId) &&
+        keepsField('spaceId') && keepsField('worldId') && incoming().keys().size() <= 30;
       allow delete: if isSignedIn() && isCoupleMember(spaceId);
     }
 

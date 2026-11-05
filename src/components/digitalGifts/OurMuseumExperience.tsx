@@ -110,7 +110,7 @@ export function OurMuseumExperience({ gift, isPreview, onClose }: Props) {
           <button
             onClick={toggleAudio}
             className="p-2.5 rounded-full bg-stone-800/80 hover:bg-stone-700 text-amber-200 border border-stone-700 transition-all text-xs flex items-center gap-1.5"
-            title="Toggle Ambient Audio"
+            title="Toggle Ambient Audio" aria-label="Toggle Ambient Audio"
           >
             {isPlayingAudio ? (
               <Volume2 className="w-4 h-4 text-amber-400" />
@@ -126,7 +126,7 @@ export function OurMuseumExperience({ gift, isPreview, onClose }: Props) {
             <button
               onClick={onClose}
               className="p-2.5 rounded-full bg-stone-800/80 hover:bg-stone-700 text-stone-300 border border-stone-700 transition-all active:scale-95"
-              title="Leave Museum"
+              title="Leave Museum" aria-label="Leave Museum"
             >
               <X className="w-4 h-4" />
             </button>

@@ -1,3 +1,4 @@
+import { apiFetch } from '../lib/api';
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { useAuth } from './AuthContext';
 import { useCoupleSpace } from './CoupleSpaceContext';
@@ -150,7 +151,7 @@ export function LoveCoinsProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      const res = await fetch(`/api/coins/wallet?userId=${encodeURIComponent(userData.id)}`);
+      const res = await apiFetch(`/api/coins/wallet?userId=${encodeURIComponent(userData.id)}`);
       if (res.ok) {
         const data = await res.json();
         if (data.success && data.wallet) {
@@ -207,7 +208,7 @@ export function LoveCoinsProvider({ children }: { children: React.ReactNode }) {
     const awardCoins = missionDef?.coinsReward || 40;
 
     try {
-      const res = await fetch('/api/coins/submit-proof', {
+      const res = await apiFetch('/api/coins/submit-proof', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -282,7 +283,7 @@ export function LoveCoinsProvider({ children }: { children: React.ReactNode }) {
 
     // 1. Try server endpoint
     try {
-      const res = await fetch('/api/coins/spend', {
+      const res = await apiFetch('/api/coins/spend', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -383,7 +384,7 @@ export function LoveCoinsProvider({ children }: { children: React.ReactNode }) {
 
     // 1. Try server endpoint
     try {
-      const res = await fetch('/api/coins/send-gift', {
+      const res = await apiFetch('/api/coins/send-gift', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -485,7 +486,7 @@ export function LoveCoinsProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      const res = await fetch('/api/coins/verify-referral', {
+      const res = await apiFetch('/api/coins/verify-referral', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -539,7 +540,7 @@ export function LoveCoinsProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      const res = await fetch('/api/coins/check-in', {
+      const res = await apiFetch('/api/coins/check-in', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: userData.id })
@@ -618,7 +619,7 @@ export function LoveCoinsProvider({ children }: { children: React.ReactNode }) {
     setInventory(updatedInv);
 
     try {
-      await fetch('/api/coins/update-preferences', {
+      await apiFetch('/api/coins/update-preferences', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -640,7 +641,7 @@ export function LoveCoinsProvider({ children }: { children: React.ReactNode }) {
     setInventory(updatedInv);
 
     try {
-      await fetch('/api/coins/update-preferences', {
+      await apiFetch('/api/coins/update-preferences', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

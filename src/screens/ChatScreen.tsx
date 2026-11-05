@@ -1,3 +1,5 @@
+import { AiConsentPrompt } from '../components/legal/AiConsentPrompt';
+import { hasAiConsent, onAiConsentChange } from '../lib/aiConsent';
 import React, { useState, useEffect, useRef } from 'react';
 import { useCoupleSpace } from '../contexts/CoupleSpaceContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -173,6 +175,9 @@ export function ChatScreen() {
   const [showAIAssist, setShowAIAssist] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
   const [aiMoodResult, setAiMoodResult] = useState<{title: string, description: string, messageSuggestion?: string} | null>(null);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [aiConsent, setAiConsentState] = useState<boolean>(() => hasAiConsent());
+  useEffect(() => onAiConsentChange(setAiConsentState), []);
   
   // Voice recording state
   const [isRecording, setIsRecording] = useState(false);
@@ -761,7 +766,7 @@ export function ChatScreen() {
   };
 
   /**
-   * Send Message (Zero-Knowledge AES-GCM Encrypted packet, stored directly in phones)
+   * Send Message (AES-GCM encrypted in the browser, then synced via Firestore). NOTE: key is derived from the couple space ID, so this is NOT end-to-end encryption.
    */
   const sendMessage = async (e?: React.FormEvent, content?: string) => {
     e?.preventDefault();
@@ -803,7 +808,7 @@ export function ChatScreen() {
         });
         const encrypted = await encryptData(space.id, payloadToEncrypt);
 
-        // 3. Post end-to-end encrypted packet
+        // 3. Post encrypted packet to Firestore
         await addDoc(collection(db, `coupleSpaces/${space.id}/messages`), {
           id: msgId,
           coupleSpaceId: space.id,
@@ -859,7 +864,7 @@ export function ChatScreen() {
         });
         const encrypted = await encryptData(space.id, payloadToEncrypt);
 
-        // 3. Post end-to-end encrypted packet
+        // 3. Post encrypted packet to Firestore
         await addDoc(collection(db, `coupleSpaces/${space.id}/messages`), {
           id: msgId,
           coupleSpaceId: space.id,
@@ -911,7 +916,7 @@ export function ChatScreen() {
       });
       const encrypted = await encryptData(space.id, payloadToEncrypt);
 
-      // 3. Post end-to-end encrypted packet
+      // 3. Post encrypted packet to Firestore
       await addDoc(collection(db, `coupleSpaces/${space.id}/messages`), {
         id: msgId,
         coupleSpaceId: space.id,
@@ -926,32 +931,32 @@ export function ChatScreen() {
     }
   };
 
+  // Only the user's own messages are sent to the AI (the partner has not consented to AI processing).
+  const ownRecentMessages = (count: number) =>
+    messages
+      .filter(m => m.senderId === userData?.id && typeof m.content === 'string' && m.content.trim() && !m.content.startsWith('🔒'))
+      .slice(-count)
+      .map(m => ({ from: 'me', text: m.content }));
+
   const generateReplySuggestions = async (tone: string) => {
     if (isGenerating) return;
+    if (!aiConsent) return;
     setIsGenerating(true);
     setAiSuggestions([]);
-    
-    const contextMessages = messages.slice(-5).map(m => `${m.senderId === userData?.id ? 'Me' : 'Partner'}: ${m.content}`).join('\n');
-    const context = contextMessages || 'We haven\'t chatted much recently.';
-    
-    import('../lib/gemini').then(async ({ generateText }) => {
-       try {
-          const prompt = `Act as an AI communication assistant for a couple's chat. 
-          Here is the recent chat history:\n${context}\n\n
-          Generate 3 short, distinct, ${tone} reply options for 'Me' to send next.
-          Return ONLY a JSON array of 3 strings. Example: ["reply 1", "reply 2", "reply 3"]`;
-          
-          const res = await generateText(prompt);
-          const cleanJson = res.replace(/```json/g, '').replace(/```/g, '').trim();
-          const options = JSON.parse(cleanJson);
-          setAiSuggestions(options);
-       } catch (e) {
-          console.error(e);
-          setAiSuggestions(["Sorry, AI error."]);
-       } finally {
-          setIsGenerating(false);
-       }
-    });
+    setAiError(null);
+    try {
+      const { generateTextTask } = await import('../lib/gemini');
+      const res = await generateTextTask('reply-suggestions', { tone, messages: ownRecentMessages(5) });
+      const cleanJson = res.replace(/```json/g, '').replace(/```/g, '').trim();
+      const options = JSON.parse(cleanJson);
+      if (!Array.isArray(options) || options.length === 0) throw new Error('No suggestions');
+      setAiSuggestions(options.filter((o: unknown) => typeof o === 'string').slice(0, 3));
+    } catch (e: any) {
+      console.error(e);
+      setAiError(e?.message && e?.status !== undefined ? e.message : "AIRA couldn't come up with ideas right now. Please try again.");
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const selectSuggestion = (text: string) => {
@@ -961,29 +966,22 @@ export function ChatScreen() {
 
   const checkVibe = async () => {
     if (isGenerating) return;
+    if (!aiConsent) return;
     setIsGenerating(true);
     setAiSuggestions([]);
     setAiMoodResult(null);
-
-    const contextMessages = messages.slice(-10).map(m => `${m.senderId === userData?.id ? 'Me' : 'Partner'}: ${m.content}`).join('\n');
-    
-    import('../lib/gemini').then(async ({ generateText }) => {
-       try {
-          const prompt = `Act as an AI relationship coach. Analyze the recent chat history:\n${contextMessages || "(No recent messages)"}\n\n
-          What is the overall vibe? Is there any tension, or is it loving/platonic?
-          Also suggest a sweet action one of them can take right now.
-          Return ONLY a JSON object: {"title": "The vibe...", "description": "Action suggestion...", "messageSuggestion": "optional quick message..."}`;
-          
-          const res = await generateText(prompt);
-          const cleanJson = res.replace(/```json/g, '').replace(/```/g, '').trim();
-          setAiMoodResult(JSON.parse(cleanJson));
-       } catch (e) {
-          console.error(e);
-          setAiMoodResult({title: "Couldn't read the vibe", description: "Are you guys even talking? 😂"});
-       } finally {
-          setIsGenerating(false);
-       }
-    });
+    setAiError(null);
+    try {
+      const { generateTextTask } = await import('../lib/gemini');
+      const res = await generateTextTask('vibe-check', { messages: ownRecentMessages(10) });
+      const cleanJson = res.replace(/```json/g, '').replace(/```/g, '').trim();
+      setAiMoodResult(JSON.parse(cleanJson));
+    } catch (e: any) {
+      console.error(e);
+      setAiError(e?.message && e?.status !== undefined ? e.message : "AIRA couldn't connect right now. Please try again.");
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const sendReaction = async (emoji: string) => {
@@ -1111,7 +1109,7 @@ export function ChatScreen() {
               <h2 className="text-2xl font-serif font-bold text-rose-950 mb-1">Our Secret Vault</h2>
               <div className="flex items-center justify-center gap-1.5 text-xs text-emerald-600 font-semibold mb-3">
                 <ShieldCheck className="w-4 h-4" />
-                <span>Zero-Knowledge AES Encrypted</span>
+                <span>Passcode lock on this device</span>
               </div>
               <p className="text-rose-600/80 mb-6 text-sm">
                 {!localStorage.getItem(`chatLocked_${space?.id}_pin`) 
@@ -1162,7 +1160,7 @@ export function ChatScreen() {
               <Play className="w-8 h-8 text-rose-500 ml-1" />
             </div>
             <h3 className="font-bold text-rose-950 text-lg mb-1">A voice note from your love 💌</h3>
-            <p className="text-rose-600 text-sm mb-6">Stored privately on your device</p>
+            <p className="text-rose-600 text-sm mb-6">Shared only inside your couple space</p>
             <div className="flex gap-3">
               <button 
                 type="button"
@@ -1203,7 +1201,7 @@ export function ChatScreen() {
             <div className="flex items-center gap-1.5 mt-0.5">
               <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full flex items-center gap-1 border border-emerald-200/50">
                 <ShieldCheck className="w-3 h-3 text-emerald-600" />
-                Phone-Only & Encrypted
+                Encrypted before upload
               </span>
               {isOffline && (
                 <span className="text-[10px] font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full flex items-center gap-1 border border-amber-200">
@@ -1242,7 +1240,7 @@ export function ChatScreen() {
             type="button"
             onClick={toggleMusic} 
             className="p-2.5 bg-white/70 backdrop-blur-md rounded-full shadow-sm text-rose-500 hover:text-rose-600 hover:bg-white border border-white transition-all active:scale-95"
-            title="Ambient Music"
+            title="Ambient Music" aria-label="Ambient Music"
           >
             {isMusicPlaying ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4 text-rose-300" />}
           </button>
@@ -1268,9 +1266,9 @@ export function ChatScreen() {
             <div className="w-16 h-16 rounded-full bg-white/60 backdrop-blur-md flex items-center justify-center shadow-inner">
               <ShieldCheck className="w-8 h-8 text-rose-400" />
             </div>
-            <h3 className="font-serif font-bold text-base text-rose-950">Zero-Knowledge Private Space</h3>
+            <h3 className="font-serif font-bold text-base text-rose-950">Your private couple space</h3>
             <p className="text-xs leading-relaxed max-w-xs text-rose-800/80">
-              Your chats, photos, and voice notes are encrypted with AES-256 and stored directly in both your phones. Accessible online & offline!
+              Chats, photos and voice notes are encrypted in your browser before they sync through our cloud database (Google Firebase), and a copy is cached on this device for offline reading. This is not end-to-end encryption yet.
             </p>
           </div>
         )}
@@ -1426,7 +1424,7 @@ export function ChatScreen() {
                   />
                   <div className="flex items-center gap-2 mt-1 text-[11px] text-emerald-600 font-medium">
                     <ShieldCheck className="w-3.5 h-3.5" />
-                    Encrypted on-device photo
+                    Encrypted before upload
                   </div>
                 </div>
                 <button 
@@ -1476,7 +1474,9 @@ export function ChatScreen() {
             className={`p-3 outline-none rounded-full transition-transform active:scale-95 flex-shrink-0 border shadow-sm ${
               showAIAssist ? 'bg-purple-100 text-purple-600 border-purple-200' : 'bg-white/70 text-purple-400 hover:text-purple-500 border-white'
             }`}
-            title="Aira Love Assistant"
+            title="AI reply ideas"
+            aria-label="AI reply ideas"
+            aria-expanded={showAIAssist}
           >
             <Sparkles className="w-4 h-4" />
           </button>
@@ -1486,7 +1486,8 @@ export function ChatScreen() {
             type="button"
             onClick={() => fileInputRef.current?.click()}
             className="p-3 outline-none rounded-full transition-transform active:scale-95 flex-shrink-0 border bg-white/70 hover:bg-white text-rose-400 hover:text-rose-500 border-white shadow-sm"
-            title="Send Encrypted Photo"
+            title="Send a photo"
+            aria-label="Send a photo"
           >
             <ImageIcon className="w-4 h-4" />
           </button>
@@ -1497,10 +1498,17 @@ export function ChatScreen() {
                    <motion.div initial={{opacity:0, y:10}} animate={{opacity:1, y:0}} exit={{opacity:0, y:10}} className="absolute bottom-full mb-3 left-0 w-full bg-white rounded-2xl p-4 shadow-xl border border-rose-100 z-50">
                       <div className="flex justify-between items-center mb-3">
                          <span className="text-xs font-bold text-rose-500 flex items-center gap-1 uppercase tracking-widest"><Sparkles className="w-3 h-3" /> AI Assistant</span>
-                         <button type="button" onClick={() => { setShowAIAssist(false); setAiSuggestions([]); setAiMoodResult(null); }} className="text-gray-400 hover:text-gray-600 text-xs font-medium">Close</button>
+                         <button type="button" onClick={() => { setShowAIAssist(false); setAiSuggestions([]); setAiMoodResult(null); setAiError(null); }} className="min-h-11 px-3 text-gray-600 hover:text-gray-800 text-xs font-semibold">Close</button>
                       </div>
                       
-                      {!aiSuggestions.length && !aiMoodResult && !isGenerating ? (
+                      {!aiConsent ? (
+                         <AiConsentPrompt compact onDismiss={() => setShowAIAssist(false)} />
+                      ) : aiError && !isGenerating ? (
+                         <div className="space-y-3" role="alert">
+                            <p className="text-sm text-gray-700 bg-rose-50 border border-rose-100 rounded-xl p-3">{aiError}</p>
+                            <button type="button" onClick={() => setAiError(null)} className="w-full min-h-11 text-sm text-rose-700 font-semibold rounded-xl hover:bg-rose-50">Back</button>
+                         </div>
+                      ) : !aiSuggestions.length && !aiMoodResult && !isGenerating ? (
                          <div className="space-y-4">
                             <div>
                                <h4 className="text-xs font-bold text-gray-500 mb-2 px-1">Generate a Reply</h4>
@@ -1554,7 +1562,7 @@ export function ChatScreen() {
                   {isEncryptingAndSending ? (
                      <div className="flex-1 flex items-center justify-center gap-2 text-rose-500 font-medium text-xs py-2">
                         <Loader2 className="w-4 h-4 animate-spin" />
-                        Encrypting & Storing in Phone 🔐...
+                        Encrypting & sending…
                      </div>
                   ) : audioBlob ? (
                      <div className="flex-1 flex items-center justify-between px-2">
@@ -1587,13 +1595,15 @@ export function ChatScreen() {
                     type="text" 
                     value={newMessage}
                     onChange={e => handleInputChange(e.target.value)}
-                    placeholder="Type your encrypted message..."
+                    placeholder="Type a message…"
                     className="flex-1 bg-transparent border-none outline-none text-rose-950 placeholder:text-rose-300 px-3 text-[14.5px] font-medium min-w-0"
                   />
                   <button 
                     type="button" 
                     onClick={() => sendReaction('💌')}
-                    className="p-2 text-rose-400 hover:text-rose-500 transition-transform active:scale-95 flex-shrink-0"
+                    aria-label="Send a love letter reaction"
+                    title="Send a love letter reaction"
+                    className="w-11 h-11 flex items-center justify-center text-rose-500 hover:text-rose-600 transition-transform active:scale-95 flex-shrink-0"
                   >
                     <Smile className="w-4 h-4" />
                   </button>
@@ -1609,7 +1619,7 @@ export function ChatScreen() {
                       type="button" 
                       onClick={startRecording}
                       className="p-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full transition-transform active:scale-95 shadow-md flex-shrink-0"
-                      title="Hold or tap to record voice note"
+                      title="Hold or tap to record voice note" aria-label="Hold or tap to record voice note"
                     >
                       <Mic className="w-3.5 h-3.5 fill-white" />
                     </button>
@@ -1619,7 +1629,7 @@ export function ChatScreen() {
                   type="button"
                   onClick={triggerQuickLoveReaction}
                   className="p-3 rounded-full transition-all active:scale-90 hover:scale-105 flex-shrink-0 bg-gradient-to-tr from-rose-500 via-pink-500 to-rose-400 text-white shadow-lg shadow-rose-300/40 hover:shadow-rose-400/50 cursor-pointer group"
-                  title="Send floating live hearts"
+                  title="Send floating live hearts" aria-label="Send floating live hearts"
                 >
                   <Heart className="w-4 h-4 fill-white group-hover:scale-125 transition-transform animate-pulse" />
                 </button>

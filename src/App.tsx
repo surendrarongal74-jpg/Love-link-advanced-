@@ -46,10 +46,33 @@ import { PublicInfoScreen } from './screens/PublicInfoScreen';
 import { ConsentBanner } from './components/legal/ConsentBanner';
 import { ContextualInspector } from './components/ContextualInspector';
 import { ThemeTransitionWrapper } from './components/ThemeTransitionWrapper';
+import { LandingScreen } from './screens/LandingScreen';
+import { AppErrorBoundary } from './components/AppErrorBoundary';
+
+function FullScreenLoader({ label = 'Loading…' }: { label?: string }) {
+  return (
+    <div className="min-h-screen bg-rose-50 flex flex-col items-center justify-center gap-3 text-rose-800" role="status" aria-live="polite">
+      <div className="w-10 h-10 border-3 border-rose-300 border-t-rose-600 rounded-full animate-spin" aria-hidden="true" />
+      <span className="text-sm font-medium">{label}</span>
+    </div>
+  );
+}
+
+/** Signed-out visitors get the intro; signed-in users get their home. */
+function HomeGate() {
+  const { user, loading } = useAuth();
+  if (loading) return <FullScreenLoader />;
+  if (!user) return <LandingScreen />;
+  return (
+    <SpaceRoute>
+      <HomeScreen />
+    </SpaceRoute>
+  );
+}
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
-  if (loading) return <div className="min-h-screen bg-rose-50 flex items-center justify-center text-rose-300">Loading...</div>;
+  if (loading) return <FullScreenLoader />;
   if (!user) return <Navigate to="/auth" />;
   return <>{children}</>;
 }
@@ -58,19 +81,14 @@ function SpaceRoute({ children }: { children: React.ReactNode }) {
   const { userData } = useAuth();
   const { space, loading } = useCoupleSpace();
   
-  if (loading) return <div className="min-h-screen bg-rose-50 flex items-center justify-center text-rose-300">Loading...</div>;
+  if (loading) return <FullScreenLoader />;
   
   if (!userData?.coupleSpaceId) {
     return <Navigate to="/onboarding" />;
   }
 
   if (!space) {
-    return (
-      <div className="min-h-screen bg-rose-50 flex flex-col items-center justify-center text-rose-400 gap-3">
-        <div className="w-10 h-10 border-3 border-rose-300 border-t-rose-500 rounded-full animate-spin" />
-        <span className="text-xs font-medium">Connecting to private space...</span>
-      </div>
-    );
+    return <FullScreenLoader label="Connecting to your space…" />;
   }
   
   return <>{children}</>;
@@ -80,19 +98,14 @@ function ActiveSpaceRoute({ children }: { children: React.ReactNode }) {
   const { userData } = useAuth();
   const { space, partnerData, loading } = useCoupleSpace();
   
-  if (loading) return <div className="min-h-screen bg-rose-50 flex items-center justify-center text-rose-300">Loading...</div>;
+  if (loading) return <FullScreenLoader />;
   
   if (!userData?.coupleSpaceId) {
     return <Navigate to="/onboarding" />;
   }
 
   if (!space) {
-    return (
-      <div className="min-h-screen bg-rose-50 flex flex-col items-center justify-center text-rose-400 gap-3">
-        <div className="w-10 h-10 border-3 border-rose-300 border-t-rose-500 rounded-full animate-spin" />
-        <span className="text-xs font-medium">Connecting to private space...</span>
-      </div>
-    );
+    return <FullScreenLoader label="Connecting to your space…" />;
   }
 
   if (!partnerData) {
@@ -104,6 +117,7 @@ function ActiveSpaceRoute({ children }: { children: React.ReactNode }) {
 
 const ROUTE_TITLES: Record<string, string> = {
   '/': 'Love Link — Private Couple Space',
+  '/welcome': 'Love Link — A private space for the two of you',
   '/auth': 'Sign In • Love Link',
   '/onboarding': 'Get Started • Love Link',
   '/chat': 'Chat & Love Notes • Love Link',
@@ -140,6 +154,9 @@ const ROUTE_TITLES: Record<string, string> = {
 function AppContent() {
   const { theme } = useTheme();
   const location = useLocation();
+  const { user } = useAuth();
+  // App chrome (sidebar, inspector, notifications, tracker banner) only once signed in and outside the auth flow.
+  const showAppChrome = Boolean(user) && !['/auth', '/welcome'].includes(location.pathname);
 
   useEffect(() => {
     document.title = ROUTE_TITLES[location.pathname] || 'Love Link — Private Couple Space';
@@ -165,10 +182,11 @@ function AppContent() {
         }}
       >
         <LivingAtmosphere />
-        <SidebarNav />
+        {showAppChrome && <SidebarNav />}
 
         {/* Main Responsive Viewport Canvas */}
         <main className="flex-1 min-w-0 max-w-full md:max-w-2xl lg:max-w-4xl xl:max-w-5xl 2xl:max-w-6xl mx-auto w-full relative z-10 px-0 sm:px-2 md:px-4">
+        <AppErrorBoundary>
         <Routes>
           <Route path="/auth" element={<AuthScreen />} />
       
@@ -178,13 +196,8 @@ function AppContent() {
             </ProtectedRoute>
           } />
           
-          <Route path="/" element={
-            <ProtectedRoute>
-              <SpaceRoute>
-                <HomeScreen />
-              </SpaceRoute>
-            </ProtectedRoute>
-          } />
+          <Route path="/" element={<HomeGate />} />
+          <Route path="/welcome" element={<LandingScreen />} />
           
           <Route path="/chat" element={
             <ProtectedRoute>
@@ -396,16 +409,21 @@ function AppContent() {
           {/* Graceful 404 Not Found route */}
           <Route path="*" element={<NotFoundScreen />} />
         </Routes>
+        </AppErrorBoundary>
       </main>
 
-      <ContextualInspector />
+      {showAppChrome && <ContextualInspector />}
 
       <OfflineIndicator />
-      <ActiveCallOverlay />
-      <LiveNotificationOverlay />
-      <NotificationDrawer />
-      <IncomingGiftCelebrationModal />
-      <ConsentBanner />
+      {showAppChrome && (
+        <>
+          <ActiveCallOverlay />
+          <LiveNotificationOverlay />
+          <NotificationDrawer />
+          <IncomingGiftCelebrationModal />
+          <ConsentBanner />
+        </>
+      )}
     </div>
   </ThemeTransitionWrapper>
 );

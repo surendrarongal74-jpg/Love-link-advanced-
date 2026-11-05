@@ -1,3 +1,4 @@
+import { apiFetch } from './api';
 import { 
   ConsentPurposes, 
   ConsentRecord, 
@@ -100,7 +101,7 @@ export async function recordConsent(
 
   // 4. Also notify server endpoint for audit log
   try {
-    await fetch('/api/dpdp/consent-log', {
+    await apiFetch('/api/dpdp/consent-log', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(record),
@@ -264,7 +265,7 @@ export async function submitDataRightsRequest(params: {
 
   // 3. Post to backend endpoint
   try {
-    await fetch('/api/dpdp/rights-request', {
+    await apiFetch('/api/dpdp/rights-request', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(request),
