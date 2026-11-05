@@ -412,7 +412,9 @@ export function HomeScreen() {
   }
 
   // Days together calculation
-  const spaceCreatedDate = space?.createdAt ? new Date(space.createdAt).getTime() : Date.now() - (86400000 * 159);
+  // Same source of truth as the sidebar: anniversary if set, else when the space was created (no made-up default).
+  const startSource = space?.anniversaryDate || space?.createdAt;
+  const spaceCreatedDate = startSource ? new Date(startSource).getTime() : Date.now();
   const daysTogether = Math.max(1, Math.floor((Date.now() - spaceCreatedDate) / (1000 * 60 * 60 * 24)));
   const nextMilestone = daysTogether <= 100 ? 100 : daysTogether <= 200 ? 200 : daysTogether <= 365 ? 365 : Math.ceil(daysTogether / 100) * 100;
   const daysToMilestone = Math.max(1, nextMilestone - daysTogether);
