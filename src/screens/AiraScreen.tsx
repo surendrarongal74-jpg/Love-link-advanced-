@@ -1,3 +1,4 @@
+import { apiFetch, ApiError, friendlyApiMessage } from '../lib/api';
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useCoupleSpace } from '../contexts/CoupleSpaceContext';
@@ -58,7 +59,6 @@ export function AiraScreen() {
   const [isListening, setIsListening] = useState(false);
   const [isSmartMode, setIsSmartMode] = useState(false);
   const [chatHistory, setChatHistory] = useState<any[]>([]);
-  const [userLocation, setUserLocation] = useState('');
   
   // Card action states
   const [copiedText, setCopiedText] = useState<string | null>(null);
@@ -71,14 +71,7 @@ export function AiraScreen() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => setUserLocation(`${pos.coords.latitude}, ${pos.coords.longitude}`),
-        () => console.warn('Location access denied')
-      );
-    }
-  }, []);
+  // Location is intentionally NOT collected here: AIRA never receives GPS coordinates.
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -151,31 +144,22 @@ export function AiraScreen() {
       const newContent = { role: 'user', parts };
       const nextChatHistory = [...chatHistory, newContent];
       
-      const systemInstruction = `You are AIRA, a loving and emotionally intelligent AI companion inside Love Link, a private couples app.
-User Name: ${userName}
-Partner Name: ${partnerName}
-Days Together: ${daysTogether}
-Location GPS: ${userLocation || 'Unknown'}
-
-Your tone: Warm, empathetic, romantic, gentle, and practical. Like a supportive friend who cares deeply about their relationship happiness.
-Keep responses concise, clear, and well-spaced. Use soft emojis (💗, 🌸, ✨, 💌).
-- If suggesting a romantic note, date, or game, provide helpful advice and trigger the appropriate card.
-- Output generateLoveMessageCard for special love messages.
-- Output generateDateIdeaCard for date planning.
-- Output generateGameCard for playful couple games.`;
-
-      const response = await fetch('/api/aira/chat', {
+      // The system prompt is built on the server; we only send names and day count.
+      const response = await apiFetch('/api/aira/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           chatHistory: nextChatHistory,
-          systemInstruction,
+          userName,
+          partnerName,
+          daysTogether,
           isSmartMode,
         }),
       });
 
       if (!response.ok) {
-        throw new Error(`Chat API error: ${response.status}`);
+        const body = await response.json().catch(() => null);
+        throw new ApiError(response.status, body?.error || `http_${response.status}`, friendlyApiMessage(response.status, body?.error, body?.message));
       }
 
       const resData = await response.json();
@@ -229,7 +213,8 @@ Keep responses concise, clear, and well-spaced. Use soft emojis (💗, 🌸, ✨
 
     } catch (err) {
       console.error(err);
-      setMessages(prev => [...prev, { id: Date.now().toString(), sender: 'aira', type: 'text', text: "I'm right here with you! Please give me a second and ask again 🌸" }]);
+      const friendly = err instanceof ApiError ? err.message : "AIRA couldn't connect right now. Please try again in a moment.";
+      setMessages(prev => [...prev, { id: Date.now().toString(), sender: 'aira', type: 'text', text: `⚠️ ${friendly}` }]);
     } finally {
       setIsTyping(false);
     }
@@ -351,6 +336,8 @@ Keep responses concise, clear, and well-spaced. Use soft emojis (💗, 🌸, ✨
           <button
             onClick={() => setIsVoiceActive(!isVoiceActive)}
             title={isVoiceActive ? "Voice response enabled" : "Voice response muted"}
+            aria-label={isVoiceActive ? "Mute AIRA's voice replies" : "Turn on AIRA's voice replies"}
+            aria-pressed={isVoiceActive}
             className={`p-2 rounded-full border transition-all active:scale-95 ${
               isVoiceActive 
                 ? 'bg-rose-100 text-rose-600 border-rose-200' 
@@ -364,6 +351,7 @@ Keep responses concise, clear, and well-spaced. Use soft emojis (💗, 🌸, ✨
           <div className="bg-rose-100/70 p-0.5 rounded-full border border-rose-200/60 flex items-center">
             <button
               onClick={() => setIsSmartMode(false)}
+              aria-pressed={!isSmartMode}
               className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all ${
                 !isSmartMode
                   ? 'bg-white text-rose-600 shadow-xs'
@@ -375,6 +363,7 @@ Keep responses concise, clear, and well-spaced. Use soft emojis (💗, 🌸, ✨
             </button>
             <button
               onClick={() => setIsSmartMode(true)}
+              aria-pressed={isSmartMode}
               className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all ${
                 isSmartMode
                   ? 'bg-white text-purple-600 shadow-xs'

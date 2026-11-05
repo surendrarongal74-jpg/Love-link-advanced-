@@ -8,7 +8,8 @@ import { handleFirestoreError, OperationType } from '../lib/errorHandler';
 import { BottomNav } from '../components/BottomNav';
 import { motion, AnimatePresence } from 'motion/react';
 import { Map, CalendarHeart, Wand2, Compass, DollarSign, Clock, X, Plus, Trash2, Dices, Sparkles } from 'lucide-react';
-import { generateText } from '../lib/gemini';
+import { generateTextTask } from '../lib/gemini';
+import { ApiError } from '../lib/api';
 
 interface DatePlan {
   id: string;
@@ -59,21 +60,7 @@ export function AIPlannerScreen() {
     setIsGenerating(true);
     
     try {
-      const prompt = `Act as an expert romantic date planner. 
-      Generate a date idea with these parameters:
-      - Budget: ${budget}
-      - Mood: ${mood}
-      - Time: ${time}
-      - Extra vibes: ${vibes || 'None'}
-      
-      Output format:
-      Return ONLY a JSON object (no markdown formatting, no code blocks).
-      {
-         "title": "A catchy date title",
-         "description": "A sweet, detailed multiline description and step-by-step plan"
-      }`;
-
-      const res = await generateText(prompt);
+      const res = await generateTextTask('date-idea', { budget, mood, time, vibes });
       
       // Clean JSON if needed
       const cleanJson = res.replace(/```json/g, '').replace(/```/g, '').trim();
@@ -95,7 +82,7 @@ export function AIPlannerScreen() {
       setVibes('');
     } catch (e) {
       console.error(e);
-      alert("Oops! The AI got confused. Let's try again.");
+      alert(e instanceof ApiError ? e.message : "The date planner couldn't create a plan right now. Please try again.");
     } finally {
       setIsGenerating(false);
     }

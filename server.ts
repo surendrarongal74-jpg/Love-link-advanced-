@@ -146,6 +146,33 @@ app.use('/api', async (req: AuthedRequest, res, next) => {
 // Gemini calls cost money: cap them per signed-in user.
 app.use(['/api/gemini', '/api/aira', '/api/coins/submit-proof'], rateLimit('ai-uid', 30, 10 * 60_000, uidKey));
 
+const AI_CONFIGURED = Boolean(process.env.GEMINI_API_KEY);
+if (!AI_CONFIGURED) {
+  console.warn('[AIRA] GEMINI_API_KEY is not set: AI routes will answer 503 ai_not_configured.');
+}
+app.use(['/api/gemini', '/api/aira'], (req, res, next) => {
+  if (!AI_CONFIGURED) {
+    return res.status(503).json({ error: 'ai_not_configured', message: 'AIRA is not available right now.' });
+  }
+  next();
+});
+
+/** Honest error for AI failures: never disguise an outage as a successful (canned) answer. */
+function sendAiError(res: express.Response, route: string, error: unknown) {
+  console.error(`[AI] ${route} failed:`, (error as any)?.message || error);
+  return res.status(503).json({
+    error: 'ai_unavailable',
+    message: 'AIRA could not reach the AI service. Please try again in a moment.',
+  });
+}
+
+/** Trim and strip control characters / prompt-tag brackets from short user-supplied fields. */
+function cleanField(value: unknown, max = 60, fallback = ''): string {
+  if (typeof value !== 'string' && typeof value !== 'number') return fallback;
+  const v = String(value).replace(/[\u0000-\u001f\[\]{}<>`]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max);
+  return v || fallback;
+}
+
 const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY,
   httpOptions: {
@@ -194,12 +221,38 @@ const generateGameCard = {
 // API: AIRA Chat endpoint
 app.post('/api/aira/chat', async (req, res) => {
   try {
-    const { chatHistory, systemInstruction, isSmartMode } = req.body;
-    if (!chatHistory || !Array.isArray(chatHistory)) {
+    const { chatHistory, isSmartMode, userName, partnerName, daysTogether } = req.body || {};
+    // NOTE: any client-supplied `systemInstruction` is deliberately ignored. The prompt is built here.
+    if (!Array.isArray(chatHistory) || chatHistory.length === 0) {
       return res.status(400).json({ error: 'chatHistory array is required' });
     }
+    // Only user/model turns with text or inline image parts; keep the last 30 turns.
+    const safeHistory = chatHistory.slice(-30).map((turn: any) => {
+      const role = turn?.role === 'model' ? 'model' : 'user';
+      const parts = (Array.isArray(turn?.parts) ? turn.parts : [])
+        .map((p: any) => {
+          if (typeof p?.text === 'string') return { text: p.text.slice(0, 4000) };
+          if (p?.inlineData && typeof p.inlineData.data === 'string' && /^image\/(png|jpe?g|webp|gif)$/.test(p.inlineData.mimeType || '')) {
+            return { inlineData: { data: p.inlineData.data, mimeType: p.inlineData.mimeType } };
+          }
+          return null;
+        })
+        .filter(Boolean);
+      return { role, parts };
+    }).filter((t: any) => t.parts.length > 0);
+    if (safeHistory.length === 0) {
+      return res.status(400).json({ error: 'chatHistory has no usable content' });
+    }
 
-    const enhancedSystemInstruction = `${systemInstruction || 'You are AIRA, the warm, romantic AI companion for couples.'}
+    const days = Number.isFinite(Number(daysTogether)) ? Math.max(0, Math.min(100000, Math.floor(Number(daysTogether)))) : null;
+    const enhancedSystemInstruction = `You are AIRA, a loving and emotionally intelligent AI companion inside Love Link, a private couples app.
+User name: ${cleanField(userName, 40, 'the user')}
+Partner name: ${cleanField(partnerName, 40, 'their partner')}
+${days !== null ? `Days together: ${days}` : ''}
+
+Your tone: warm, empathetic, romantic, gentle and practical, like a supportive friend who cares about their relationship.
+Keep responses concise, clear and well-spaced. Use soft emojis (💗, 🌸, ✨, 💌) sparingly.
+Never ask for or reveal passwords, codes, or precise locations. Stay on relationship, dating, and wellbeing topics.
 
 CRITICAL FORMATTING INSTRUCTIONS FOR SPECIAL CARDS:
 - When you generate or suggest a love message/text for the partner, include:
@@ -215,7 +268,7 @@ You can include warm conversational text before or after these tags.`;
     try {
       response = await ai.models.generateContent({
         model: 'gemini-3.1-flash-lite',
-        contents: chatHistory,
+        contents: safeHistory,
         config: {
           systemInstruction: enhancedSystemInstruction,
           temperature: isSmartMode ? 0.9 : 0.7,
@@ -225,7 +278,7 @@ You can include warm conversational text before or after these tags.`;
       console.warn('Attempt with gemini-3.1-flash-lite failed, trying gemini-3.8-flash:', err?.message || err);
       response = await ai.models.generateContent({
         model: 'gemini-3.8-flash',
-        contents: chatHistory,
+        contents: safeHistory,
         config: {
           systemInstruction: enhancedSystemInstruction,
           temperature: isSmartMode ? 0.9 : 0.7,
@@ -275,49 +328,68 @@ You can include warm conversational text before or after these tags.`;
       candidateContent,
     });
   } catch (error: any) {
-    console.error('Error in /api/aira/chat:', error);
-    return res.json({
-      text: "I'm right here with you! Let me know what romantic idea or question you have in mind 💕",
-      functionCalls: [],
-      candidateContent: { role: 'model', parts: [{ text: "I'm right here with you! Let me know what romantic idea or question you have in mind 💕" }] }
-    });
+    return sendAiError(res, '/api/aira/chat', error);
   }
 });
 
-// API: Generate Text
+// API: Generate Text for a fixed set of tasks. Prompts are built here from typed params only;
+// arbitrary client prompts / system instructions are not accepted (this used to be an open Gemini proxy).
+const TEXT_TASKS = new Set(['date-idea', 'reply-suggestions', 'vibe-check']);
+function clip(v: unknown, max: number): string {
+  return typeof v === 'string' ? v.slice(0, max) : '';
+}
+function chatLines(v: unknown, maxLines: number): string {
+  if (!Array.isArray(v)) return '';
+  return v.slice(-maxLines).map((m: any) => {
+    const who = m?.from === 'me' ? 'Me' : 'Partner';
+    return `${who}: ${clip(m?.text, 500).replace(/[\r\n]+/g, ' ')}`;
+  }).join('\n');
+}
 app.post('/api/gemini/generate-text', async (req, res) => {
   try {
-    const { prompt, systemInstruction } = req.body;
-    if (!prompt) {
-      return res.status(400).json({ error: 'Prompt is required' });
+    const { task, params = {} } = req.body || {};
+    if (!TEXT_TASKS.has(task)) {
+      return res.status(400).json({ error: 'unknown_task' });
     }
+    let prompt = '';
+    if (task === 'date-idea') {
+      prompt = `Act as an expert romantic date planner. Generate a date idea with these parameters:
+- Budget: ${cleanField(params.budget, 40, 'Any')}
+- Mood: ${cleanField(params.mood, 40, 'Romantic')}
+- Time: ${cleanField(params.time, 40, 'Evening')}
+- Extra vibes: ${cleanField(params.vibes, 200, 'None')}
 
-    const config: any = {
-      temperature: 0.7,
-    };
-    if (systemInstruction) {
-      config.systemInstruction = systemInstruction;
+Return ONLY a JSON object (no markdown, no code blocks):
+{"title": "A catchy date title", "description": "A sweet, detailed multiline description and step-by-step plan"}`;
+    } else if (task === 'reply-suggestions') {
+      const tone = cleanField(params.tone, 30, 'sweet');
+      const history = chatLines(params.messages, 5) || "We haven't chatted much recently.";
+      prompt = `Act as an AI communication assistant for a couple's chat.
+Here is the recent chat history (only the user's own messages are included):
+${history}
+
+Generate 3 short, distinct, ${tone} reply options for 'Me' to send next.
+Return ONLY a JSON array of 3 strings. Example: ["reply 1", "reply 2", "reply 3"]`;
+    } else {
+      const history = chatLines(params.messages, 10) || '(No recent messages)';
+      prompt = `Act as a gentle, non-judgemental relationship coach. Here are the user's own recent messages to their partner:
+${history}
+
+Describe the overall vibe kindly, and suggest one sweet action they can take right now.
+Return ONLY a JSON object: {"title": "The vibe...", "description": "Action suggestion...", "messageSuggestion": "optional quick message..."}`;
     }
 
     let response: any;
     try {
-      response = await ai.models.generateContent({
-        model: 'gemini-3.1-flash-lite',
-        contents: prompt,
-        config,
-      });
+      response = await ai.models.generateContent({ model: 'gemini-3.1-flash-lite', contents: prompt, config: { temperature: 0.7 } });
     } catch (err: any) {
-      response = await ai.models.generateContent({
-        model: 'gemini-3.8-flash',
-        contents: prompt,
-        config,
-      });
+      response = await ai.models.generateContent({ model: 'gemini-3.8-flash', contents: prompt, config: { temperature: 0.7 } });
     }
-
-    return res.json({ text: response.text || '' });
+    const text = response.text || '';
+    if (!text.trim()) throw new Error('Empty AI response');
+    return res.json({ text });
   } catch (error: any) {
-    console.error('Error in /api/gemini/generate-text:', error);
-    return res.json({ text: "You make every moment together special ❤️" });
+    return sendAiError(res, '/api/gemini/generate-text', error);
   }
 });
 
@@ -354,8 +426,7 @@ Output ONLY the question text. Nothing else.`;
     const question = response.text?.trim() || "What's a small thing I did recently that made you smile?";
     return res.json({ question });
   } catch (error: any) {
-    console.error('Error in /api/gemini/daily-question:', error);
-    return res.json({ question: "What's a small thing I did recently that made you smile?" });
+    return sendAiError(res, '/api/gemini/daily-question', error);
   }
 });
 
@@ -415,10 +486,7 @@ Output JSON format with an array of strings in a 'suggestions' field.`;
       suggestions: parsed.suggestions || ["Thinking of you ❤️", "Hope you're having a good day!", "Can't wait to see you!"]
     });
   } catch (error: any) {
-    console.error('Error in /api/gemini/suggest-messages:', error);
-    return res.json({
-      suggestions: ["Thinking of you ❤️", "Hope you're having a good day!", "Can't wait to see you!"]
-    });
+    return sendAiError(res, '/api/gemini/suggest-messages', error);
   }
 });
 
@@ -626,156 +694,7 @@ REQUIREMENTS:
       plan: parsedPlan
     });
   } catch (error: any) {
-    console.error('Error in /api/gemini/generate-date-plan:', error);
-
-    // Fallback high-fidelity curated romantic plan
-    const fallbackPlan = {
-      title: "Celestial Starlight & Velvet Vinyl Serenade",
-      tagline: "An enchanting evening of cozy stargazing, artisanal delicacies, and heart-to-heart discovery",
-      overview: "Step into an immersive, candlelit sanctuary designed for intimate connection. From culinary creations to deciphering constellations and trading heartfelt memories, tonight is solely dedicated to you two.",
-      style: "cozy_home",
-      suggestedPreparation: [
-        "Dim the overhead lights and arrange warm fairy lights or candles around the room",
-        "Queue the custom romantic playlist and chill your favorite wine or mocktail",
-        "Prepare a cozy blanket fort or outdoor floor seating with plush pillows",
-        "Keep the secret surprise letter hidden nearby until the stargazing segment"
-      ],
-      activities: [
-        {
-          id: "act_1",
-          name: "Artisanal Tasting & Synchronized Toast",
-          timeEstimate: "35 mins",
-          description: "Unveil a curated spread of savory bites, fresh fruit, and favorite treats. Clink glasses to a special moment you shared this year.",
-          sparkleTip: "Feed each other a secret bite with eyes closed and guess the flavor!"
-        },
-        {
-          id: "act_2",
-          name: "Stargazing & Constellation Map Reading",
-          timeEstimate: "45 mins",
-          description: "Look up at the night sky (or project a starry constellation dome onto the ceiling). Identify your zodiac signs and craft a custom couple constellation.",
-          sparkleTip: "Whisper one secret wish you have for your partner's upcoming year."
-        },
-        {
-          id: "act_3",
-          name: "Midnight Vinyl Slow Dance & Memory Vault",
-          timeEstimate: "30 mins",
-          description: "Turn down the lights completely, play your signature song, and hold each other close for an uninterrupted slow dance.",
-          sparkleTip: "Slip the handwritten secret love note into their hand as the song fades out."
-        }
-      ],
-      conversationPrompts: [
-        {
-          id: "prompt_1",
-          category: "warmUp",
-          categoryLabel: "Warm-Up Spark",
-          question: "If we had an entire 48 hours with zero phone notifications and unlimited budget, what's the first crazy thing we'd do together?"
-        },
-        {
-          id: "prompt_2",
-          category: "warmUp",
-          categoryLabel: "Warm-Up Spark",
-          question: "What is one funny habit of mine that you secretly find completely adorable?"
-        },
-        {
-          id: "prompt_3",
-          category: "deepConnection",
-          categoryLabel: "Soul Connection",
-          question: "When in the past month did you feel most deeply loved and supported by me?"
-        },
-        {
-          id: "prompt_4",
-          category: "deepConnection",
-          categoryLabel: "Soul Connection",
-          question: "What is a quiet vulnerability you've been carrying lately that I can help hold with you?"
-        },
-        {
-          id: "prompt_5",
-          category: "nostalgia",
-          categoryLabel: "Memory Lane",
-          question: "Do you remember the exact moment or conversation where you realized I was truly special to you?"
-        },
-        {
-          id: "prompt_6",
-          category: "nostalgia",
-          categoryLabel: "Memory Lane",
-          question: "What is your single favorite spontaneous memory we've ever created together?"
-        },
-        {
-          id: "prompt_7",
-          category: "futureDreams",
-          categoryLabel: "Future Horizons",
-          question: "Where in the world do you most dream of waking up next to each other five years from now?"
-        },
-        {
-          id: "prompt_8",
-          category: "futureDreams",
-          categoryLabel: "Future Horizons",
-          question: "What is a new ritual or tradition you want our couple space to keep forever?"
-        }
-      ],
-      playlist: {
-        playlistName: "Midnight Celestial & Lo-Fi Reverie",
-        vibeDescription: "Warm analog guitars, silky soul harmonies, and soothing lo-fi beats curated for candlelit romance.",
-        tracks: [
-          {
-            id: "track_1",
-            title: "Texas Sun",
-            artist: "Leon Bridges & Khruangbin",
-            genre: "Soul / Psychedelic",
-            reasonForInclusion: "Smooth, warm guitars that immediately set a relaxed, romantic tone",
-            idealMoment: "Play during welcome drinks and setting up"
-          },
-          {
-            id: "track_2",
-            title: "From the Start",
-            artist: "Laufey",
-            genre: "Modern Jazz Pop",
-            reasonForInclusion: "Playful bossa nova swing that sparks smiles and gentle head-nodding",
-            idealMoment: "Play while preparing the appetizers together"
-          },
-          {
-            id: "track_3",
-            title: "Best Part",
-            artist: "Daniel Caesar ft. H.E.R.",
-            genre: "R&B / Soul",
-            reasonForInclusion: "Tender acoustic duet celebrating unconditional affection",
-            idealMoment: "Play during the dinner tasting"
-          },
-          {
-            id: "track_4",
-            title: "Apocalypse",
-            artist: "Cigarettes After Sex",
-            genre: "Dream Pop / Ambient",
-            reasonForInclusion: "Hypnotic, reverb-drenched atmosphere perfect for stargazing",
-            idealMoment: "Play while looking up at the night sky"
-          },
-          {
-            id: "track_5",
-            title: "Beyond",
-            artist: "Leon Bridges",
-            genre: "Vintage Soul",
-            reasonForInclusion: "Soulful declaration of falling deeper and deeper in love",
-            idealMoment: "Play during deep conversation prompts"
-          },
-          {
-            id: "track_6",
-            title: "Lover",
-            artist: "Taylor Swift",
-            genre: "Romantic Pop Ballad",
-            reasonForInclusion: "Waltz rhythm ideal for a spontaneous living room slow dance",
-            idealMoment: "Play during the midnight slow dance finale"
-          }
-        ]
-      },
-      surpriseTwist: "Hand them a sealed envelope with a custom ticket for an upcoming surprise breakfast in bed tomorrow morning!",
-      reasoningFromPastSurprises: "Incorporated your preference for relaxed, high-intimacy sensory moments with acoustic warmth and playful shared discovery."
-    };
-
-    return res.json({
-      success: true,
-      plan: fallbackPlan,
-      isFallback: true
-    });
+    return sendAiError(res, '/api/gemini/generate-date-plan', error);
   }
 });
 
@@ -963,61 +882,7 @@ REQUIREMENTS:
       dateNight: parsed
     });
   } catch (error: any) {
-    console.error('Error in /api/gemini/random-date-generator:', error);
-
-    const city = req.body?.location?.city || 'the City';
-    const fallbackDateNight = {
-      id: `rdn_${Date.now()}`,
-      title: `Candlelit Speakeasy & Starlight Vista in ${city}`,
-      tagline: "An evocative night of artisan cocktails, jazz vinyl, and quiet city lights",
-      locationAnchor: `Historic Arts & Dining District, ${city}`,
-      mapQuery: `intimate cocktail bar and dessert ${city}`,
-      vibe: req.body?.preferences?.vibe || 'Romantic & Dimly Lit',
-      budgetCategory: "$$",
-      estimatedCost: "$45 - $70 total",
-      duration: "2.5 hours",
-      bestTime: "7:30 PM - 10:00 PM",
-      weatherOutfitTip: "Smart casual chic with comfortable walking layers",
-      diceRollEmoji: "🎲 🍸 🎷 ✨",
-      mainActivity: {
-        name: "Velvet Corner & Handcrafted Cocktail Tasting",
-        spotType: "Intimate Japanese Listening Bar / Underground Speakeasy",
-        localNeighborhood: `Downtown Arts Corridor, ${city}`,
-        vividDescription: "Soft amber filament bulbs, smooth vinyl records spinning in the background, and leather booths made for whispering secrets.",
-        proTip: "Tell the bartender two flavors you each adore and ask them to invent a secret signature mocktail or cocktail just for your couple.",
-        duration: "1.5 hours"
-      },
-      secondaryActivity: {
-        name: "Midnight Gelato & Moonlit Promenade",
-        spotType: "Artisanal Dessert Parlor & Panoramic Viewpoint",
-        vividDescription: "Step outside into the cool evening breeze with two cups of warm pistachio gelato, strolling toward an illuminated overlook or waterfront bench.",
-        proTip: "Feed each other a spoonful with your eyes closed and guess the flavor notes.",
-        duration: "45 mins"
-      },
-      spontaneityChallenge: {
-        title: "The Mystery Menu Order",
-        instructions: "Each partner secretly orders one dish or drink for the other without revealing what it is until it arrives at the table!",
-        pointsReward: 50
-      },
-      conversationCard: {
-        theme: "Midnight Spark",
-        question: "If tonight were a movie scene of our love story, what song would be playing over the credits right now?",
-        followUp: "What's one thing you appreciate about our connection today that you didn't see coming when we first met?"
-      },
-      soundtrack: {
-        playlistTitle: "City Lights & Velvet Reverie",
-        featuredTrack: "Leon Bridges - Texas Sun",
-        spotifySearchQuery: "Leon Bridges Texas Sun",
-        vibeNote: "Mellow soul guitars that ground you both in the romantic warmth of the moment."
-      },
-      whyThisMatches: `Tailored for a memorable, sensory-rich evening in ${city} balancing intimate conversation and spontaneous discovery.`
-    };
-
-    return res.json({
-      success: true,
-      dateNight: fallbackDateNight,
-      isFallback: true
-    });
+    return sendAiError(res, '/api/gemini/random-date-generator', error);
   }
 });
 
@@ -1077,10 +942,7 @@ Output ONLY JSON in this format:
       suggestions: parsed.suggestions || ["Show them you care in a special way today."]
     });
   } catch (error: any) {
-    console.error('Error in /api/gemini/love-language:', error);
-    return res.json({
-      suggestions: ["Show them you care in a special way today."]
-    });
+    return sendAiError(res, '/api/gemini/love-language', error);
   }
 });
 
@@ -1178,9 +1040,7 @@ Output as JSON with:
       messageSuggestion: parsed.messageSuggestion || fallback.messageSuggestion
     });
   } catch (error: any) {
-    console.warn('Graceful fallback used for /api/gemini/analyze-mood:', error?.message || error);
-    const fallback = getFallback(myMood, partnerMood);
-    return res.json(fallback);
+    return sendAiError(res, '/api/gemini/analyze-mood', error);
   }
 });
 
@@ -1409,8 +1269,7 @@ Output JSON: {
     const parsed = JSON.parse(response.text || '{}');
     return res.json({ success: true, item: parsed });
   } catch (error: any) {
-    console.error('Error in /api/aira/game-content:', error);
-    return res.status(500).json({ error: error.message || 'Failed to generate game content' });
+    return sendAiError(res, '/api/aira/game-content', error);
   }
 });
 
@@ -1514,44 +1373,7 @@ Output JSON only in this format:
     const parsed = JSON.parse(response.text || '{}');
     return res.json({ success: true, ideas: parsed.ideas || [] });
   } catch (error: any) {
-    console.error('Error in /api/gemini/vision-board-ideas:', error);
-    return res.status(500).json({
-      success: false,
-      ideas: [
-        {
-          title: "Starlit Campervan Road Trip",
-          description: "Rent a vintage campervan, drive up the scenic coast, and sleep under meteor showers together.",
-          category: "Travel & Adventures",
-          targetYear: "Next Summer",
-          suggestedEmoji: "🚐",
-          imageUrl: "https://images.unsplash.com/photo-1523987355523-c7b5b0dd90a7?auto=format&fit=crop&w=800&q=80"
-        },
-        {
-          title: "Sun-drenched Reading Nook",
-          description: "Design a shared corner with plush floor pillows, plant cuttings, and our favorite books side by side.",
-          category: "Home & Sanctuary",
-          targetYear: "Within 1 Year",
-          suggestedEmoji: "🌿",
-          imageUrl: "https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&w=800&q=80"
-        },
-        {
-          title: "Learn Italian & Cook in Tuscany",
-          description: "Take online cooking lessons together, then book a farmhouse stay to make fresh pasta from scratch.",
-          category: "Personal Growth",
-          targetYear: "2-3 Years",
-          suggestedEmoji: "🍝",
-          imageUrl: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=800&q=80"
-        },
-        {
-          title: "Sunrise Hot Air Balloon Ride",
-          description: "Drift quietly over misty valleys at dawn holding hot coffee and each other's hands.",
-          category: "Fun & Quirky",
-          targetYear: "Next Anniversary",
-          suggestedEmoji: "🎈",
-          imageUrl: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80"
-        }
-      ]
-    });
+    return sendAiError(res, '/api/gemini/vision-board-ideas', error);
   }
 });
 
@@ -1654,44 +1476,7 @@ Output JSON only in this schema:
     const parsed = JSON.parse(response.text || '{}');
     return res.json({ success: true, coupons: parsed.coupons || [] });
   } catch (error: any) {
-    console.error('Error in /api/gemini/love-coupons-ideas:', error);
-    return res.status(500).json({
-      success: false,
-      coupons: [
-        {
-          title: "15-Minute Head & Scalp Massage",
-          description: "Relax completely with soothing music and gentle scalp massage.",
-          category: "Sweet Gestures",
-          tokenCost: 100,
-          emoji: "💆‍♀️",
-          terms: "Redeemable anytime after a long day."
-        },
-        {
-          title: "Ultimate Lazy Sunday Breakfast in Bed",
-          description: "I will make your favorite pancakes or eggs with fresh coffee delivered to bed.",
-          category: "Romantic Dates",
-          tokenCost: 150,
-          emoji: "🥞",
-          terms: "Valid on any weekend morning."
-        },
-        {
-          title: "Movie & Snack Dictator Pass",
-          description: "You choose the movie, the couch snacks, and the blanket fortress tonight.",
-          category: "Playful Favors",
-          tokenCost: 75,
-          emoji: "🍿",
-          terms: "No complaints allowed from partner!"
-        },
-        {
-          title: "Late Night Spontaneous Dessert Run",
-          description: "Pack into the car in our comfy clothes for milkshakes or warm cookies.",
-          category: "Romantic Dates",
-          tokenCost: 120,
-          emoji: "🍨",
-          terms: "Valid between 9 PM and midnight."
-        }
-      ]
-    });
+    return sendAiError(res, '/api/gemini/love-coupons-ideas', error);
   }
 });
 
@@ -2788,18 +2573,7 @@ app.post('/api/coins/send-gift', (req, res) => {
       giftName,
       cost,
       recipientId,
-// Locked: changing the Search Console token requires the SEO_ADMIN_TOKEN secret (set in Render env).
-// Without it configured, the endpoint is disabled entirely.
       note
-  const adminSecret = process.env.SEO_ADMIN_TOKEN || '';
-  const provided = String(req.headers['x-admin-token'] || '');
-  const ok =
-    adminSecret.length >= 16 &&
-    provided.length === adminSecret.length &&
-    crypto.timingSafeEqual(Buffer.from(provided), Buffer.from(adminSecret));
-  if (!ok) {
-    return res.status(403).json({ success: false, error: 'forbidden' });
-  }
     });
 
     if (!result.success) {
@@ -2876,7 +2650,7 @@ app.post('/api/coins/check-in', (req, res) => {
 
 // Health check endpoint for Cloud Run and container orchestration
 app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'ok', uptime: process.uptime() });
+  res.status(200).json({ status: 'ok', uptime: process.uptime(), aiConfigured: AI_CONFIGURED });
 });
 
 // Helper to determine the canonical origin for SEO and sitemaps
@@ -3014,7 +2788,18 @@ app.get('/api/seo/status', (req, res) => {
   });
 });
 
+// Locked: changing the Search Console token requires the SEO_ADMIN_TOKEN secret (set in Render env).
+// Without it configured, the endpoint is disabled entirely.
 app.post('/api/seo/token', (req, res) => {
+  const adminSecret = process.env.SEO_ADMIN_TOKEN || '';
+  const provided = String(req.headers['x-admin-token'] || '');
+  const ok =
+    adminSecret.length >= 16 &&
+    provided.length === adminSecret.length &&
+    crypto.timingSafeEqual(Buffer.from(provided), Buffer.from(adminSecret));
+  if (!ok) {
+    return res.status(403).json({ success: false, error: 'forbidden' });
+  }
   const { token } = req.body;
   if (typeof token === 'string' && /^[A-Za-z0-9_-]{6,100}$/.test(token.trim())) {
     dynamicGscToken = token.trim();
