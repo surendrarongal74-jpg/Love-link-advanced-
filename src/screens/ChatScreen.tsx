@@ -1,3 +1,5 @@
+import { AiConsentPrompt } from '../components/legal/AiConsentPrompt';
+import { hasAiConsent, onAiConsentChange } from '../lib/aiConsent';
 import React, { useState, useEffect, useRef } from 'react';
 import { useCoupleSpace } from '../contexts/CoupleSpaceContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -174,7 +176,8 @@ export function ChatScreen() {
   const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
   const [aiMoodResult, setAiMoodResult] = useState<{title: string, description: string, messageSuggestion?: string} | null>(null);
   const [aiError, setAiError] = useState<string | null>(null);
-
+  const [aiConsent, setAiConsentState] = useState<boolean>(() => hasAiConsent());
+  useEffect(() => onAiConsentChange(setAiConsentState), []);
   
   // Voice recording state
   const [isRecording, setIsRecording] = useState(false);
@@ -937,6 +940,7 @@ export function ChatScreen() {
 
   const generateReplySuggestions = async (tone: string) => {
     if (isGenerating) return;
+    if (!aiConsent) return;
     setIsGenerating(true);
     setAiSuggestions([]);
     setAiError(null);
@@ -962,6 +966,7 @@ export function ChatScreen() {
 
   const checkVibe = async () => {
     if (isGenerating) return;
+    if (!aiConsent) return;
     setIsGenerating(true);
     setAiSuggestions([]);
     setAiMoodResult(null);
@@ -1496,7 +1501,9 @@ export function ChatScreen() {
                          <button type="button" onClick={() => { setShowAIAssist(false); setAiSuggestions([]); setAiMoodResult(null); setAiError(null); }} className="min-h-11 px-3 text-gray-600 hover:text-gray-800 text-xs font-semibold">Close</button>
                       </div>
                       
-                      {aiError && !isGenerating ? (
+                      {!aiConsent ? (
+                         <AiConsentPrompt compact onDismiss={() => setShowAIAssist(false)} />
+                      ) : aiError && !isGenerating ? (
                          <div className="space-y-3" role="alert">
                             <p className="text-sm text-gray-700 bg-rose-50 border border-rose-100 rounded-xl p-3">{aiError}</p>
                             <button type="button" onClick={() => setAiError(null)} className="w-full min-h-11 text-sm text-rose-700 font-semibold rounded-xl hover:bg-rose-50">Back</button>

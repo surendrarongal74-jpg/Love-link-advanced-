@@ -1,4 +1,6 @@
 import { apiFetch, ApiError, friendlyApiMessage } from '../lib/api';
+import { hasAiConsent, onAiConsentChange } from '../lib/aiConsent';
+import { AiConsentPrompt } from '../components/legal/AiConsentPrompt';
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useCoupleSpace } from '../contexts/CoupleSpaceContext';
@@ -59,6 +61,8 @@ export function AiraScreen() {
   const [isListening, setIsListening] = useState(false);
   const [isSmartMode, setIsSmartMode] = useState(false);
   const [chatHistory, setChatHistory] = useState<any[]>([]);
+  const [aiConsent, setAiConsentState] = useState<boolean>(() => hasAiConsent());
+  useEffect(() => onAiConsentChange(setAiConsentState), []);
   
   // Card action states
   const [copiedText, setCopiedText] = useState<string | null>(null);
@@ -111,6 +115,7 @@ export function AiraScreen() {
 
   const handleSend = async () => {
     if (!inputText.trim() && !uploadedImage) return;
+    if (!aiConsent) return;
 
     const userText = inputText;
     const currentUploaded = uploadedImage;
@@ -387,6 +392,7 @@ export function AiraScreen() {
 
       {/* 3. CHAT MESSAGES AREA (Proper spacing and light theme) */}
       <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-5 space-y-4 relative z-10 scroll-smooth max-w-3xl mx-auto w-full">
+        {!aiConsent && <AiConsentPrompt />}
         {messages.map((msg) => (
           <motion.div 
             key={msg.id}
@@ -702,7 +708,7 @@ export function AiraScreen() {
             <button 
               type="button"
               onClick={handleSend}
-              disabled={!inputText.trim() && !uploadedImage}
+              disabled={!aiConsent || (!inputText.trim() && !uploadedImage)}
               title="Send to AIRA"
               className="p-2.5 rounded-full shrink-0 bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white disabled:opacity-35 disabled:cursor-not-allowed shadow-xs transition-all active:scale-95"
             >

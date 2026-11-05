@@ -9,8 +9,9 @@ import { recordConsent } from '../lib/dpdpService';
 
 export function AuthScreen() {
   const { user, signInWithGoogle, signInWithDemo } = useAuth();
-  const [coreSyncConsent, setCoreSyncConsent] = useState<boolean>(true);
-  const [mediaConsent, setMediaConsent] = useState<boolean>(true);
+  // DPDP s.6: consent must be an affirmative act, so nothing is pre-ticked.
+  const [coreSyncConsent, setCoreSyncConsent] = useState<boolean>(false);
+  const [mediaConsent, setMediaConsent] = useState<boolean>(false);
   const [locationConsent, setLocationConsent] = useState<boolean>(false);
   const [aiConsent, setAiConsent] = useState<boolean>(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
@@ -122,9 +123,11 @@ export function AuthScreen() {
               <ShieldCheck className="w-3.5 h-3.5 text-rose-500" />
               <span>DPDP Consent (India Act, 2023)</span>
             </span>
-            <span className="text-[10px] text-emerald-600 font-semibold flex items-center gap-1">
-              <CheckCircle2 className="w-3 h-3" /> Ready
-            </span>
+            {isRequiredConsentMet && (
+              <span className="text-[11px] text-emerald-700 font-semibold flex items-center gap-1">
+                <CheckCircle2 className="w-3 h-3" aria-hidden="true" /> Ready
+              </span>
+            )}
           </div>
 
           <div className="space-y-2 text-xs text-gray-700">

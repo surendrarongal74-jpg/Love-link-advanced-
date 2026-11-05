@@ -271,7 +271,10 @@ export function HomeScreen() {
     try {
       const msgsQuery = query(collection(db, `coupleSpaces/${space.id}/messages`), orderBy('createdAt', 'desc'), limit(15));
       const smap = await getDocs(msgsQuery);
-      const chatHistory = smap.docs.reverse().map(d => `${d.data().senderId === userData.id ? 'Me' : 'Partner'}: ${d.data().content}`);
+      // Only the user's own (plaintext) messages are ever sent to the AI; the partner has not consented.
+      const chatHistory = smap.docs.reverse()
+        .filter(d => d.data().senderId === userData.id && typeof d.data().content === 'string')
+        .map(d => `Me: ${d.data().content}`);
       qText = await generateDailyQuestion(chatHistory);
     } catch (e) {
       console.error(e);

@@ -108,23 +108,7 @@ export function OnboardingScreen() {
       return;
     }
 
-    // Auto-approve local fallback permissions so user is never blocked
-    if (!allPermissionsGranted) {
-      handlePermissionsChange(true);
-      try {
-        localStorage.setItem(
-          'lovelink_device_permissions',
-          JSON.stringify({
-            microphone: true,
-            notifications: true,
-            cameraAndPhotos: true,
-            localVault: true,
-          })
-        );
-      } catch {
-        // ignore
-      }
-    }
+    // Device permissions are optional and only recorded when the browser actually grants them.
 
     setIsCreating(true);
     setCreateErrorMsg(null);
@@ -152,18 +136,14 @@ export function OnboardingScreen() {
       const userSnap = await getDoc(userRef);
       if (userSnap.exists()) {
         await updateDoc(userRef, { 
-          coupleSpaceId: spaceId,
-          permissionsGranted: true,
-          permissionsGrantedAt: Date.now()
+          coupleSpaceId: spaceId
         });
       } else {
         await setDoc(userRef, {
           id: currentUid,
           email: auth.currentUser?.email || userData?.email || '',
           displayName: auth.currentUser?.displayName || userData?.displayName || 'Partner',
-          coupleSpaceId: spaceId,
-          permissionsGranted: true,
-          permissionsGrantedAt: Date.now()
+          coupleSpaceId: spaceId
         });
       }
       
@@ -187,23 +167,7 @@ export function OnboardingScreen() {
     }
     setErrorMsg(null);
     
-    // Auto-approve local fallback permissions so user is never blocked
-    if (!allPermissionsGranted) {
-      handlePermissionsChange(true);
-      try {
-        localStorage.setItem(
-          'lovelink_device_permissions',
-          JSON.stringify({
-            microphone: true,
-            notifications: true,
-            cameraAndPhotos: true,
-            localVault: true,
-          })
-        );
-      } catch {
-        // ignore
-      }
-    }
+    // Device permissions are optional and only recorded when the browser actually grants them.
 
     if (!inviteCodeInput || inviteCodeInput.trim().length !== 6) {
       setErrorMsg("Please enter a valid 6-digit invite code.");
@@ -241,18 +205,14 @@ export function OnboardingScreen() {
       const userSnap = await getDoc(userRef);
       if (userSnap.exists()) {
         await updateDoc(userRef, {
-          coupleSpaceId: code,
-          permissionsGranted: true,
-          permissionsGrantedAt: Date.now()
+          coupleSpaceId: code
         });
       } else {
         await setDoc(userRef, {
           id: currentUid,
           email: auth.currentUser?.email || userData?.email || '',
           displayName: auth.currentUser?.displayName || userData?.displayName || 'Partner',
-          coupleSpaceId: code,
-          permissionsGranted: true,
-          permissionsGrantedAt: Date.now()
+          coupleSpaceId: code
         });
       }
       

@@ -1,5 +1,7 @@
 import { auth } from './firebase';
+import { hasAiConsent } from './aiConsent';
 
+const AI_ROUTE = /^\/api\/(gemini|aira)\//;
 
 /** Error thrown by apiFetch for non-2xx responses, carrying the server's error code. */
 export class ApiError extends Error {
@@ -17,6 +19,13 @@ export class ApiError extends Error {
  * Demo sessions have no Firebase user, so protected routes answer 401 auth_required.
  */
 export async function apiFetch(path: string, init: RequestInit = {}): Promise<Response> {
+  // DPDP: never send anything to the AI service without the user's opt-in.
+  if (AI_ROUTE.test(path) && !hasAiConsent()) {
+    return new Response(JSON.stringify({ error: 'ai_consent_required' }), {
+      status: 403,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
   const headers = new Headers(init.headers || {});
   if (init.body && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
   try {
@@ -44,6 +53,7 @@ export async function apiPostJson<T = any>(path: string, body: unknown): Promise
 }
 
 export function friendlyApiMessage(status: number, code?: string, serverMessage?: string): string {
+  if (code === 'ai_consent_required') return 'Turn on AI features to use AIRA. Nothing is sent to Google Gemini until you do.';
   if (status === 401) return 'Sign in with Google to use AIRA and other AI features (they are not available in demo mode).';
   if (status === 429) return 'You are going a little fast. Please wait a minute and try again.';
   if (code === 'ai_not_configured') return 'AIRA is not available right now. Please try again later.';

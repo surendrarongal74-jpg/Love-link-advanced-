@@ -102,28 +102,26 @@ export const PartnerPermissionsChecklist: React.FC<PartnerPermissionsChecklistPr
     });
   };
 
-  // Request Microphone
+  const denied = (what: string) =>
+    setFeedbackMsg(`${what} was not allowed. That's okay: you can still use Love Link, and turn it on later in your browser's site settings.`);
+
+  // Request Microphone (real browser prompt; only recorded as granted if the browser grants it)
   const requestMic = async () => {
     setRequesting('microphone');
     setFeedbackMsg(null);
     try {
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        // Stop audio tracks immediately after permission confirmed
-        stream.getTracks().forEach((track) => track.stop());
-        updatePermission('microphone', true);
-        playSound('success');
-        setFeedbackMsg('Microphone access granted for voice notes!');
-      } else {
-        // Fallback for environments where getUserMedia is restricted or simulated
-        updatePermission('microphone', true);
-        playSound('success');
-        setFeedbackMsg('Microphone permission enabled.');
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setFeedbackMsg('This browser does not support voice recording.');
+        return;
       }
-    } catch {
-      // If user denied in browser prompt, allow explicit retry or confirm
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach((track) => track.stop());
       updatePermission('microphone', true);
-      setFeedbackMsg('Microphone permission enabled for Love Link.');
+      playSound('success');
+      setFeedbackMsg('Microphone allowed for voice notes.');
+    } catch {
+      updatePermission('microphone', false);
+      denied('Microphone access');
     } finally {
       setRequesting(null);
     }
@@ -134,97 +132,96 @@ export const PartnerPermissionsChecklist: React.FC<PartnerPermissionsChecklistPr
     setRequesting('notifications');
     setFeedbackMsg(null);
     try {
-      if (typeof window !== 'undefined' && 'Notification' in window) {
-        const perm = await Notification.requestPermission();
-        if (perm === 'granted') {
-          updatePermission('notifications', true);
-          playSound('success');
-          setFeedbackMsg('Notifications enabled for partner pings & messages!');
-        } else {
-          // Enabled by user choice for app-internal alerts
-          updatePermission('notifications', true);
-          setFeedbackMsg('In-app alerts enabled.');
-        }
+      if (typeof window === 'undefined' || !('Notification' in window)) {
+        setFeedbackMsg('This browser does not support notifications.');
+        return;
+      }
+      const perm = await Notification.requestPermission();
+      updatePermission('notifications', perm === 'granted');
+      if (perm === 'granted') {
+        playSound('success');
+        setFeedbackMsg('Notifications allowed for partner pings and messages.');
       } else {
-        updatePermission('notifications', true);
+        denied('Notifications');
       }
     } catch {
-      updatePermission('notifications', true);
+      updatePermission('notifications', false);
+      denied('Notifications');
     } finally {
       setRequesting(null);
     }
   };
 
-  // Request Camera & Photos
+  // Request Camera (photos can always be picked from the gallery without this)
   const requestCameraAndPhotos = async () => {
     setRequesting('cameraAndPhotos');
     setFeedbackMsg(null);
     try {
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-          stream.getTracks().forEach((track) => track.stop());
-        } catch {
-          // Camera might not exist (e.g. desktop), fallback
-        }
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setFeedbackMsg('This browser does not support the camera. You can still share photos from your gallery.');
+        return;
       }
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      stream.getTracks().forEach((track) => track.stop());
       updatePermission('cameraAndPhotos', true);
       playSound('success');
-      setFeedbackMsg('Camera and photo storage access confirmed!');
+      setFeedbackMsg('Camera allowed.');
     } catch {
-      updatePermission('cameraAndPhotos', true);
+      updatePermission('cameraAndPhotos', false);
+      denied('Camera access');
     } finally {
       setRequesting(null);
     }
   };
 
-  // Request Local Vault Storage
+  // Offline cache uses IndexedDB, which needs no browser prompt.
   const requestLocalVault = () => {
-    setRequesting('localVault');
-    try {
+    if (typeof window !== 'undefined' && 'indexedDB' in window) {
       updatePermission('localVault', true);
-      playSound('success');
       setFeedbackMsg('Offline cache enabled on this device.');
-    } finally {
-      setRequesting(null);
+    } else {
+      setFeedbackMsg('This browser does not support offline storage.');
     }
   };
 
-  // Grant All at once
+  // Ask for each permission in turn, recording only what the browser actually grants.
   const grantAll = async () => {
     setRequesting('all');
     setFeedbackMsg(null);
+    const next: PermissionStatus = { ...status };
     try {
-      // Mic
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      if (navigator.mediaDevices?.getUserMedia) {
         try {
           const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
           stream.getTracks().forEach((track) => track.stop());
+          next.microphone = true;
         } catch {
-          // ignore
+          next.microphone = false;
+        }
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+          stream.getTracks().forEach((track) => track.stop());
+          next.cameraAndPhotos = true;
+        } catch {
+          next.cameraAndPhotos = false;
         }
       }
-
-      // Notifications
       if (typeof window !== 'undefined' && 'Notification' in window) {
         try {
-          await Notification.requestPermission();
+          next.notifications = (await Notification.requestPermission()) === 'granted';
         } catch {
-          // ignore
+          next.notifications = false;
         }
       }
-
-      const next: PermissionStatus = {
-        microphone: true,
-        notifications: true,
-        cameraAndPhotos: true,
-        localVault: true,
-      };
-
+      next.localVault = typeof window !== 'undefined' && 'indexedDB' in window;
       setStatus(next);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      playSound('success');
-      setFeedbackMsg('All required permissions granted! You can now connect with your partner.');
+      const allowed = Object.values(next).filter(Boolean).length;
+      setFeedbackMsg(
+        allowed === 4
+          ? 'All set on this device.'
+          : `${allowed} of 4 allowed. Anything you skipped can be turned on later; Love Link still works without it.`
+      );
     } finally {
       setRequesting(null);
     }
@@ -241,7 +238,7 @@ export const PartnerPermissionsChecklist: React.FC<PartnerPermissionsChecklistPr
       desc: 'Record voice whispers & audio notes shared with your partner',
       isGranted: status.microphone,
       action: requestMic,
-      required: true,
+      required: false,
     },
     {
       key: 'cameraAndPhotos' as const,
@@ -250,7 +247,7 @@ export const PartnerPermissionsChecklist: React.FC<PartnerPermissionsChecklistPr
       desc: 'Share private photos, couple drawings, and avatars stored offline',
       isGranted: status.cameraAndPhotos,
       action: requestCameraAndPhotos,
-      required: true,
+      required: false,
     },
     {
       key: 'notifications' as const,
@@ -259,7 +256,7 @@ export const PartnerPermissionsChecklist: React.FC<PartnerPermissionsChecklistPr
       desc: 'Get notified when your partner sends a love ping or daily answer',
       isGranted: status.notifications,
       action: requestNotifications,
-      required: true,
+      required: false,
     },
     {
       key: 'localVault' as const,
@@ -268,7 +265,7 @@ export const PartnerPermissionsChecklist: React.FC<PartnerPermissionsChecklistPr
       desc: 'Keeps a copy of recent chats on this device so they load offline',
       isGranted: status.localVault,
       action: requestLocalVault,
-      required: true,
+      required: false,
     },
   ];
 
@@ -282,27 +279,28 @@ export const PartnerPermissionsChecklist: React.FC<PartnerPermissionsChecklistPr
           </div>
           <div>
             <h3 className="font-serif font-bold text-gray-900 text-base flex items-center gap-2">
-              Required Device Permissions
+              Device permissions (optional)
               {allGranted ? (
                 <span className="text-[11px] font-sans font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full border border-emerald-200">
-                  Ready to Connect ✨
+                  All allowed
                 </span>
               ) : (
                 <span className="text-[11px] font-sans font-bold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full border border-amber-200">
-                  Required ({grantedCount}/4)
+                  {grantedCount}/4 allowed
                 </span>
               )}
             </h3>
             <p className="text-xs text-rose-500/90 font-medium">
-              Must be granted before connecting with your partner
+              Ask now or later. Love Link works without them; some features (voice notes, alerts) need them.
             </p>
           </div>
         </div>
 
         <button
           onClick={() => setShowDetails(!showDetails)}
-          className="text-gray-400 hover:text-gray-600 p-1 rounded-lg transition"
-          aria-label="Toggle details"
+          className="text-gray-500 hover:text-gray-700 p-2.5 rounded-lg transition"
+          aria-label={showDetails ? 'Hide permission details' : 'Show permission details'}
+          aria-expanded={showDetails}
         >
           {showDetails ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
         </button>
@@ -350,7 +348,7 @@ export const PartnerPermissionsChecklist: React.FC<PartnerPermissionsChecklistPr
                 <div>
                   <div className="flex items-center gap-1.5">
                     <span className="text-xs font-bold text-gray-900">{item.title}</span>
-                    <span className="text-[10px] text-rose-500 font-semibold">• Required</span>
+                    <span className="text-[11px] text-gray-500 font-semibold">• Optional</span>
                   </div>
                   <p className="text-[11px] text-gray-500 leading-tight">{item.desc}</p>
                 </div>
@@ -366,7 +364,8 @@ export const PartnerPermissionsChecklist: React.FC<PartnerPermissionsChecklistPr
                   <button
                     onClick={item.action}
                     disabled={requesting === item.key || requesting === 'all'}
-                    className="text-xs font-semibold bg-rose-500 hover:bg-rose-600 active:scale-95 text-white px-3 py-1.5 rounded-full shadow-sm shadow-rose-200 transition disabled:opacity-50"
+                    className="min-h-11 text-xs font-semibold bg-rose-600 hover:bg-rose-700 active:scale-95 text-white px-4 rounded-full shadow-sm shadow-rose-200 transition disabled:opacity-50"
+                    aria-label={`Allow ${item.title}`}
                   >
                     {requesting === item.key ? 'Requesting...' : 'Allow'}
                   </button>
@@ -385,7 +384,7 @@ export const PartnerPermissionsChecklist: React.FC<PartnerPermissionsChecklistPr
           className="w-full bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white font-semibold text-xs py-3 px-4 rounded-2xl shadow-md shadow-rose-200 transition-all flex items-center justify-center gap-2 active:scale-95"
         >
           <Sparkles className="w-4 h-4" />
-          {requesting === 'all' ? 'Enabling Permissions...' : 'Grant All Required Permissions'}
+          {requesting === 'all' ? 'Asking your browser…' : 'Ask for all permissions'}
         </button>
       )}
 
@@ -393,7 +392,7 @@ export const PartnerPermissionsChecklist: React.FC<PartnerPermissionsChecklistPr
         <div className="text-center py-1">
           <p className="text-xs text-emerald-700 font-semibold flex items-center justify-center gap-1.5">
             <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-            All required permissions granted for this device!
+            All permissions allowed on this device.
           </p>
         </div>
       )}
