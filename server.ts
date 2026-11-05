@@ -5,6 +5,7 @@ import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import { GoogleGenAI, Type } from '@google/genai';
 import dotenv from 'dotenv';
+import { createRemoteJWKSet, jwtVerify } from 'jose';
 
 dotenv.config();
 process.env.DISABLE_HMR = 'true';
@@ -15,21 +16,135 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = parseInt(process.env.PORT || '3000', 10);
 
-app.use(express.json({ limit: '25mb' }));
+app.disable('x-powered-by');
+app.set('trust proxy', 1); // Render terminates TLS in front of us; needed for per-IP rate limits
 
-// CORS & iFrame compatibility headers for AI Studio preview
+// ---------------------------------------------------------------------------
+// Security: origin allowlist, Firebase ID-token auth and rate limiting
+// ---------------------------------------------------------------------------
+
+const ALLOWED_ORIGINS = new Set<string>([
+  'https://love-link-advanced-2.onrender.com',
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  'http://localhost:4173',
+  ...(process.env.ALLOWED_ORIGINS || '').split(',').map((o) => o.trim()).filter(Boolean),
+]);
+
+function readFirebaseProjectId(): string {
+  if (process.env.FIREBASE_PROJECT_ID) return process.env.FIREBASE_PROJECT_ID;
+  try {
+    const cfg = JSON.parse(fs.readFileSync(path.resolve(__dirname, 'firebase-applet-config.json'), 'utf-8'));
+    return cfg.projectId || '';
+  } catch {
+    return '';
+  }
+}
+const FIREBASE_PROJECT_ID = readFirebaseProjectId();
+const FIREBASE_JWKS = createRemoteJWKSet(
+  new URL('https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com')
+);
+
+type AuthedRequest = express.Request & { uid?: string; authEmail?: string };
+
+async function verifyFirebaseIdToken(token: string): Promise<{ uid: string; email?: string }> {
+  if (!FIREBASE_PROJECT_ID) throw new Error('Firebase project id not configured');
+  const { payload } = await jwtVerify(token, FIREBASE_JWKS, {
+    issuer: `https://securetoken.google.com/${FIREBASE_PROJECT_ID}`,
+    audience: FIREBASE_PROJECT_ID,
+    algorithms: ['RS256'],
+  });
+  if (!payload.sub || typeof payload.sub !== 'string') throw new Error('Token has no subject');
+  return { uid: payload.sub, email: typeof payload.email === 'string' ? payload.email : undefined };
+}
+
+// Small in-memory fixed-window rate limiter (single instance; move to Redis/Firestore if scaled out)
+const rateBuckets = new Map<string, { count: number; resetAt: number }>();
+function rateLimit(name: string, max: number, windowMs: number, keyFn: (req: AuthedRequest) => string) {
+  return (req: AuthedRequest, res: express.Response, next: express.NextFunction) => {
+    const key = `${name}:${keyFn(req)}`;
+    const now = Date.now();
+    const bucket = rateBuckets.get(key);
+    if (!bucket || bucket.resetAt <= now) {
+      rateBuckets.set(key, { count: 1, resetAt: now + windowMs });
+      return next();
+    }
+    bucket.count += 1;
+    if (bucket.count > max) {
+      res.setHeader('Retry-After', Math.ceil((bucket.resetAt - now) / 1000).toString());
+      return res.status(429).json({ error: 'rate_limited', message: 'Too many requests. Please slow down and try again shortly.' });
+    }
+    return next();
+  };
+}
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, b] of rateBuckets) if (b.resetAt <= now) rateBuckets.delete(k);
+}, 60_000).unref();
+
+const ipKey = (req: AuthedRequest) => req.ip || 'unknown';
+const uidKey = (req: AuthedRequest) => req.uid || req.ip || 'unknown';
+
+// Security headers + CORS limited to our own origins
 app.use((req, res, next) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
-  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-  if (req.method === 'OPTIONS') {
-    return res.sendStatus(200);
+  const origin = req.headers.origin;
+  if (origin && ALLOWED_ORIGINS.has(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  }
+  if (req.path.startsWith('/api/')) {
+    if (origin && !ALLOWED_ORIGINS.has(origin)) {
+      return res.status(403).json({ error: 'origin_not_allowed' });
+    }
+    if (req.method === 'OPTIONS') return res.sendStatus(204);
   }
   next();
 });
+
+// Body size: AIRA image chats and photo proofs need a few MB; everything else stays small.
+app.use(['/api/aira/chat', '/api/coins/submit-proof'], express.json({ limit: '8mb' }));
+app.use(express.json({ limit: '1mb' }));
+
+// Routes that may be called without signing in (public info, pre-sign-in consent log, data-rights intake)
+const PUBLIC_API_ROUTES = new Set<string>([
+  'GET /api/coins/catalogs',
+  'GET /api/seo/status',
+  'GET /api/dpdp/status',
+  'POST /api/dpdp/consent-log',
+  'POST /api/dpdp/rights-request',
+]);
+
+app.use('/api', rateLimit('api-ip', 300, 60_000, ipKey));
+
+app.use('/api', async (req: AuthedRequest, res, next) => {
+  if (PUBLIC_API_ROUTES.has(`${req.method} ${req.baseUrl}${req.path}`)) return next();
+  const header = req.headers.authorization || '';
+  const token = header.startsWith('Bearer ') ? header.slice(7).trim() : '';
+  if (!token) {
+    return res.status(401).json({ error: 'auth_required', message: 'Please sign in to use this feature.' });
+  }
+  try {
+    const { uid, email } = await verifyFirebaseIdToken(token);
+    req.uid = uid;
+    req.authEmail = email;
+    // Never trust a client-supplied identity: overwrite any userId with the verified uid.
+    if (req.body && typeof req.body === 'object' && !Array.isArray(req.body)) req.body.userId = uid;
+    if (req.query && 'userId' in req.query) (req.query as Record<string, unknown>).userId = uid;
+    return next();
+  } catch {
+    return res.status(401).json({ error: 'invalid_token', message: 'Your session has expired. Please sign in again.' });
+  }
+});
+
+// Gemini calls cost money: cap them per signed-in user.
+app.use(['/api/gemini', '/api/aira', '/api/coins/submit-proof'], rateLimit('ai-uid', 30, 10 * 60_000, uidKey));
 
 const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY,
@@ -2673,7 +2788,18 @@ app.post('/api/coins/send-gift', (req, res) => {
       giftName,
       cost,
       recipientId,
+// Locked: changing the Search Console token requires the SEO_ADMIN_TOKEN secret (set in Render env).
+// Without it configured, the endpoint is disabled entirely.
       note
+  const adminSecret = process.env.SEO_ADMIN_TOKEN || '';
+  const provided = String(req.headers['x-admin-token'] || '');
+  const ok =
+    adminSecret.length >= 16 &&
+    provided.length === adminSecret.length &&
+    crypto.timingSafeEqual(Buffer.from(provided), Buffer.from(adminSecret));
+  if (!ok) {
+    return res.status(403).json({ success: false, error: 'forbidden' });
+  }
     });
 
     if (!result.success) {
@@ -2890,7 +3016,7 @@ app.get('/api/seo/status', (req, res) => {
 
 app.post('/api/seo/token', (req, res) => {
   const { token } = req.body;
-  if (typeof token === 'string') {
+  if (typeof token === 'string' && /^[A-Za-z0-9_-]{6,100}$/.test(token.trim())) {
     dynamicGscToken = token.trim();
     return res.json({ success: true, token: dynamicGscToken });
   }
