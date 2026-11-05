@@ -85,8 +85,12 @@ export function OnboardingScreen() {
     }
   };
 
+  // 6 characters from an unambiguous alphabet, using the browser's CSPRNG (was Math.random()).
   const generateInviteCode = () => {
-    return Math.random().toString(36).substring(2, 8).toUpperCase();
+    const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    const bytes = new Uint8Array(6);
+    crypto.getRandomValues(bytes);
+    return Array.from(bytes, (b) => alphabet[b % alphabet.length]).join('');
   };
 
   const handleCopyCode = async () => {
@@ -125,7 +129,9 @@ export function OnboardingScreen() {
         lastInteractionAt: Date.now(),
         createdAt: Date.now(),
         xp: 0,
-        level: 1
+        level: 1,
+        // Invite codes are single-use and expire after 48 hours (enforced in firestore.rules).
+        inviteExpiresAt: Date.now() + 48 * 60 * 60 * 1000
       };
 
       // 1. Create coupleSpace document
@@ -152,7 +158,7 @@ export function OnboardingScreen() {
       await refreshUserData();
     } catch (e: any) {
       console.error("Error creating space:", e);
-      setCreateErrorMsg(e?.message || "Failed to create space. Please try again.");
+      setCreateErrorMsg("Could not create your space right now. Check your connection and try again.");
       handleFirestoreError(e, OperationType.CREATE, 'coupleSpaces');
     } finally {
       setIsCreating(false);
@@ -179,7 +185,17 @@ export function OnboardingScreen() {
     try {
       const code = inviteCodeInput.trim().toUpperCase();
       const spaceDocRef = doc(db, 'coupleSpaces', code);
-      const spaceSnap = await getDoc(spaceDocRef);
+      let spaceSnap;
+      try {
+        spaceSnap = await getDoc(spaceDocRef);
+      } catch (readErr: any) {
+        if (readErr?.code === 'permission-denied') {
+          setErrorMsg("This invite code is invalid, has expired, or has already been used. Ask your partner for a new code.");
+          setIsJoining(false);
+          return;
+        }
+        throw readErr;
+      }
       
       if (!spaceSnap.exists()) {
         setErrorMsg("Invalid invite code. Check with your partner and try again.");
@@ -236,7 +252,9 @@ export function OnboardingScreen() {
       
     } catch (e: any) {
       console.error("Error joining space:", e);
-      setErrorMsg(e?.message || "Could not join space. Please try again.");
+      setErrorMsg(e?.code === 'permission-denied'
+        ? "This invite code is invalid, has expired, or has already been used. Ask your partner for a new code."
+        : "Could not join right now. Check your connection and try again.");
       handleFirestoreError(e, OperationType.UPDATE, 'coupleSpaces');
     } finally {
       setIsJoining(false);
@@ -272,7 +290,7 @@ export function OnboardingScreen() {
           </div>
           <h2 className="text-2xl font-serif font-bold mb-2">Space Created!</h2>
           <p className="text-rose-500 mb-6 font-medium text-sm">
-            Send this code to your partner. Both of your devices will synchronize once they enter it.
+            Send this code to your partner. It works once and expires in 48 hours.
           </p>
           <div className="bg-gradient-to-r from-rose-50 to-pink-50 p-6 rounded-3xl flex items-center justify-between mb-6 border border-white shadow-sm">
             <span className="text-3xl font-mono font-bold tracking-[0.2em] text-rose-950">{generatedCode}</span>
